@@ -10,24 +10,47 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { OrderWithDrink, DrinkAnalytics } from "@shared/schema";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { Clock, TrendingUp, AlertCircle, CheckCircle2, Home } from "lucide-react";
-import { Link } from "wouter";
-import { useState } from "react";
+import { Clock, TrendingUp, AlertCircle, CheckCircle2, Home, LogOut } from "lucide-react";
+import { Link, useLocation } from "wouter";
+import { useState, useEffect } from "react";
 
 export default function Dashboard() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [filterMode, setFilterMode] = useState<"all" | "never-made" | "least-ordered">("all");
 
-  // Fetch live queue
-  const { data: queue, isLoading: queueLoading } = useQuery<OrderWithDrink[]>({
-    queryKey: ["/api/orders/queue"],
-    refetchInterval: 5000, // Auto-refresh every 5 seconds
+  // Check authentication
+  const { data: authStatus, isLoading: authLoading } = useQuery<{ isAuthenticated: boolean }>({
+    queryKey: ["/api/auth/check"],
   });
 
-  // Fetch analytics
+  // Fetch live queue (must be called before any conditional returns)
+  const { data: queue, isLoading: queueLoading } = useQuery<OrderWithDrink[]>({
+    queryKey: ["/api/orders/queue"],
+    refetchInterval: 5000,
+    enabled: !!authStatus?.isAuthenticated, // Only fetch if authenticated
+  });
+
+  // Fetch analytics (must be called before any conditional returns)
   const { data: analytics, isLoading: analyticsLoading } = useQuery<DrinkAnalytics[]>({
     queryKey: ["/api/analytics"],
-    refetchInterval: 10000, // Auto-refresh every 10 seconds
+    refetchInterval: 10000,
+    enabled: !!authStatus?.isAuthenticated, // Only fetch if authenticated
+  });
+
+  // Logout mutation
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/auth/logout", {});
+    },
+    onSuccess: () => {
+      queryClient.clear();
+      setLocation("/dashboard-login");
+      toast({
+        title: "Logged Out",
+        description: "You have been logged out successfully",
+      });
+    },
   });
 
   // Mark as in progress mutation
@@ -58,6 +81,18 @@ export default function Dashboard() {
       });
     },
   });
+
+  // Redirect to login if not authenticated (after all hooks are called)
+  useEffect(() => {
+    if (!authLoading && !authStatus?.isAuthenticated) {
+      setLocation("/dashboard-login");
+    }
+  }, [authStatus, authLoading, setLocation]);
+
+  // Don't render dashboard if not authenticated
+  if (authLoading || !authStatus?.isAuthenticated) {
+    return null;
+  }
 
   // Filter analytics data
   const filteredAnalytics = (() => {
@@ -108,16 +143,28 @@ export default function Dashboard() {
             <h1 className="font-serif text-2xl md:text-3xl font-bold text-foreground">
               Host Dashboard
             </h1>
-            <Link href="/">
+            <div className="flex gap-2">
+              <Link href="/">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  data-testid="button-back-home"
+                >
+                  <Home className="w-4 h-4 mr-2" />
+                  Home
+                </Button>
+              </Link>
               <Button 
                 variant="outline" 
                 size="sm"
-                data-testid="button-back-home"
+                onClick={() => logoutMutation.mutate()}
+                disabled={logoutMutation.isPending}
+                data-testid="button-logout"
               >
-                <Home className="w-4 h-4 mr-2" />
-                Home
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
               </Button>
-            </Link>
+            </div>
           </div>
         </div>
       </header>

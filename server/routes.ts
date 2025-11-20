@@ -5,6 +5,46 @@ import { insertMenuSchema, insertDrinkSchema, insertOrderSchema } from "@shared/
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Simple hardcoded password - in production this would use proper hashing
+  const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD || "barflores2025";
+
+  // POST /api/auth/login - Dashboard login
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { password } = req.body;
+      
+      if (!password) {
+        return res.status(400).json({ error: "Password is required" });
+      }
+      
+      if (password === DASHBOARD_PASSWORD) {
+        req.session.isAuthenticated = true;
+        res.json({ success: true });
+      } else {
+        res.status(401).json({ error: "Invalid password" });
+      }
+    } catch (error) {
+      console.error("Error during login:", error);
+      res.status(500).json({ error: "Login failed" });
+    }
+  });
+
+  // GET /api/auth/check - Check if user is authenticated
+  app.get("/api/auth/check", async (req, res) => {
+    res.json({ isAuthenticated: !!req.session.isAuthenticated });
+  });
+
+  // POST /api/auth/logout - Logout
+  app.post("/api/auth/logout", async (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        console.error("Error destroying session:", err);
+        return res.status(500).json({ error: "Logout failed" });
+      }
+      res.json({ success: true });
+    });
+  });
+
   // GET /api/menus - Get all menus
   app.get("/api/menus", async (req, res) => {
     try {
