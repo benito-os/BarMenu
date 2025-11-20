@@ -24,6 +24,7 @@ export interface IStorage {
   
   // Drink operations
   getDrinksByMenuId(menuId: string): Promise<Drink[]>;
+  getAllDrinksByMenuId(menuId: string): Promise<Drink[]>;
   getDrinkById(id: string): Promise<Drink | undefined>;
   createDrink(drink: InsertDrink): Promise<Drink>;
   reorderDrinks(drinks: Array<{ id: string; sortOrder: number }>): Promise<void>;
@@ -65,6 +66,14 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(drinks)
       .where(and(eq(drinks.menuId, menuId), eq(drinks.isActive, true)))
+      .orderBy(drinks.section, drinks.sortOrder);
+  }
+
+  async getAllDrinksByMenuId(menuId: string): Promise<Drink[]> {
+    return await db
+      .select()
+      .from(drinks)
+      .where(eq(drinks.menuId, menuId))
       .orderBy(drinks.section, drinks.sortOrder);
   }
 

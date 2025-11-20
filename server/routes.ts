@@ -114,7 +114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // GET /api/drinks?menuId=xxx - Get drinks by menu ID
+  // GET /api/drinks?menuId=xxx - Get drinks by menu ID (active only)
   app.get("/api/drinks", async (req, res) => {
     try {
       const { menuId } = req.query;
@@ -128,6 +128,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching drinks:", error);
       res.status(500).json({ error: "Failed to fetch drinks" });
+    }
+  });
+
+  // GET /api/drinks/all?menuId=xxx - Get all drinks by menu ID (including inactive, for admin)
+  app.get("/api/drinks/all", async (req, res) => {
+    try {
+      const { menuId } = req.query;
+      
+      if (!menuId || typeof menuId !== "string") {
+        return res.status(400).json({ error: "menuId query parameter is required" });
+      }
+      
+      const drinks = await storage.getAllDrinksByMenuId(menuId);
+      res.json(drinks);
+    } catch (error) {
+      console.error("Error fetching all drinks:", error);
+      res.status(500).json({ error: "Failed to fetch all drinks" });
     }
   });
 

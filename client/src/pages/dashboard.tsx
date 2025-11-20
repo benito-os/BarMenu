@@ -198,6 +198,101 @@ export default function Dashboard() {
     isActive: true,
     sortOrder: 0,
   });
+
+  // Fetch all drinks for selected menu (including inactive) for admin management
+  const { data: allDrinks, isLoading: allDrinksLoading } = useQuery<Drink[]>({
+    queryKey: ["/api/drinks/all", selectedMenuId],
+    enabled: !!authStatus?.isAuthenticated && !!selectedMenuId,
+  });
+
+  // Update localDrinks when allDrinks changes
+  useEffect(() => {
+    if (allDrinks) {
+      setLocalDrinks(allDrinks);
+    }
+  }, [allDrinks]);
+
+  // Reorder drinks mutation
+  const reorderDrinksMutation = useMutation({
+    mutationFn: async (drinks: Array<{ id: string; sortOrder: number }>) => {
+      return await apiRequest("/api/drinks/reorder", {
+        method: "PATCH",
+        body: JSON.stringify({ drinks }),
+        headers: { "Content-Type": "application/json" },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/drinks/all", selectedMenuId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/drinks", selectedMenuId] });
+      toast({
+        title: "Drinks reordered",
+        description: "Drink order has been updated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to reorder drinks",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Bulk delete drinks mutation
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (drinkIds: string[]) => {
+      return await apiRequest("/api/drinks/bulk", {
+        method: "DELETE",
+        body: JSON.stringify({ drinkIds }),
+        headers: { "Content-Type": "application/json" },
+      });
+    },
+    onSuccess: () => {
+      setSelectedDrinks(new Set());
+      queryClient.invalidateQueries({ queryKey: ["/api/drinks/all", selectedMenuId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/drinks", selectedMenuId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics"] });
+      toast({
+        title: "Drinks deleted",
+        description: "Selected drinks have been deleted successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete drinks",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Bulk update drinks mutation (activate/deactivate)
+  const bulkUpdateMutation = useMutation({
+    mutationFn: async ({ drinkIds, isActive }: { drinkIds: string[]; isActive: boolean }) => {
+      return await apiRequest("/api/drinks/bulk", {
+        method: "PATCH",
+        body: JSON.stringify({ drinkIds, isActive }),
+        headers: { "Content-Type": "application/json" },
+      });
+    },
+    onSuccess: () => {
+      setSelectedDrinks(new Set());
+      queryClient.invalidateQueries({ queryKey: ["/api/drinks/all", selectedMenuId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/drinks", selectedMenuId] });
+      toast({
+        title: "Drinks updated",
+        description: "Selected drinks have been updated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update drinks",
+        variant: "destructive",
+      });
+    },
+  });
+
   const createDrinkMutation = useMutation({
     mutationFn: async (drinkData: typeof newDrink) => {
       // Ensure sortOrder is a number
@@ -288,6 +383,101 @@ export default function Dashboard() {
         return <Badge variant="secondary">{status}</Badge>;
     }
   };
+
+  // Handle drag end for reordering drinks
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (over && active.id !== over.id) {
+      const oldIndex = localDrinks.findIndex(d => d.id === active.id);
+      const newIndex = localDrinks.findIndex(d => d.id === over.id);
+      
+      const reordered = arrayMove(localDrinks, oldIndex, newIndex);
+      setLocalDrinks(reordered);
+      
+      // Update sort order based on new positions
+      const updates = reordered.map((drink, index) => ({
+        id: drink.id,
+        sortOrder: index,
+      }));
+      
+      reorderDrinksMutation.mutate(updates);
+    }
+  };
+
+  // Toggle drink selection
+  const toggleDrinkSelection = (drinkId: string) => {
+    const newSelection = new Set(selectedDrinks);
+    if (newSelection.has(drinkId)) {
+      newSelection.delete(drinkId);
+    } else {
+      newSelection.add(drinkId);
+    }
+    setSelectedDrinks(newSelection);
+  };
+
+  // Select all or deselect all
+  const toggleSelectAll = () => {
+    if (selectedDrinks.size === localDrinks.length) {
+      setSelectedDrinks(new Set());
+    } else {
+      setSelectedDrinks(new Set(localDrinks.map(d => d.id)));
+    }
+  };
+
+  // Sortable Drink Item Component
+  function SortableDrinkItem({ drink }: { drink: Drink }) {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+    } = useSortable({ id: drink.id });
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.5 : 1,
+    };
+
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        className="flex items-center gap-3 p-3 border rounded-md bg-card"
+        data-testid={`drink-item-${drink.id}`}
+      >
+        <Checkbox
+          checked={selectedDrinks.has(drink.id)}
+          onCheckedChange={() => toggleDrinkSelection(drink.id)}
+          data-testid={`checkbox-drink-${drink.id}`}
+        />
+        <div
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing p-1 hover-elevate rounded"
+        >
+          <GripVertical className="w-5 h-5 text-muted-foreground" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="font-medium truncate">{drink.name}</p>
+            {!drink.isActive && (
+              <Badge variant="secondary" className="text-xs">Inactive</Badge>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground truncate">
+            {drink.section} • {drink.style || "No style"}
+          </p>
+        </div>
+        <div className="text-sm text-muted-foreground">
+          Order: {drink.sortOrder}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -785,6 +975,154 @@ export default function Dashboard() {
                     This QR code links to your home page where guests can see all active menus
                   </p>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Manage Drinks Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-xl">Manage Drinks</CardTitle>
+                <CardDescription>
+                  Reorder drinks, activate/deactivate, or bulk delete
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Menu Selector */}
+                <div className="space-y-2">
+                  <Label htmlFor="manage-menu">Select Menu</Label>
+                  <Select
+                    value={selectedMenuId}
+                    onValueChange={(value) => {
+                      setSelectedMenuId(value);
+                      setSelectedDrinks(new Set());
+                    }}
+                    disabled={menusLoading || !menus || menus.length === 0}
+                  >
+                    <SelectTrigger id="manage-menu" data-testid="select-manage-menu">
+                      <SelectValue placeholder="Choose a menu to manage" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {menus?.map((menu) => (
+                        <SelectItem key={menu.id} value={menu.id}>
+                          {menu.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {selectedMenuId && (
+                  <>
+                    {/* Bulk Actions Bar */}
+                    {localDrinks.length > 0 && (
+                      <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/20">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={toggleSelectAll}
+                          data-testid="button-toggle-select-all"
+                        >
+                          {selectedDrinks.size === localDrinks.length ? "Deselect All" : "Select All"}
+                        </Button>
+                        
+                        {selectedDrinks.size > 0 && (
+                          <>
+                            <div className="text-sm text-muted-foreground">
+                              {selectedDrinks.size} selected
+                            </div>
+                            <div className="flex-1" />
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                bulkUpdateMutation.mutate({
+                                  drinkIds: Array.from(selectedDrinks),
+                                  isActive: true,
+                                });
+                              }}
+                              disabled={bulkUpdateMutation.isPending}
+                              data-testid="button-bulk-activate"
+                            >
+                              <CheckCircle2 className="w-4 h-4 mr-1" />
+                              Activate
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                bulkUpdateMutation.mutate({
+                                  drinkIds: Array.from(selectedDrinks),
+                                  isActive: false,
+                                });
+                              }}
+                              disabled={bulkUpdateMutation.isPending}
+                              data-testid="button-bulk-deactivate"
+                            >
+                              <AlertCircle className="w-4 h-4 mr-1" />
+                              Deactivate
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => {
+                                if (confirm(`Delete ${selectedDrinks.size} drink(s)? This cannot be undone.`)) {
+                                  bulkDeleteMutation.mutate(Array.from(selectedDrinks));
+                                }
+                              }}
+                              disabled={bulkDeleteMutation.isPending}
+                              data-testid="button-bulk-delete"
+                            >
+                              <Trash2 className="w-4 h-4 mr-1" />
+                              Delete
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Drinks List with Drag and Drop */}
+                    {allDrinksLoading ? (
+                      <div className="space-y-3">
+                        {[1, 2, 3].map((i) => (
+                          <Skeleton key={i} className="h-16 w-full" />
+                        ))}
+                      </div>
+                    ) : localDrinks.length > 0 ? (
+                      <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={handleDragEnd}
+                      >
+                        <SortableContext
+                          items={localDrinks.map(d => d.id)}
+                          strategy={verticalListSortingStrategy}
+                        >
+                          <div className="space-y-2" data-testid="drinks-list">
+                            {localDrinks.map((drink) => (
+                              <SortableDrinkItem key={drink.id} drink={drink} />
+                            ))}
+                          </div>
+                        </SortableContext>
+                      </DndContext>
+                    ) : (
+                      <p className="text-muted-foreground text-center py-8">
+                        No drinks in this menu. Create drinks below!
+                      </p>
+                    )}
+                  </>
+                )}
+
+                {!selectedMenuId && !menusLoading && menus && menus.length > 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    Select a menu to manage its drinks
+                  </p>
+                )}
+
+                {!menus || menus.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    Create a menu first before managing drinks
+                  </p>
+                ) : null}
               </CardContent>
             </Card>
 
