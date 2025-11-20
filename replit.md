@@ -51,8 +51,12 @@ Preferred communication style: Simple, everyday language.
 - `GET /api/menus/:slug` - Get specific menu by slug
 - `POST /api/menus` - Create new menu
 - `PATCH /api/menus/:id` - Update menu (body: {isActive})
-- `GET /api/drinks?menuId=xxx` - Get drinks for a menu (query parameter)
+- `GET /api/drinks?menuId=xxx` - Get active drinks for a menu (query parameter)
+- `GET /api/drinks/all?menuId=xxx` - Get ALL drinks for a menu including inactive (for admin)
 - `POST /api/drinks` - Create new drink
+- `PATCH /api/drinks/reorder` - Reorder drinks (body: {drinks: [{id, sortOrder}]})
+- `DELETE /api/drinks/bulk` - Bulk delete drinks (body: {drinkIds: string[]})
+- `PATCH /api/drinks/bulk` - Bulk update drinks active status (body: {drinkIds: string[], isActive: boolean})
 - `POST /api/orders` - Place drink order (body: {drinkId, menuId, guestName?})
 - `GET /api/orders/queue` - Get pending orders with drink details and recipes
 - `PATCH /api/orders/:id` - Update order status (body: {status})
@@ -125,6 +129,14 @@ Currently not implemented - the application operates in an open access model sui
 **Carousel/Slider:**
 - embla-carousel-react - Touch-friendly carousel component
 
+**QR Code Generation:**
+- qrcode.react - QR code generation for menus and landing page
+
+**Drag-and-Drop:**
+- @dnd-kit/core - Core drag-and-drop functionality
+- @dnd-kit/sortable - Sortable list implementation
+- @dnd-kit/utilities - Utility functions for drag-and-drop
+
 **Date Utilities:**
 - date-fns - Date manipulation and formatting
 
@@ -177,9 +189,23 @@ Currently not implemented - the application operates in an open access model sui
 - **Admin Controls** (Admin tab):
   - Create new menus with react-hook-form + zodResolver validation (name, slug, description fields)
   - Toggle menu active/inactive status with switches
+  - QR code generation for each menu (dialog with enlarged QR code and URL)
+  - QR code for home page showing all active menus
   - Create new drinks with full form (menu, name, section, style, description, recipe, base spirit, mocktail/stirred/shaken flags, sort order)
   - Real-time menu list showing active/inactive status
   - All drink fields validated and schema-compliant
+- **Manage Drinks Section** (Admin tab):
+  - Menu selector to choose which menu's drinks to manage
+  - Displays all drinks (both active and inactive) for selected menu
+  - Drag-and-drop reordering using @dnd-kit with visual feedback
+  - Bulk selection with checkboxes for each drink
+  - Select All / Deselect All functionality
+  - Bulk activate operation - activate multiple drinks at once
+  - Bulk deactivate operation - deactivate multiple drinks at once
+  - Bulk delete operation with confirmation dialog
+  - Visual indicators for inactive drinks (badge display)
+  - Real-time updates after all operations with query invalidation
+  - Optimistic UI updates for smooth user experience
 - **Analytics System**:
   - Counts all non-cancelled orders (requested, in_progress, served)
   - Never Made filter shows drinks with orderCount === 0
@@ -211,3 +237,9 @@ Currently not implemented - the application operates in an open access model sui
 - Menu creation uses react-hook-form + zodResolver for robust validation following project guidelines
 - Drink creation uses manual state management (could be migrated to react-hook-form in future)
 - Queue now displays drink recipe/instructions instead of section for bartender reference
+- QR codes use QRCodeSVG component with high error correction level (H)
+- Drag-and-drop uses @dnd-kit with closestCenter collision detection
+- Bulk operations clear selections after completion for better UX
+- Manage Drinks fetches ALL drinks (active + inactive) via separate endpoint
+- Query invalidation ensures UI stays in sync after all mutations
+- Optimistic updates for drag-and-drop provide immediate visual feedback

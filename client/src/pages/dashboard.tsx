@@ -202,26 +202,33 @@ export default function Dashboard() {
   // Fetch all drinks for selected menu (including inactive) for admin management
   const { data: allDrinks, isLoading: allDrinksLoading } = useQuery<Drink[]>({
     queryKey: ["/api/drinks/all", selectedMenuId],
+    queryFn: async () => {
+      if (!selectedMenuId) return [];
+      const response = await fetch(`/api/drinks/all?menuId=${selectedMenuId}`);
+      if (!response.ok) throw new Error("Failed to fetch drinks");
+      return response.json();
+    },
     enabled: !!authStatus?.isAuthenticated && !!selectedMenuId,
   });
 
-  // Update localDrinks when allDrinks changes
+  // Update localDrinks when allDrinks changes or when selectedMenuId changes
   useEffect(() => {
     if (allDrinks) {
       setLocalDrinks(allDrinks);
+    } else if (selectedMenuId) {
+      // Clear local drinks when menu changes but data hasn't loaded yet
+      setLocalDrinks([]);
     }
-  }, [allDrinks]);
+  }, [allDrinks, selectedMenuId]);
 
   // Reorder drinks mutation
   const reorderDrinksMutation = useMutation({
     mutationFn: async (drinks: Array<{ id: string; sortOrder: number }>) => {
-      return await apiRequest("/api/drinks/reorder", {
-        method: "PATCH",
-        body: JSON.stringify({ drinks }),
-        headers: { "Content-Type": "application/json" },
-      });
+      console.log("Reorder mutation called with:", drinks);
+      return await apiRequest("PATCH", "/api/drinks/reorder", { drinks });
     },
     onSuccess: () => {
+      console.log("Reorder mutation success");
       queryClient.invalidateQueries({ queryKey: ["/api/drinks/all", selectedMenuId] });
       queryClient.invalidateQueries({ queryKey: ["/api/drinks", selectedMenuId] });
       toast({
@@ -229,23 +236,22 @@ export default function Dashboard() {
         description: "Drink order has been updated successfully",
       });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error("Reorder mutation error:", error);
       toast({
         title: "Error",
-        description: "Failed to reorder drinks",
+        description: `Failed to reorder drinks: ${error.message}`,
         variant: "destructive",
       });
+      // Revert optimistic update on error
+      queryClient.invalidateQueries({ queryKey: ["/api/drinks/all", selectedMenuId] });
     },
   });
 
   // Bulk delete drinks mutation
   const bulkDeleteMutation = useMutation({
     mutationFn: async (drinkIds: string[]) => {
-      return await apiRequest("/api/drinks/bulk", {
-        method: "DELETE",
-        body: JSON.stringify({ drinkIds }),
-        headers: { "Content-Type": "application/json" },
-      });
+      return await apiRequest("DELETE", "/api/drinks/bulk", { drinkIds });
     },
     onSuccess: () => {
       setSelectedDrinks(new Set());
@@ -269,11 +275,7 @@ export default function Dashboard() {
   // Bulk update drinks mutation (activate/deactivate)
   const bulkUpdateMutation = useMutation({
     mutationFn: async ({ drinkIds, isActive }: { drinkIds: string[]; isActive: boolean }) => {
-      return await apiRequest("/api/drinks/bulk", {
-        method: "PATCH",
-        body: JSON.stringify({ drinkIds, isActive }),
-        headers: { "Content-Type": "application/json" },
-      });
+      return await apiRequest("PATCH", "/api/drinks/bulk", { drinkIds, isActive });
     },
     onSuccess: () => {
       setSelectedDrinks(new Set());
@@ -304,6 +306,7 @@ export default function Dashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/drinks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/drinks/all"] });
       setNewDrink({
         menuId: "",
         name: "",
@@ -388,21 +391,31 @@ export default function Dashboard() {
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     
-    if (over && active.id !== over.id) {
-      const oldIndex = localDrinks.findIndex(d => d.id === active.id);
-      const newIndex = localDrinks.findIndex(d => d.id === over.id);
-      
-      const reordered = arrayMove(localDrinks, oldIndex, newIndex);
-      setLocalDrinks(reordered);
-      
-      // Update sort order based on new positions
-      const updates = reordered.map((drink, index) => ({
-        id: drink.id,
-        sortOrder: index,
-      }));
-      
-      reorderDrinksMutation.mutate(updates);
+    if (!over || active.id === over.id) {
+      return; // No change in position
     }
+    
+    const oldIndex = localDrinks.findIndex(d => d.id === active.id);
+    const newIndex = localDrinks.findIndex(d => d.id === over.id);
+    
+    if (oldIndex === -1 || newIndex === -1) {
+      console.error("Could not find drink indices for reorder");
+      return;
+    }
+    
+    const reordered = arrayMove(localDrinks, oldIndex, newIndex);
+    
+    // Update sort order based on new positions
+    const updates = reordered.map((drink, index) => ({
+      id: drink.id,
+      sortOrder: index,
+    }));
+    
+    // Optimistically update UI
+    setLocalDrinks(reordered);
+    
+    // Call mutation to persist to backend
+    reorderDrinksMutation.mutate(updates);
   };
 
   // Toggle drink selection
@@ -995,6 +1008,7 @@ export default function Dashboard() {
                     onValueChange={(value) => {
                       setSelectedMenuId(value);
                       setSelectedDrinks(new Set());
+                      setLocalDrinks([]);
                     }}
                     disabled={menusLoading || !menus || menus.length === 0}
                   >
