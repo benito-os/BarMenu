@@ -137,15 +137,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "status is required" });
       }
       
+      // Get current order to validate transition
+      const currentOrder = await storage.getOrderById(id);
+      if (!currentOrder) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+      
+      // Validate status transitions to enforce workflow
+      const validTransitions: Record<string, string[]> = {
+        "requested": ["in_progress", "cancelled"],
+        "in_progress": ["served", "cancelled"],
+        "served": [], // Final state
+        "cancelled": [], // Final state
+      };
+      
+      const allowedStatuses = validTransitions[currentOrder.status] || [];
+      if (!allowedStatuses.includes(status)) {
+        return res.status(400).json({ 
+          error: `Invalid status transition from ${currentOrder.status} to ${status}`,
+          allowedTransitions: allowedStatuses
+        });
+      }
+      
       const order = await storage.updateOrderStatus(
         id, 
         status, 
         status === "served" ? new Date() : undefined
       );
-      
-      if (!order) {
-        return res.status(404).json({ error: "Order not found" });
-      }
       
       res.json(order);
     } catch (error) {

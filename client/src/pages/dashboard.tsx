@@ -186,31 +186,28 @@ export default function Dashboard() {
                               {getStatusBadge(order.status)}
                             </TableCell>
                             <TableCell className="text-right">
-                              <div className="flex gap-2 justify-end">
-                                {order.status === "requested" && (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => inProgressMutation.mutate(order.id)}
-                                    disabled={inProgressMutation.isPending}
-                                    data-testid={`button-in-progress-${order.id}`}
-                                  >
-                                    <Clock className="w-4 h-4 mr-2" />
-                                    Start Preparing
-                                  </Button>
-                                )}
-                                {(order.status === "requested" || order.status === "in_progress") && (
-                                  <Button
-                                    size="sm"
-                                    onClick={() => serveMutation.mutate(order.id)}
-                                    disabled={serveMutation.isPending}
-                                    data-testid={`button-serve-${order.id}`}
-                                  >
-                                    <CheckCircle2 className="w-4 h-4 mr-2" />
-                                    Mark Served
-                                  </Button>
-                                )}
-                              </div>
+                              {order.status === "requested" && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => inProgressMutation.mutate(order.id)}
+                                  disabled={inProgressMutation.isPending}
+                                  data-testid={`button-in-progress-${order.id}`}
+                                >
+                                  <Clock className="w-4 h-4 mr-2" />
+                                  Start Preparing
+                                </Button>
+                              )}
+                              {order.status === "in_progress" && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => serveMutation.mutate(order.id)}
+                                  disabled={serveMutation.isPending}
+                                  data-testid={`button-serve-${order.id}`}
+                                >
+                                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                                  Mark Served
+                                </Button>
+                              )}
                             </TableCell>
                           </TableRow>
                         ))}
