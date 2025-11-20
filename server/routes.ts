@@ -93,6 +93,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // PATCH /api/menus/:id - Update menu (e.g., toggle active status)
+  app.patch("/api/menus/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { isActive } = req.body;
+      
+      if (typeof isActive !== "boolean") {
+        return res.status(400).json({ error: "isActive must be a boolean" });
+      }
+      
+      const menu = await storage.updateMenu(id, { isActive });
+      if (!menu) {
+        return res.status(404).json({ error: "Menu not found" });
+      }
+      res.json(menu);
+    } catch (error) {
+      console.error("Error updating menu:", error);
+      res.status(500).json({ error: "Failed to update menu" });
+    }
+  });
+
   // GET /api/drinks?menuId=xxx - Get drinks by menu ID
   app.get("/api/drinks", async (req, res) => {
     try {

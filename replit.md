@@ -50,12 +50,16 @@ Preferred communication style: Simple, everyday language.
 - `GET /api/menus` - Retrieve all menus
 - `GET /api/menus/:slug` - Get specific menu by slug
 - `POST /api/menus` - Create new menu
+- `PATCH /api/menus/:id` - Update menu (body: {isActive})
 - `GET /api/drinks?menuId=xxx` - Get drinks for a menu (query parameter)
 - `POST /api/drinks` - Create new drink
-- `POST /api/orders` - Place drink order (body: {drinkId, menuId})
-- `GET /api/orders/queue` - Get pending orders with drink details
+- `POST /api/orders` - Place drink order (body: {drinkId, menuId, guestName?})
+- `GET /api/orders/queue` - Get pending orders with drink details and recipes
 - `PATCH /api/orders/:id` - Update order status (body: {status})
 - `GET /api/analytics` - Get drink popularity analytics with counts
+- `POST /api/auth/login` - Dashboard login (body: {username, password})
+- `POST /api/auth/logout` - Logout and destroy session
+- `GET /api/auth/check` - Check authentication status
 
 **Data Layer:**
 - Storage abstraction through IStorage interface for flexibility
@@ -158,16 +162,23 @@ Currently not implemented - the application operates in an open access model sui
   - Enforced workflow prevents skipping steps (frontend UI + backend validation)
   - Queue displays both requested and in-progress orders
 - **Dashboard Authentication**:
-  - Password-protected dashboard at /dashboard-login
+  - Username + password authentication (username must be "admin")
   - Session-based authentication with express-session
   - Default password: "barflores2025" (configurable via DASHBOARD_PASSWORD env var)
   - Logout functionality with session destruction
   - Protected routes redirect to login when not authenticated
+  - Login redirect timing fix with 100ms delay to ensure session establishment
 - **Host Dashboard**: 
-  - Live queue tab with auto-refresh every 5 seconds
+  - Live queue tab with auto-refresh every 5 seconds showing drink recipes/instructions
   - Analytics tab with auto-refresh every 10 seconds
+  - Admin tab for menu and drink management
   - Three filter modes: All Drinks, Never Made, Least Ordered
   - Logout button in header
+- **Admin Controls** (Admin tab):
+  - Create new menus with name, slug, and description
+  - Toggle menu active/inactive status with switches
+  - Create new drinks with full form (menu, name, section, style, description, recipe, preparation method, base spirit, flags, sort order)
+  - Real-time menu list showing active/inactive status
 - **Analytics System**:
   - Counts all non-cancelled orders (requested, in_progress, served)
   - Never Made filter shows drinks with orderCount === 0
