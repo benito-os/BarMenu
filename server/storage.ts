@@ -26,6 +26,9 @@ export interface IStorage {
   getDrinksByMenuId(menuId: string): Promise<Drink[]>;
   getDrinkById(id: string): Promise<Drink | undefined>;
   createDrink(drink: InsertDrink): Promise<Drink>;
+  reorderDrinks(drinks: Array<{ id: string; sortOrder: number }>): Promise<void>;
+  bulkDeleteDrinks(drinkIds: string[]): Promise<void>;
+  bulkUpdateDrinks(drinkIds: string[], isActive: boolean): Promise<void>;
   
   // Order operations
   createOrder(order: InsertOrder): Promise<Order>;
@@ -75,6 +78,21 @@ export class DatabaseStorage implements IStorage {
     return drink;
   }
 
+  async reorderDrinks(drinksToUpdate: Array<{ id: string; sortOrder: number }>): Promise<void> {
+    // Update each drink's sortOrder in a transaction
+    for (const { id, sortOrder } of drinksToUpdate) {
+      await db.update(drinks).set({ sortOrder }).where(eq(drinks.id, id));
+    }
+  }
+
+  async bulkDeleteDrinks(drinkIds: string[]): Promise<void> {
+    await db.delete(drinks).where(inArray(drinks.id, drinkIds));
+  }
+
+  async bulkUpdateDrinks(drinkIds: string[], isActive: boolean): Promise<void> {
+    await db.update(drinks).set({ isActive }).where(inArray(drinks.id, drinkIds));
+  }
+
   async createOrder(insertOrder: InsertOrder): Promise<Order> {
     const [order] = await db.insert(orders).values(insertOrder).returning();
     return order;
@@ -104,7 +122,11 @@ export class DatabaseStorage implements IStorage {
       .where(inArray(orders.status, ["requested", "in_progress"]))
       .orderBy(orders.requestedAt);
 
-    return results;
+    // Map to ensure drinkRecipe is never null (provide fallback)
+    return results.map(r => ({
+      ...r,
+      drinkRecipe: r.drinkRecipe || "-",
+    }));
   }
 
   async updateOrderStatus(id: string, status: string, completedAt?: Date): Promise<Order | undefined> {

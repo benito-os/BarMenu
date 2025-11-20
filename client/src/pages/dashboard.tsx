@@ -24,14 +24,44 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { QRCodeSVG } from "qrcode.react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { GripVertical, Trash2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function Dashboard() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [filterMode, setFilterMode] = useState<"all" | "never-made" | "least-ordered">("all");
+  const [selectedMenuId, setSelectedMenuId] = useState<string>("");
+  const [selectedDrinks, setSelectedDrinks] = useState<Set<string>>(new Set());
+  const [localDrinks, setLocalDrinks] = useState<Drink[]>([]);
   
   // Get base URL for QR codes
   const baseUrl = window.location.origin;
+  
+  // Sensors for drag and drop
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // Check authentication
   const { data: authStatus, isLoading: authLoading } = useQuery<{ isAuthenticated: boolean }>({

@@ -163,6 +163,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // PATCH /api/drinks/reorder - Update drink sort orders
+  app.patch("/api/drinks/reorder", async (req, res) => {
+    try {
+      const { drinks } = req.body; // Array of { id, sortOrder }
+      
+      if (!Array.isArray(drinks)) {
+        return res.status(400).json({ error: "drinks must be an array" });
+      }
+      
+      await storage.reorderDrinks(drinks);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error reordering drinks:", error);
+      res.status(500).json({ error: "Failed to reorder drinks" });
+    }
+  });
+
+  // DELETE /api/drinks/bulk - Bulk delete drinks
+  app.delete("/api/drinks/bulk", async (req, res) => {
+    try {
+      const { drinkIds } = req.body;
+      
+      if (!Array.isArray(drinkIds) || drinkIds.length === 0) {
+        return res.status(400).json({ error: "drinkIds must be a non-empty array" });
+      }
+      
+      await storage.bulkDeleteDrinks(drinkIds);
+      res.json({ success: true, deleted: drinkIds.length });
+    } catch (error) {
+      console.error("Error bulk deleting drinks:", error);
+      res.status(500).json({ error: "Failed to delete drinks" });
+    }
+  });
+
+  // PATCH /api/drinks/bulk - Bulk update drinks (activate/deactivate)
+  app.patch("/api/drinks/bulk", async (req, res) => {
+    try {
+      const { drinkIds, isActive } = req.body;
+      
+      if (!Array.isArray(drinkIds) || drinkIds.length === 0) {
+        return res.status(400).json({ error: "drinkIds must be a non-empty array" });
+      }
+      
+      if (typeof isActive !== "boolean") {
+        return res.status(400).json({ error: "isActive must be a boolean" });
+      }
+      
+      await storage.bulkUpdateDrinks(drinkIds, isActive);
+      res.json({ success: true, updated: drinkIds.length });
+    } catch (error) {
+      console.error("Error bulk updating drinks:", error);
+      res.status(500).json({ error: "Failed to update drinks" });
+    }
+  });
+
   // POST /api/orders - Create new order (guest requests drink)
   app.post("/api/orders", async (req, res) => {
     try {
