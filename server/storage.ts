@@ -1,38 +1,135 @@
-import { type User, type InsertUser } from "@shared/schema";
-import { randomUUID } from "crypto";
-
-// modify the interface with any CRUD methods
-// you might need
+// Reference: blueprint:javascript_database
+import { 
+  type Menu, 
+  type InsertMenu,
+  type Drink,
+  type InsertDrink,
+  type Order,
+  type InsertOrder,
+  type DrinkAnalytics,
+  type OrderWithDrink,
+  menus,
+  drinks,
+  orders
+} from "@shared/schema";
+import { db } from "./db";
+import { eq, and, sql } from "drizzle-orm";
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  // Menu operations
+  getAllMenus(): Promise<Menu[]>;
+  getMenuBySlug(slug: string): Promise<Menu | undefined>;
+  createMenu(menu: InsertMenu): Promise<Menu>;
+  
+  // Drink operations
+  getDrinksByMenuId(menuId: string): Promise<Drink[]>;
+  getDrinkById(id: string): Promise<Drink | undefined>;
+  createDrink(drink: InsertDrink): Promise<Drink>;
+  
+  // Order operations
+  createOrder(order: InsertOrder): Promise<Order>;
+  getOrderQueue(): Promise<OrderWithDrink[]>;
+  updateOrderStatus(id: string, status: string, completedAt?: Date): Promise<Order | undefined>;
+  
+  // Analytics operations
+  getDrinkAnalytics(menuId?: string): Promise<DrinkAnalytics[]>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-
-  constructor() {
-    this.users = new Map();
+export class DatabaseStorage implements IStorage {
+  async getAllMenus(): Promise<Menu[]> {
+    return await db.select().from(menus).orderBy(sql`${menus.createdAt} DESC`);
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  async getMenuBySlug(slug: string): Promise<Menu | undefined> {
+    const [menu] = await db.select().from(menus).where(eq(menus.slug, slug));
+    return menu || undefined;
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+  async createMenu(insertMenu: InsertMenu): Promise<Menu> {
+    const [menu] = await db.insert(menus).values(insertMenu).returning();
+    return menu;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+  async getDrinksByMenuId(menuId: string): Promise<Drink[]> {
+    return await db
+      .select()
+      .from(drinks)
+      .where(and(eq(drinks.menuId, menuId), eq(drinks.isActive, true)))
+      .orderBy(drinks.section, drinks.sortOrder);
+  }
+
+  async getDrinkById(id: string): Promise<Drink | undefined> {
+    const [drink] = await db.select().from(drinks).where(eq(drinks.id, id));
+    return drink || undefined;
+  }
+
+  async createDrink(insertDrink: InsertDrink): Promise<Drink> {
+    const [drink] = await db.insert(drinks).values(insertDrink).returning();
+    return drink;
+  }
+
+  async createOrder(insertOrder: InsertOrder): Promise<Order> {
+    const [order] = await db.insert(orders).values(insertOrder).returning();
+    return order;
+  }
+
+  async getOrderQueue(): Promise<OrderWithDrink[]> {
+    const results = await db
+      .select({
+        id: orders.id,
+        drinkId: orders.drinkId,
+        menuId: orders.menuId,
+        status: orders.status,
+        requestedAt: orders.requestedAt,
+        completedAt: orders.completedAt,
+        drinkName: drinks.name,
+        drinkSection: drinks.section,
+      })
+      .from(orders)
+      .innerJoin(drinks, eq(orders.drinkId, drinks.id))
+      .where(eq(orders.status, "requested"))
+      .orderBy(orders.requestedAt);
+
+    return results;
+  }
+
+  async updateOrderStatus(id: string, status: string, completedAt?: Date): Promise<Order | undefined> {
+    const updateData: any = { status };
+    if (completedAt || status === "served") {
+      updateData.completedAt = completedAt || new Date();
+    }
+
+    const [order] = await db
+      .update(orders)
+      .set(updateData)
+      .where(eq(orders.id, id))
+      .returning();
+    
+    return order || undefined;
+  }
+
+  async getDrinkAnalytics(menuId?: string): Promise<DrinkAnalytics[]> {
+    const baseQuery = db
+      .select({
+        id: drinks.id,
+        name: drinks.name,
+        section: drinks.section,
+        menuId: drinks.menuId,
+        orderCount: sql<number>`CAST(COUNT(CASE WHEN ${orders.status} != 'cancelled' THEN ${orders.id} END) AS INTEGER)`,
+      })
+      .from(drinks)
+      .leftJoin(orders, eq(orders.drinkId, drinks.id))
+      .groupBy(drinks.id, drinks.name, drinks.section, drinks.menuId);
+
+    const results = menuId
+      ? await baseQuery.where(eq(drinks.menuId, menuId))
+      : await baseQuery;
+
+    return results.map(result => ({
+      ...result,
+      isNeverMade: result.orderCount === 0,
+    }));
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

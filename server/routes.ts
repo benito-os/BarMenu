@@ -1,15 +1,169 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { insertMenuSchema, insertDrinkSchema, insertOrderSchema } from "@shared/schema";
+import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // put application routes here
-  // prefix all routes with /api
+  // GET /api/menus - Get all menus
+  app.get("/api/menus", async (req, res) => {
+    try {
+      const menus = await storage.getAllMenus();
+      res.json(menus);
+    } catch (error) {
+      console.error("Error fetching menus:", error);
+      res.status(500).json({ error: "Failed to fetch menus" });
+    }
+  });
 
-  // use storage to perform CRUD operations on the storage interface
-  // e.g. storage.insertUser(user) or storage.getUserByUsername(username)
+  // GET /api/menus/:slug - Get menu by slug
+  app.get("/api/menus/:slug", async (req, res) => {
+    try {
+      const { slug } = req.params;
+      const menu = await storage.getMenuBySlug(slug);
+      
+      if (!menu) {
+        return res.status(404).json({ error: "Menu not found" });
+      }
+      
+      res.json(menu);
+    } catch (error) {
+      console.error("Error fetching menu:", error);
+      res.status(500).json({ error: "Failed to fetch menu" });
+    }
+  });
+
+  // POST /api/menus - Create new menu
+  app.post("/api/menus", async (req, res) => {
+    try {
+      const validatedData = insertMenuSchema.parse(req.body);
+      const menu = await storage.createMenu(validatedData);
+      res.status(201).json(menu);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid menu data", details: error.errors });
+      }
+      console.error("Error creating menu:", error);
+      res.status(500).json({ error: "Failed to create menu" });
+    }
+  });
+
+  // GET /api/drinks?menuId=xxx - Get drinks by menu ID
+  app.get("/api/drinks", async (req, res) => {
+    try {
+      const { menuId } = req.query;
+      
+      if (!menuId || typeof menuId !== "string") {
+        return res.status(400).json({ error: "menuId query parameter is required" });
+      }
+      
+      const drinks = await storage.getDrinksByMenuId(menuId);
+      res.json(drinks);
+    } catch (error) {
+      console.error("Error fetching drinks:", error);
+      res.status(500).json({ error: "Failed to fetch drinks" });
+    }
+  });
+
+  // GET /api/drinks/:id - Get drink by ID
+  app.get("/api/drinks/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const drink = await storage.getDrinkById(id);
+      
+      if (!drink) {
+        return res.status(404).json({ error: "Drink not found" });
+      }
+      
+      res.json(drink);
+    } catch (error) {
+      console.error("Error fetching drink:", error);
+      res.status(500).json({ error: "Failed to fetch drink" });
+    }
+  });
+
+  // POST /api/drinks - Create new drink
+  app.post("/api/drinks", async (req, res) => {
+    try {
+      const validatedData = insertDrinkSchema.parse(req.body);
+      const drink = await storage.createDrink(validatedData);
+      res.status(201).json(drink);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid drink data", details: error.errors });
+      }
+      console.error("Error creating drink:", error);
+      res.status(500).json({ error: "Failed to create drink" });
+    }
+  });
+
+  // POST /api/orders - Create new order (guest requests drink)
+  app.post("/api/orders", async (req, res) => {
+    try {
+      const validatedData = insertOrderSchema.parse(req.body);
+      const order = await storage.createOrder(validatedData);
+      res.status(201).json(order);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid order data", details: error.errors });
+      }
+      console.error("Error creating order:", error);
+      res.status(500).json({ error: "Failed to create order" });
+    }
+  });
+
+  // GET /api/orders/queue - Get live queue of pending orders
+  app.get("/api/orders/queue", async (req, res) => {
+    try {
+      const queue = await storage.getOrderQueue();
+      res.json(queue);
+    } catch (error) {
+      console.error("Error fetching order queue:", error);
+      res.status(500).json({ error: "Failed to fetch order queue" });
+    }
+  });
+
+  // PATCH /api/orders/:id - Update order status
+  app.patch("/api/orders/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      
+      if (!status || typeof status !== "string") {
+        return res.status(400).json({ error: "status is required" });
+      }
+      
+      const order = await storage.updateOrderStatus(
+        id, 
+        status, 
+        status === "served" ? new Date() : undefined
+      );
+      
+      if (!order) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+      
+      res.json(order);
+    } catch (error) {
+      console.error("Error updating order:", error);
+      res.status(500).json({ error: "Failed to update order" });
+    }
+  });
+
+  // GET /api/analytics - Get drink analytics
+  app.get("/api/analytics", async (req, res) => {
+    try {
+      const { menuId } = req.query;
+      const analytics = await storage.getDrinkAnalytics(
+        menuId && typeof menuId === "string" ? menuId : undefined
+      );
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching analytics:", error);
+      res.status(500).json({ error: "Failed to fetch analytics" });
+    }
+  });
 
   const httpServer = createServer(app);
-
   return httpServer;
 }
