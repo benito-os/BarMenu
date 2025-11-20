@@ -160,7 +160,7 @@ Currently not implemented - the application operates in an open access model sui
   - "Start Preparing" button for requested orders
   - "Mark Served" button for in-progress orders
   - Enforced workflow prevents skipping steps (frontend UI + backend validation)
-  - Queue displays both requested and in-progress orders
+  - Queue displays both requested and in-progress orders with drink recipes/instructions
 - **Dashboard Authentication**:
   - Username + password authentication (username must be "admin")
   - Session-based authentication with express-session
@@ -169,16 +169,17 @@ Currently not implemented - the application operates in an open access model sui
   - Protected routes redirect to login when not authenticated
   - Login redirect timing fix with 100ms delay to ensure session establishment
 - **Host Dashboard**: 
-  - Live queue tab with auto-refresh every 5 seconds showing drink recipes/instructions
+  - Live queue tab with auto-refresh every 5 seconds showing drink recipes/instructions for bartender reference
   - Analytics tab with auto-refresh every 10 seconds
   - Admin tab for menu and drink management
   - Three filter modes: All Drinks, Never Made, Least Ordered
   - Logout button in header
 - **Admin Controls** (Admin tab):
-  - Create new menus with name, slug, and description
+  - Create new menus with react-hook-form + zodResolver validation (name, slug, description fields)
   - Toggle menu active/inactive status with switches
-  - Create new drinks with full form (menu, name, section, style, description, recipe, preparation method, base spirit, flags, sort order)
+  - Create new drinks with full form (menu, name, section, style, description, recipe, base spirit, mocktail/stirred/shaken flags, sort order)
   - Real-time menu list showing active/inactive status
+  - All drink fields validated and schema-compliant
 - **Analytics System**:
   - Counts all non-cancelled orders (requested, in_progress, served)
   - Never Made filter shows drinks with orderCount === 0
@@ -193,6 +194,8 @@ Currently not implemented - the application operates in an open access model sui
 - Fixed analytics GROUP BY aggregation for accurate order counting
 - Fixed React hooks order to prevent "Rendered more hooks than during previous render" error
 - Corrected Express middleware order: body parsers before session middleware
+- Removed non-existent preparationMethod field from drink creation form
+- Added required isActive field to drink creation payload
 
 ### Technical Decisions
 - Analytics counts ALL non-cancelled orders to show total demand
@@ -205,3 +208,6 @@ Currently not implemented - the application operates in an open access model sui
 - Auto-refresh intervals: Queue 5s, Analytics 10s for real-time updates
 - Session-based auth with simple password for basic protection (not production-grade security)
 - Guest name capture is optional to reduce friction in ordering flow
+- Menu creation uses react-hook-form + zodResolver for robust validation following project guidelines
+- Drink creation uses manual state management (could be migrated to react-hook-form in future)
+- Queue now displays drink recipe/instructions instead of section for bartender reference
