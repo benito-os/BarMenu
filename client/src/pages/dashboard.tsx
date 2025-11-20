@@ -54,7 +54,7 @@ export default function Dashboard() {
     },
     onSuccess: () => {
       queryClient.clear();
-      setLocation("/dashboard-login");
+      setLocation("/dashboard/login");
       toast({
         title: "Logged Out",
         description: "You have been logged out successfully",
@@ -205,7 +205,7 @@ export default function Dashboard() {
   // Redirect to login if not authenticated (after all hooks are called)
   useEffect(() => {
     if (!authLoading && !authStatus?.isAuthenticated) {
-      setLocation("/dashboard-login");
+      setLocation("/dashboard/login");
     }
   }, [authStatus, authLoading, setLocation]);
 
