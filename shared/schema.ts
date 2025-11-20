@@ -79,5 +79,6 @@ export type DrinkAnalytics = {
 export type OrderWithDrink = Order & {
   drinkName: string;
   drinkSection: string;
+  drinkRecipe: string;
   guestName?: string;
 };

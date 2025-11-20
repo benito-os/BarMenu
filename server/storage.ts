@@ -91,6 +91,7 @@ export class DatabaseStorage implements IStorage {
         completedAt: orders.completedAt,
         drinkName: drinks.name,
         drinkSection: drinks.section,
+        drinkRecipe: drinks.recipe,
       })
       .from(orders)
       .innerJoin(drinks, eq(orders.drinkId, drinks.id))

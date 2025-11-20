@@ -206,7 +206,7 @@ export default function Dashboard() {
                           <TableHead>Time</TableHead>
                           <TableHead>Guest</TableHead>
                           <TableHead>Drink</TableHead>
-                          <TableHead>Section</TableHead>
+                          <TableHead>Instructions</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
@@ -226,8 +226,8 @@ export default function Dashboard() {
                             <TableCell className="font-serif">
                               {order.drinkName}
                             </TableCell>
-                            <TableCell className="text-muted-foreground">
-                              {order.drinkSection}
+                            <TableCell className="text-sm max-w-md">
+                              {order.drinkRecipe}
                             </TableCell>
                             <TableCell>
                               {getStatusBadge(order.status)}

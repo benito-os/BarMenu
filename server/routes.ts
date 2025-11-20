@@ -11,17 +11,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/auth/login - Dashboard login
   app.post("/api/auth/login", async (req, res) => {
     try {
-      const { password } = req.body;
+      const { username, password } = req.body;
       
-      if (!password) {
-        return res.status(400).json({ error: "Password is required" });
+      if (!username || !password) {
+        return res.status(400).json({ error: "Username and password are required" });
+      }
+      
+      // Only allow "admin" username
+      if (username !== "admin") {
+        return res.status(401).json({ error: "Invalid credentials" });
       }
       
       if (password === DASHBOARD_PASSWORD) {
         req.session.isAuthenticated = true;
         res.json({ success: true });
       } else {
-        res.status(401).json({ error: "Invalid password" });
+        res.status(401).json({ error: "Invalid credentials" });
       }
     } catch (error) {
       console.error("Error during login:", error);

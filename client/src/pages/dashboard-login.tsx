@@ -9,20 +9,24 @@ import { useToast } from "@/hooks/use-toast";
 import { Lock } from "lucide-react";
 
 export default function DashboardLogin() {
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
   const loginMutation = useMutation({
-    mutationFn: async (password: string) => {
-      return apiRequest("POST", "/api/auth/login", { password });
+    mutationFn: async ({ username, password }: { username: string; password: string }) => {
+      return apiRequest("POST", "/api/auth/login", { username, password });
     },
     onSuccess: () => {
       toast({
         title: "Login Successful",
         description: "Welcome to the dashboard",
       });
-      setLocation("/dashboard");
+      // Small delay to ensure session is established
+      setTimeout(() => {
+        setLocation("/dashboard");
+      }, 100);
     },
     onError: (error: any) => {
       toast({
@@ -35,8 +39,8 @@ export default function DashboardLogin() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password) {
-      loginMutation.mutate(password);
+    if (username && password) {
+      loginMutation.mutate({ username, password });
     }
   };
 
@@ -53,6 +57,21 @@ export default function DashboardLogin() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
+              <label htmlFor="username" className="text-sm font-medium">
+                Username
+              </label>
+              <Input
+                id="username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Enter username"
+                autoFocus
+                disabled={loginMutation.isPending}
+                data-testid="input-username"
+              />
+            </div>
+            <div className="space-y-2">
               <label htmlFor="password" className="text-sm font-medium">
                 Password
               </label>
@@ -61,8 +80,7 @@ export default function DashboardLogin() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter dashboard password"
-                autoFocus
+                placeholder="Enter password"
                 disabled={loginMutation.isPending}
                 data-testid="input-password"
               />
@@ -70,7 +88,7 @@ export default function DashboardLogin() {
             <Button
               type="submit"
               className="w-full"
-              disabled={loginMutation.isPending || !password}
+              disabled={loginMutation.isPending || !username || !password}
               data-testid="button-login"
             >
               {loginMutation.isPending ? "Logging in..." : "Login"}
