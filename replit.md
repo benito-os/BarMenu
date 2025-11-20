@@ -146,17 +146,33 @@ Currently not implemented - the application operates in an open access model sui
 ### Completed Features
 - **Database Schema**: Implemented 3-table PostgreSQL schema (menus, drinks, orders) with full referential integrity
 - **Seeded Data**: Added NYE 2025 menu (8 drinks, active) and Baltimore Spring menu (3 drinks, inactive)
+- **Guest Name Capture**: 
+  - Optional guest name field in order dialog
+  - Captured names display in dashboard queue
+  - Enhanced hospitality experience with personalized service
 - **Guest Ordering Flow**: Complete ordering system with real-time feedback and status tracking
+- **Order Status Workflow**:
+  - Three-state progression: requested → in_progress → served
+  - "Start Preparing" button for requested orders
+  - "Mark Served" button for in-progress orders
+  - Enforced workflow prevents skipping steps (frontend UI + backend validation)
+  - Queue displays both requested and in-progress orders
+- **Dashboard Authentication**:
+  - Password-protected dashboard at /dashboard-login
+  - Session-based authentication with express-session
+  - Default password: "barflores2025" (configurable via DASHBOARD_PASSWORD env var)
+  - Logout functionality with session destruction
+  - Protected routes redirect to login when not authenticated
 - **Host Dashboard**: 
   - Live queue tab with auto-refresh every 5 seconds
   - Analytics tab with auto-refresh every 10 seconds
   - Three filter modes: All Drinks, Never Made, Least Ordered
+  - Logout button in header
 - **Analytics System**:
   - Counts all non-cancelled orders (requested, in_progress, served)
   - Never Made filter shows drinks with orderCount === 0
   - Least Ordered filter shows bottom 25% (minimum 1 drink) sorted ascending
   - Bar chart visualization of drink popularity
-- **Mark as Served**: One-click workflow to update order status and remove from queue
 - **Premium Design**: Playfair Display + Inter fonts, hero image, sophisticated color scheme
 
 ### Bug Fixes
@@ -164,9 +180,17 @@ Currently not implemented - the application operates in an open access model sui
 - Corrected drinks API query from path parameter to query parameter format
 - Improved Least Ordered filter to guarantee at least 1 result in all scenarios
 - Fixed analytics GROUP BY aggregation for accurate order counting
+- Fixed React hooks order to prevent "Rendered more hooks than during previous render" error
+- Corrected Express middleware order: body parsers before session middleware
 
 ### Technical Decisions
 - Analytics counts ALL non-cancelled orders to show total demand
 - Least Ordered uses ascending sort and takes bottom 25% (min 1 drink)
-- Manual workflow: hosts explicitly mark drinks as served via dashboard buttons
+- Order workflow: requested → in_progress → served (enforced both frontend and backend)
+- Backend validates status transitions to prevent invalid progressions
+- Frontend uses enabled flag on useQuery to conditionally fetch data when authenticated
+- All React hooks called unconditionally before conditional returns
+- Manual workflow: hosts explicitly manage order status via dashboard buttons
 - Auto-refresh intervals: Queue 5s, Analytics 10s for real-time updates
+- Session-based auth with simple password for basic protection (not production-grade security)
+- Guest name capture is optional to reduce friction in ordering flow
