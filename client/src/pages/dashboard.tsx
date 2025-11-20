@@ -12,21 +12,26 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { OrderWithDrink, DrinkAnalytics, Menu, Drink, InsertMenu } from "@shared/schema";
 import { insertMenuSchema } from "@shared/schema";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { Clock, TrendingUp, AlertCircle, CheckCircle2, Home, LogOut, Settings } from "lucide-react";
+import { Clock, TrendingUp, AlertCircle, CheckCircle2, Home, LogOut, Settings, QrCode, Download } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { QRCodeSVG } from "qrcode.react";
 
 export default function Dashboard() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [filterMode, setFilterMode] = useState<"all" | "never-made" | "least-ordered">("all");
+  
+  // Get base URL for QR codes
+  const baseUrl = window.location.origin;
 
   // Check authentication
   const { data: authStatus, isLoading: authLoading } = useQuery<{ isAuthenticated: boolean }>({
@@ -670,6 +675,35 @@ export default function Dashboard() {
                           <p className="text-xs text-muted-foreground mt-1">Slug: {menu.slug}</p>
                         </div>
                         <div className="flex items-center gap-3">
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button variant="outline" size="sm" data-testid={`button-qr-${menu.id}`}>
+                                <QrCode className="w-4 h-4 mr-2" />
+                                QR Code
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-md">
+                              <DialogHeader>
+                                <DialogTitle>{menu.name} - QR Code</DialogTitle>
+                                <DialogDescription>
+                                  Scan this code to view the menu on your phone
+                                </DialogDescription>
+                              </DialogHeader>
+                              <div className="flex flex-col items-center gap-4 py-4">
+                                <div className="bg-white p-4 rounded-lg">
+                                  <QRCodeSVG
+                                    value={`${baseUrl}/menu/${menu.slug}`}
+                                    size={256}
+                                    level="H"
+                                    includeMargin={true}
+                                  />
+                                </div>
+                                <p className="text-sm text-muted-foreground text-center">
+                                  {`${baseUrl}/menu/${menu.slug}`}
+                                </p>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
                           <div className="flex items-center gap-2">
                             <Label htmlFor={`menu-active-${menu.id}`} className="text-sm">
                               {menu.isActive ? "Active" : "Inactive"}
@@ -693,6 +727,34 @@ export default function Dashboard() {
                     No menus created yet. Create your first menu above!
                   </p>
                 )}
+              </CardContent>
+            </Card>
+
+            {/* Home Page QR Code Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-xl">Home Page QR Code</CardTitle>
+                <CardDescription>
+                  QR code for the main landing page showing all active menus
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col items-center gap-4">
+                  <div className="bg-white p-4 rounded-lg border">
+                    <QRCodeSVG
+                      value={baseUrl}
+                      size={200}
+                      level="H"
+                      includeMargin={true}
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground text-center">
+                    {baseUrl}
+                  </p>
+                  <p className="text-xs text-muted-foreground text-center max-w-md">
+                    This QR code links to your home page where guests can see all active menus
+                  </p>
+                </div>
               </CardContent>
             </Card>
 
