@@ -50,12 +50,12 @@ Preferred communication style: Simple, everyday language.
 - `GET /api/menus` - Retrieve all menus
 - `GET /api/menus/:slug` - Get specific menu by slug
 - `POST /api/menus` - Create new menu
-- `GET /api/drinks/:menuId` - Get drinks for a menu
+- `GET /api/drinks?menuId=xxx` - Get drinks for a menu (query parameter)
 - `POST /api/drinks` - Create new drink
-- `POST /api/orders` - Place drink order
-- `GET /api/orders/queue` - Get pending orders
-- `PATCH /api/orders/:id` - Update order status
-- `GET /api/analytics` - Get drink popularity analytics
+- `POST /api/orders` - Place drink order (body: {drinkId, menuId})
+- `GET /api/orders/queue` - Get pending orders with drink details
+- `PATCH /api/orders/:id` - Update order status (body: {status})
+- `GET /api/analytics` - Get drink popularity analytics with counts
 
 **Data Layer:**
 - Storage abstraction through IStorage interface for flexibility
@@ -140,3 +140,33 @@ Currently not implemented - the application operates in an open access model sui
 
 **Third-Party Services:**
 - Google Fonts - Playfair Display and Inter font families loaded via CDN
+
+## Recent Changes (November 20, 2025)
+
+### Completed Features
+- **Database Schema**: Implemented 3-table PostgreSQL schema (menus, drinks, orders) with full referential integrity
+- **Seeded Data**: Added NYE 2025 menu (8 drinks, active) and Baltimore Spring menu (3 drinks, inactive)
+- **Guest Ordering Flow**: Complete ordering system with real-time feedback and status tracking
+- **Host Dashboard**: 
+  - Live queue tab with auto-refresh every 5 seconds
+  - Analytics tab with auto-refresh every 10 seconds
+  - Three filter modes: All Drinks, Never Made, Least Ordered
+- **Analytics System**:
+  - Counts all non-cancelled orders (requested, in_progress, served)
+  - Never Made filter shows drinks with orderCount === 0
+  - Least Ordered filter shows bottom 25% (minimum 1 drink) sorted ascending
+  - Bar chart visualization of drink popularity
+- **Mark as Served**: One-click workflow to update order status and remove from queue
+- **Premium Design**: Playfair Display + Inter fonts, hero image, sophisticated color scheme
+
+### Bug Fixes
+- Fixed import error for queryClient in dashboard.tsx
+- Corrected drinks API query from path parameter to query parameter format
+- Improved Least Ordered filter to guarantee at least 1 result in all scenarios
+- Fixed analytics GROUP BY aggregation for accurate order counting
+
+### Technical Decisions
+- Analytics counts ALL non-cancelled orders to show total demand
+- Least Ordered uses ascending sort and takes bottom 25% (min 1 drink)
+- Manual workflow: hosts explicitly mark drinks as served via dashboard buttons
+- Auto-refresh intervals: Queue 5s, Analytics 10s for real-time updates
