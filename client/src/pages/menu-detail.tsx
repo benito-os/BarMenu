@@ -5,6 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { Menu, Drink } from "@shared/schema";
@@ -16,6 +19,9 @@ export default function MenuDetail() {
   const slug = params?.slug;
   const { toast } = useToast();
   const [orderedDrinks, setOrderedDrinks] = useState<Set<string>>(new Set());
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedDrinkId, setSelectedDrinkId] = useState<string | null>(null);
+  const [guestName, setGuestName] = useState("");
 
   const { data: menu, isLoading: menuLoading } = useQuery<Menu>({
     queryKey: ["/api/menus", slug],
@@ -28,15 +34,19 @@ export default function MenuDetail() {
   });
 
   const orderMutation = useMutation({
-    mutationFn: async (drinkId: string) => {
+    mutationFn: async ({ drinkId, guestName }: { drinkId: string; guestName?: string }) => {
       return apiRequest("POST", "/api/orders", {
         drinkId,
         menuId: menu?.id,
+        guestName: guestName || undefined,
       });
     },
-    onSuccess: (_, drinkId) => {
+    onSuccess: (_, { drinkId }) => {
       const drink = drinks?.find(d => d.id === drinkId);
       setOrderedDrinks(prev => new Set(prev).add(drinkId));
+      setDialogOpen(false);
+      setGuestName("");
+      setSelectedDrinkId(null);
       toast({
         title: "Order Placed!",
         description: `Your ${drink?.name} is in the queue`,
@@ -51,6 +61,17 @@ export default function MenuDetail() {
       });
     },
   });
+
+  const handleOrderClick = (drinkId: string) => {
+    setSelectedDrinkId(drinkId);
+    setDialogOpen(true);
+  };
+
+  const handleOrderSubmit = () => {
+    if (selectedDrinkId) {
+      orderMutation.mutate({ drinkId: selectedDrinkId, guestName });
+    }
+  };
 
   // Group drinks by section
   const drinksBySection = drinks?.reduce((acc, drink) => {
@@ -198,7 +219,7 @@ export default function MenuDetail() {
                           <CardContent>
                             <Button
                               className="w-full"
-                              onClick={() => orderMutation.mutate(drink.id)}
+                              onClick={() => handleOrderClick(drink.id)}
                               disabled={orderMutation.isPending || isOrdered}
                               data-testid={`button-order-${drink.id}`}
                             >
@@ -207,8 +228,6 @@ export default function MenuDetail() {
                                   <Check className="w-4 h-4 mr-2" />
                                   Ordered
                                 </>
-                              ) : orderMutation.isPending ? (
-                                "Placing Order..."
                               ) : (
                                 "Request This Drink"
                               )}
@@ -241,6 +260,55 @@ export default function MenuDetail() {
           </div>
         )}
       </div>
+
+      {/* Guest Name Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent data-testid="dialog-guest-name">
+          <DialogHeader>
+            <DialogTitle>Who should we make this for?</DialogTitle>
+            <DialogDescription>
+              Optional: Enter your name so we know who ordered this drink
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="guest-name">Your Name</Label>
+              <Input
+                id="guest-name"
+                data-testid="input-guest-name"
+                placeholder="e.g., Alex"
+                value={guestName}
+                onChange={(e) => setGuestName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleOrderSubmit();
+                  }
+                }}
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDialogOpen(false);
+                setGuestName("");
+                setSelectedDrinkId(null);
+              }}
+              data-testid="button-cancel-order"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleOrderSubmit}
+              disabled={orderMutation.isPending}
+              data-testid="button-confirm-order"
+            >
+              {orderMutation.isPending ? "Placing Order..." : "Place Order"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

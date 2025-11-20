@@ -50,6 +50,7 @@ export const orders = pgTable("orders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   drinkId: varchar("drink_id").notNull().references(() => drinks.id, { onDelete: 'cascade' }),
   menuId: varchar("menu_id").notNull().references(() => menus.id, { onDelete: 'cascade' }),
+  guestName: text("guest_name"),
   status: text("status").notNull().default("requested"), // "requested" | "in_progress" | "served" | "cancelled"
   requestedAt: timestamp("requested_at").notNull().defaultNow(),
   completedAt: timestamp("completed_at"),
@@ -78,4 +79,5 @@ export type DrinkAnalytics = {
 export type OrderWithDrink = Order & {
   drinkName: string;
   drinkSection: string;
+  guestName?: string;
 };

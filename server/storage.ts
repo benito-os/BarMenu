@@ -13,7 +13,7 @@ import {
   orders
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, inArray } from "drizzle-orm";
 
 export interface IStorage {
   // Menu operations
@@ -79,6 +79,7 @@ export class DatabaseStorage implements IStorage {
         id: orders.id,
         drinkId: orders.drinkId,
         menuId: orders.menuId,
+        guestName: orders.guestName,
         status: orders.status,
         requestedAt: orders.requestedAt,
         completedAt: orders.completedAt,
@@ -87,7 +88,7 @@ export class DatabaseStorage implements IStorage {
       })
       .from(orders)
       .innerJoin(drinks, eq(orders.drinkId, drinks.id))
-      .where(eq(orders.status, "requested"))
+      .where(inArray(orders.status, ["requested", "in_progress"]))
       .orderBy(orders.requestedAt);
 
     return results;

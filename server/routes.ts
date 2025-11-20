@@ -100,7 +100,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/orders - Create new order (guest requests drink)
   app.post("/api/orders", async (req, res) => {
     try {
-      const validatedData = insertOrderSchema.parse(req.body);
+      // Extend the schema to allow optional guestName
+      const orderSchema = insertOrderSchema.extend({
+        guestName: z.string().optional(),
+      });
+      const validatedData = orderSchema.parse(req.body);
       const order = await storage.createOrder(validatedData);
       res.status(201).json(order);
     } catch (error) {
