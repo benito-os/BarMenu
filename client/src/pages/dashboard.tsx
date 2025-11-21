@@ -19,7 +19,7 @@ import { apiRequest } from "@/lib/queryClient";
 import type { OrderWithDrink, DrinkAnalytics, Menu, Drink, InsertMenu } from "@shared/schema";
 import { insertMenuSchema } from "@shared/schema";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { Clock, TrendingUp, AlertCircle, CheckCircle2, Home, LogOut, Settings, QrCode, Download } from "lucide-react";
+import { Clock, TrendingUp, AlertCircle, CheckCircle2, Home, LogOut, Settings, QrCode, Download, X, Plus } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -54,6 +54,7 @@ export default function Dashboard() {
   const [localDrinks, setLocalDrinks] = useState<Drink[]>([]);
   const [editingDrink, setEditingDrink] = useState<Drink | null>(null);
   const [editingMenu, setEditingMenu] = useState<Menu | null>(null);
+  const [newSectionInput, setNewSectionInput] = useState<string>("");
   
   // Get base URL for QR codes
   const baseUrl = window.location.origin;
@@ -193,11 +194,15 @@ export default function Dashboard() {
   // Update menu mutation
   const updateMenuMutation = useMutation({
     mutationFn: async (menu: Menu) => {
-      return apiRequest("PATCH", `/api/menus/${menu.id}`, menu);
+      // Only send allowed update fields
+      const { id, name, slug, description, isActive, heroImageUrl, backgroundColor, accentColor, typography, sections } = menu;
+      const updateData = { name, slug, description, isActive, heroImageUrl, backgroundColor, accentColor, typography, sections };
+      return apiRequest("PATCH", `/api/menus/${id}`, updateData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/menus"] });
       setEditingMenu(null);
+      setNewSectionInput("");
       toast({
         title: "Menu Updated",
         description: "Menu has been updated successfully",
@@ -1257,12 +1262,84 @@ export default function Dashboard() {
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="edit-menu-typography">Typography Style</Label>
-                          <Input
-                            id="edit-menu-typography"
-                            value={editingMenu.typography || ""}
-                            onChange={(e) => setEditingMenu({ ...editingMenu, typography: e.target.value })}
-                            placeholder="Playfair Display, serif"
-                          />
+                          <Select
+                            value={editingMenu.typography || "not_specified"}
+                            onValueChange={(value) => setEditingMenu({ ...editingMenu, typography: value === "not_specified" ? "" : value })}
+                          >
+                            <SelectTrigger id="edit-menu-typography" data-testid="select-edit-menu-typography">
+                              <SelectValue placeholder="Select typography" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="not_specified">Not Specified (Default)</SelectItem>
+                              <SelectItem value="Playfair Display, serif">Playfair Display (Serif)</SelectItem>
+                              <SelectItem value="Inter, sans-serif">Inter (Sans-serif)</SelectItem>
+                              <SelectItem value="Roboto, sans-serif">Roboto (Sans-serif)</SelectItem>
+                              <SelectItem value="Open Sans, sans-serif">Open Sans (Sans-serif)</SelectItem>
+                              <SelectItem value="Lora, serif">Lora (Serif)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        {/* Section Management */}
+                        <div className="space-y-2">
+                          <Label>Menu Sections</Label>
+                          <p className="text-xs text-muted-foreground">
+                            Define sections to organize drinks (e.g., "Classic Elegance", "Festive and Fruity")
+                          </p>
+                          {editingMenu.sections && editingMenu.sections.length > 0 && (
+                            <div className="flex flex-wrap gap-2 p-3 border rounded-md bg-muted/20">
+                              {editingMenu.sections.map((section, index) => (
+                                <Badge key={index} variant="secondary" className="gap-1" data-testid={`badge-section-${index}`}>
+                                  {section}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const newSections = editingMenu.sections.filter((_, i) => i !== index);
+                                      setEditingMenu({ ...editingMenu, sections: newSections });
+                                    }}
+                                    className="ml-1 hover:bg-destructive/20 rounded-full p-0.5"
+                                    data-testid={`button-remove-section-${index}`}
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                          <div className="flex gap-2">
+                            <Input
+                              value={newSectionInput}
+                              onChange={(e) => setNewSectionInput(e.target.value)}
+                              placeholder="Add new section..."
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  if (newSectionInput.trim()) {
+                                    const currentSections = editingMenu.sections || [];
+                                    setEditingMenu({ ...editingMenu, sections: [...currentSections, newSectionInput.trim()] });
+                                    setNewSectionInput("");
+                                  }
+                                }
+                              }}
+                              data-testid="input-new-section"
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              onClick={() => {
+                                if (newSectionInput.trim()) {
+                                  const currentSections = editingMenu.sections || [];
+                                  setEditingMenu({ ...editingMenu, sections: [...currentSections, newSectionInput.trim()] });
+                                  setNewSectionInput("");
+                                }
+                              }}
+                              disabled={!newSectionInput.trim()}
+                              data-testid="button-add-section"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </div>
