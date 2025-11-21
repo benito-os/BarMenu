@@ -1580,12 +1580,34 @@ export default function Dashboard() {
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="edit-drink-section">Section</Label>
-                        <Input
-                          id="edit-drink-section"
-                          value={editingDrink.section}
-                          onChange={(e) => setEditingDrink({ ...editingDrink, section: e.target.value })}
-                          placeholder="Classics"
-                        />
+                        {(() => {
+                          const drinkMenu = menus?.find(m => m.id === editingDrink.menuId);
+                          const menuSections = drinkMenu?.sections || [];
+                          // Include current section if it's not in the menu sections (for legacy drinks)
+                          const currentSection = editingDrink.section;
+                          const allSections = currentSection && !menuSections.includes(currentSection) 
+                            ? [currentSection, ...menuSections] 
+                            : menuSections;
+                          return (
+                            <Select
+                              value={editingDrink.section || "not_specified"}
+                              onValueChange={(value) => setEditingDrink({ ...editingDrink, section: value === "not_specified" ? "" : value })}
+                            >
+                              <SelectTrigger id="edit-drink-section" data-testid="select-edit-drink-section">
+                                <SelectValue placeholder="Select section" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="not_specified">Not Specified</SelectItem>
+                                {allSections.map((section, idx) => (
+                                  <SelectItem key={idx} value={section}>
+                                    {section}
+                                    {currentSection === section && !menuSections.includes(section) && " (legacy)"}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          );
+                        })()}
                       </div>
                     </div>
 
@@ -1704,7 +1726,7 @@ export default function Dashboard() {
                       </Button>
                       <Button
                         type="submit"
-                        disabled={updateDrinkMutation.isPending || !editingDrink.name.trim() || !editingDrink.section.trim()}
+                        disabled={updateDrinkMutation.isPending || !editingDrink.name.trim()}
                       >
                         {updateDrinkMutation.isPending ? "Updating..." : "Update Drink"}
                       </Button>
@@ -1726,7 +1748,7 @@ export default function Dashboard() {
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
-                    if (newDrink.menuId && newDrink.name && newDrink.section) {
+                    if (newDrink.menuId && newDrink.name) {
                       createDrinkMutation.mutate(newDrink);
                     }
                   }}
@@ -1768,14 +1790,27 @@ export default function Dashboard() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="drink-section">Section</Label>
-                      <Input
-                        id="drink-section"
-                        value={newDrink.section}
-                        onChange={(e) => setNewDrink({ ...newDrink, section: e.target.value })}
-                        placeholder="Classics"
-                        disabled={createDrinkMutation.isPending}
-                        data-testid="input-drink-section"
-                      />
+                      {(() => {
+                        const selectedMenu = menus?.find(m => m.id === newDrink.menuId);
+                        const menuSections = selectedMenu?.sections || [];
+                        return (
+                          <Select
+                            value={newDrink.section || "not_specified"}
+                            onValueChange={(value) => setNewDrink({ ...newDrink, section: value === "not_specified" ? "" : value })}
+                            disabled={createDrinkMutation.isPending || !newDrink.menuId}
+                          >
+                            <SelectTrigger id="drink-section" data-testid="select-drink-section">
+                              <SelectValue placeholder="Select section" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="not_specified">Not Specified</SelectItem>
+                              {menuSections.map((section, idx) => (
+                                <SelectItem key={idx} value={section}>{section}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        );
+                      })()}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="drink-style">Style</Label>
@@ -1904,7 +1939,7 @@ export default function Dashboard() {
 
                   <Button
                     type="submit"
-                    disabled={createDrinkMutation.isPending || !newDrink.menuId || !newDrink.name.trim() || !newDrink.section.trim()}
+                    disabled={createDrinkMutation.isPending || !newDrink.menuId || !newDrink.name.trim()}
                     data-testid="button-create-drink"
                   >
                     {createDrinkMutation.isPending ? "Creating..." : "Create Drink"}
