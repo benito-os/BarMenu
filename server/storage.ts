@@ -21,12 +21,14 @@ export interface IStorage {
   getMenuBySlug(slug: string): Promise<Menu | undefined>;
   createMenu(menu: InsertMenu): Promise<Menu>;
   updateMenu(id: string, data: Partial<Menu>): Promise<Menu | undefined>;
+  deleteMenu(id: string): Promise<void>;
   
   // Drink operations
   getDrinksByMenuId(menuId: string): Promise<Drink[]>;
   getAllDrinksByMenuId(menuId: string): Promise<Drink[]>;
   getDrinkById(id: string): Promise<Drink | undefined>;
   createDrink(drink: InsertDrink): Promise<Drink>;
+  updateDrink(id: string, data: Partial<Drink>): Promise<Drink | undefined>;
   reorderDrinks(drinks: Array<{ id: string; sortOrder: number }>): Promise<void>;
   bulkDeleteDrinks(drinkIds: string[]): Promise<void>;
   bulkUpdateDrinks(drinkIds: string[], isActive: boolean): Promise<void>;
@@ -61,6 +63,10 @@ export class DatabaseStorage implements IStorage {
     return menu || undefined;
   }
 
+  async deleteMenu(id: string): Promise<void> {
+    await db.delete(menus).where(eq(menus.id, id));
+  }
+
   async getDrinksByMenuId(menuId: string): Promise<Drink[]> {
     return await db
       .select()
@@ -85,6 +91,11 @@ export class DatabaseStorage implements IStorage {
   async createDrink(insertDrink: InsertDrink): Promise<Drink> {
     const [drink] = await db.insert(drinks).values(insertDrink).returning();
     return drink;
+  }
+
+  async updateDrink(id: string, data: Partial<Drink>): Promise<Drink | undefined> {
+    const [drink] = await db.update(drinks).set(data).where(eq(drinks.id, id)).returning();
+    return drink || undefined;
   }
 
   async reorderDrinks(drinksToUpdate: Array<{ id: string; sortOrder: number }>): Promise<void> {

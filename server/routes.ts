@@ -93,17 +93,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // PATCH /api/menus/:id - Update menu (e.g., toggle active status)
+  // PATCH /api/menus/:id - Update menu (any fields including theming)
   app.patch("/api/menus/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      const { isActive } = req.body;
+      const updateData = req.body;
       
-      if (typeof isActive !== "boolean") {
-        return res.status(400).json({ error: "isActive must be a boolean" });
+      // Validate allowed fields
+      const allowedFields = ['name', 'slug', 'description', 'isActive', 'heroImageUrl', 'backgroundColor', 'accentColor', 'typography'];
+      const hasValidFields = Object.keys(updateData).every(key => allowedFields.includes(key));
+      
+      if (!hasValidFields) {
+        return res.status(400).json({ error: "Invalid fields in update data" });
       }
       
-      const menu = await storage.updateMenu(id, { isActive });
+      const menu = await storage.updateMenu(id, updateData);
       if (!menu) {
         return res.status(404).json({ error: "Menu not found" });
       }
@@ -111,6 +115,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating menu:", error);
       res.status(500).json({ error: "Failed to update menu" });
+    }
+  });
+
+  // DELETE /api/menus/:id - Delete menu
+  app.delete("/api/menus/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteMenu(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting menu:", error);
+      res.status(500).json({ error: "Failed to delete menu" });
     }
   });
 
@@ -177,6 +193,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error creating drink:", error);
       res.status(500).json({ error: "Failed to create drink" });
+    }
+  });
+
+  // PATCH /api/drinks/:id - Update drink
+  app.patch("/api/drinks/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updateData = req.body;
+      
+      // Validate allowed fields
+      const allowedFields = ['name', 'section', 'description', 'recipe', 'style', 'temperature', 
+                            'isMocktail', 'canBeMocktail', 'isStirred', 'isShaken', 
+                            'baseSpirit', 'isActive', 'sortOrder', 'menuId'];
+      const hasValidFields = Object.keys(updateData).every(key => allowedFields.includes(key));
+      
+      if (!hasValidFields) {
+        return res.status(400).json({ error: "Invalid fields in update data" });
+      }
+      
+      const drink = await storage.updateDrink(id, updateData);
+      if (!drink) {
+        return res.status(404).json({ error: "Drink not found" });
+      }
+      res.json(drink);
+    } catch (error) {
+      console.error("Error updating drink:", error);
+      res.status(500).json({ error: "Failed to update drink" });
     }
   });
 

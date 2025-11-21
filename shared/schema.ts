@@ -10,6 +10,10 @@ export const menus = pgTable("menus", {
   name: text("name").notNull(),
   description: text("description"),
   isActive: boolean("is_active").notNull().default(false),
+  heroImageUrl: text("hero_image_url"),
+  backgroundColor: text("background_color"),
+  accentColor: text("accent_color"),
+  typography: text("typography"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -30,7 +34,9 @@ export const drinks = pgTable("drinks", {
   description: text("description"),
   recipe: text("recipe"),
   style: text("style"), // e.g., "Staying Awake", "Festive and Fruity"
+  temperature: text("temperature"), // "hot" | "cold" | "room_temp" | null
   isMocktail: boolean("is_mocktail").notNull().default(false),
+  canBeMocktail: boolean("can_be_mocktail").notNull().default(false),
   isStirred: boolean("is_stirred").notNull().default(false),
   isShaken: boolean("is_shaken").notNull().default(false),
   baseSpirit: text("base_spirit"), // e.g., "Bourbon", "Vodka", "Espresso"
