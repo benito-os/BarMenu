@@ -94,8 +94,16 @@ export default function MenuDetail() {
     );
   }
 
+  // Dynamic theming styles
+  const themingStyle = menu ? {
+    backgroundColor: menu.backgroundColor || undefined,
+    fontFamily: menu.typography || undefined,
+  } : {};
+
+  const accentColor = menu?.accentColor || undefined;
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" style={themingStyle}>
       {/* Fixed Header */}
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b">
         <div className="max-w-6xl mx-auto px-6 py-4">
@@ -118,6 +126,27 @@ export default function MenuDetail() {
           </div>
         </div>
       </header>
+
+      {/* Hero Image Section */}
+      {menu?.heroImageUrl && (
+        <div 
+          className="relative h-64 md:h-96 w-full bg-cover bg-center"
+          style={{ backgroundImage: `url(${menu.heroImageUrl})` }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-black/60 flex items-center justify-center">
+            <div className="text-center text-white px-6">
+              <h2 className="font-serif text-4xl md:text-6xl font-bold mb-4">
+                {menu.name}
+              </h2>
+              {menu.description && (
+                <p className="text-lg md:text-xl max-w-2xl mx-auto">
+                  {menu.description}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-6xl mx-auto px-6 py-12">
         {isLoading ? (
@@ -142,22 +171,30 @@ export default function MenuDetail() {
           </div>
         ) : menu ? (
           <div className="space-y-12">
-            {/* Menu Header */}
-            <div className="text-center space-y-4 pb-8 border-b">
-              <h2 className="font-serif text-4xl md:text-5xl font-bold text-foreground">
-                {menu.name}
-              </h2>
-              {menu.description && (
-                <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                  {menu.description}
-                </p>
-              )}
-            </div>
+            {/* Menu Header - only show if no hero image */}
+            {!menu.heroImageUrl && (
+              <div className="text-center space-y-4 pb-8 border-b">
+                <h2 className="font-serif text-4xl md:text-5xl font-bold text-foreground">
+                  {menu.name}
+                </h2>
+                {menu.description && (
+                  <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                    {menu.description}
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Sections */}
             {sections.map((section) => (
               <section key={section} className="space-y-6">
-                <h3 className="font-sans text-xl md:text-2xl font-semibold text-foreground uppercase tracking-wide border-l-4 border-primary pl-4">
+                <h3 
+                  className="font-sans text-xl md:text-2xl font-semibold text-foreground uppercase tracking-wide border-l-4 pl-4"
+                  style={{
+                    borderLeftColor: accentColor || undefined,
+                    ...(accentColor ? {} : { borderLeftColor: 'hsl(var(--primary))' })
+                  }}
+                >
                   {section}
                 </h3>
                 
