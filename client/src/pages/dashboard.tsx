@@ -392,7 +392,12 @@ export default function Dashboard() {
   // Update drink mutation
   const updateDrinkMutation = useMutation({
     mutationFn: async (drink: Drink) => {
-      return apiRequest("PATCH", `/api/drinks/${drink.id}`, drink);
+      // Only send allowed update fields
+      const { id, menuId, name, section, description, recipe, style, temperature, 
+              isMocktail, canBeMocktail, isStirred, isShaken, baseSpirit, isActive, sortOrder } = drink;
+      const updateData = { menuId, name, section, description, recipe, style, temperature, 
+                          isMocktail, canBeMocktail, isStirred, isShaken, baseSpirit, isActive, sortOrder };
+      return apiRequest("PATCH", `/api/drinks/${id}`, updateData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/drinks"] });
