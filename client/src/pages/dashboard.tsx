@@ -52,6 +52,7 @@ export default function Dashboard() {
   const [selectedDrinks, setSelectedDrinks] = useState<Set<string>>(new Set());
   const [localDrinks, setLocalDrinks] = useState<Drink[]>([]);
   const [editingDrink, setEditingDrink] = useState<Drink | null>(null);
+  const [editingMenu, setEditingMenu] = useState<Menu | null>(null);
   
   // Get base URL for QR codes
   const baseUrl = window.location.origin;
@@ -141,6 +142,10 @@ export default function Dashboard() {
       slug: "",
       description: "",
       isActive: false,
+      heroImageUrl: "",
+      backgroundColor: "",
+      accentColor: "",
+      typography: "",
     },
   });
 
@@ -180,6 +185,49 @@ export default function Dashboard() {
       toast({
         title: "Menu Updated",
         description: "Menu status has been updated",
+      });
+    },
+  });
+
+  // Update menu mutation
+  const updateMenuMutation = useMutation({
+    mutationFn: async (menu: Menu) => {
+      return apiRequest("PATCH", `/api/menus/${menu.id}`, menu);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/menus"] });
+      setEditingMenu(null);
+      toast({
+        title: "Menu Updated",
+        description: "Menu has been updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update menu",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete menu mutation
+  const deleteMenuMutation = useMutation({
+    mutationFn: async (menuId: string) => {
+      return apiRequest("DELETE", `/api/menus/${menuId}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/menus"] });
+      toast({
+        title: "Menu Deleted",
+        description: "Menu has been deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete menu",
+        variant: "destructive",
       });
     },
   });
@@ -904,6 +952,85 @@ export default function Dashboard() {
                         </FormItem>
                       )}
                     />
+                    <div className="border-t pt-4">
+                      <h3 className="text-sm font-semibold mb-4">Theme Customization (Optional)</h3>
+                      <div className="space-y-4">
+                        <FormField
+                          control={menuForm.control}
+                          name="heroImageUrl"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Hero Image URL</FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder="https://example.com/image.jpg"
+                                  {...field}
+                                  value={field.value || ""}
+                                  disabled={createMenuMutation.isPending}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={menuForm.control}
+                            name="backgroundColor"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Background Color</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder="#ffffff or hsl(0, 0%, 100%)"
+                                    {...field}
+                                    value={field.value || ""}
+                                    disabled={createMenuMutation.isPending}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={menuForm.control}
+                            name="accentColor"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Accent Color</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder="#000000 or hsl(0, 0%, 0%)"
+                                    {...field}
+                                    value={field.value || ""}
+                                    disabled={createMenuMutation.isPending}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <FormField
+                          control={menuForm.control}
+                          name="typography"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Typography Style</FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder="Playfair Display, serif"
+                                  {...field}
+                                  value={field.value || ""}
+                                  disabled={createMenuMutation.isPending}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
                     <Button
                       type="submit"
                       disabled={createMenuMutation.isPending}
@@ -946,6 +1073,44 @@ export default function Dashboard() {
                           <p className="text-xs text-muted-foreground mt-1">Slug: {menu.slug}</p>
                         </div>
                         <div className="flex items-center gap-3">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEditingMenu(menu)}
+                            data-testid={`button-edit-menu-${menu.id}`}
+                          >
+                            <Pencil className="w-4 h-4 mr-2" />
+                            Edit
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                data-testid={`button-delete-menu-${menu.id}`}
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Menu</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete "{menu.name}"? This action will also delete all associated drinks and cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteMenuMutation.mutate(menu.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                           <Dialog>
                             <DialogTrigger asChild>
                               <Button variant="outline" size="sm" data-testid={`button-qr-${menu.id}`}>
@@ -1000,6 +1165,131 @@ export default function Dashboard() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Edit Menu Dialog */}
+            <Dialog open={!!editingMenu} onOpenChange={(open) => !open && setEditingMenu(null)}>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Edit Menu</DialogTitle>
+                  <DialogDescription>
+                    Update menu information and theming
+                  </DialogDescription>
+                </DialogHeader>
+                {editingMenu && (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      updateMenuMutation.mutate(editingMenu);
+                    }}
+                    className="space-y-4"
+                  >
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-menu-name">Menu Name</Label>
+                        <Input
+                          id="edit-menu-name"
+                          value={editingMenu.name}
+                          onChange={(e) => setEditingMenu({ ...editingMenu, name: e.target.value })}
+                          placeholder="NYE 2025"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-menu-slug">Slug (URL-friendly)</Label>
+                        <Input
+                          id="edit-menu-slug"
+                          value={editingMenu.slug}
+                          onChange={(e) => setEditingMenu({ ...editingMenu, slug: e.target.value })}
+                          placeholder="nye-2025"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-menu-description">Description</Label>
+                      <Textarea
+                        id="edit-menu-description"
+                        value={editingMenu.description || ""}
+                        onChange={(e) => setEditingMenu({ ...editingMenu, description: e.target.value })}
+                        placeholder="A curated selection of cocktails for..."
+                        rows={3}
+                      />
+                    </div>
+
+                    <div className="border-t pt-4">
+                      <h3 className="text-sm font-semibold mb-4">Theme Customization (Optional)</h3>
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-menu-hero">Hero Image URL</Label>
+                          <Input
+                            id="edit-menu-hero"
+                            value={editingMenu.heroImageUrl || ""}
+                            onChange={(e) => setEditingMenu({ ...editingMenu, heroImageUrl: e.target.value })}
+                            placeholder="https://example.com/image.jpg"
+                          />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="edit-menu-bg-color">Background Color</Label>
+                            <Input
+                              id="edit-menu-bg-color"
+                              value={editingMenu.backgroundColor || ""}
+                              onChange={(e) => setEditingMenu({ ...editingMenu, backgroundColor: e.target.value })}
+                              placeholder="#ffffff or hsl(0, 0%, 100%)"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="edit-menu-accent-color">Accent Color</Label>
+                            <Input
+                              id="edit-menu-accent-color"
+                              value={editingMenu.accentColor || ""}
+                              onChange={(e) => setEditingMenu({ ...editingMenu, accentColor: e.target.value })}
+                              placeholder="#000000 or hsl(0, 0%, 0%)"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-menu-typography">Typography Style</Label>
+                          <Input
+                            id="edit-menu-typography"
+                            value={editingMenu.typography || ""}
+                            onChange={(e) => setEditingMenu({ ...editingMenu, typography: e.target.value })}
+                            placeholder="Playfair Display, serif"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 border-t pt-4">
+                      <Switch
+                        id="edit-menu-active"
+                        checked={editingMenu.isActive}
+                        onCheckedChange={(checked) => setEditingMenu({ ...editingMenu, isActive: checked })}
+                      />
+                      <Label htmlFor="edit-menu-active" className="text-sm">Menu is Active (visible to guests)</Label>
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-4">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setEditingMenu(null)}
+                        disabled={updateMenuMutation.isPending}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="submit"
+                        disabled={updateMenuMutation.isPending || !editingMenu.name.trim() || !editingMenu.slug.trim()}
+                      >
+                        {updateMenuMutation.isPending ? "Updating..." : "Update Menu"}
+                      </Button>
+                    </div>
+                  </form>
+                )}
+              </DialogContent>
+            </Dialog>
 
             {/* Home Page QR Code Section */}
             <Card>
