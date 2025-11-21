@@ -191,8 +191,10 @@ export default function Dashboard() {
     description: "",
     recipe: "",
     style: "",
+    temperature: "",
     baseSpirit: "",
     isMocktail: false,
+    canBeMocktail: false,
     isStirred: false,
     isShaken: false,
     isActive: true,
@@ -314,8 +316,10 @@ export default function Dashboard() {
         description: "",
         recipe: "",
         style: "",
+        temperature: "",
         baseSpirit: "",
         isMocktail: false,
+        canBeMocktail: false,
         isStirred: false,
         isShaken: false,
         isActive: true,
@@ -1242,19 +1246,39 @@ export default function Dashboard() {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="drink-base">Base Spirit</Label>
-                    <Input
-                      id="drink-base"
-                      value={newDrink.baseSpirit}
-                      onChange={(e) => setNewDrink({ ...newDrink, baseSpirit: e.target.value })}
-                      placeholder="Gin"
-                      disabled={createDrinkMutation.isPending}
-                      data-testid="input-drink-base"
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="drink-base">Base Spirit</Label>
+                      <Input
+                        id="drink-base"
+                        value={newDrink.baseSpirit}
+                        onChange={(e) => setNewDrink({ ...newDrink, baseSpirit: e.target.value })}
+                        placeholder="Gin"
+                        disabled={createDrinkMutation.isPending}
+                        data-testid="input-drink-base"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="drink-temperature">Temperature</Label>
+                      <Select
+                        value={newDrink.temperature}
+                        onValueChange={(value) => setNewDrink({ ...newDrink, temperature: value })}
+                        disabled={createDrinkMutation.isPending}
+                      >
+                        <SelectTrigger id="drink-temperature" data-testid="select-drink-temperature">
+                          <SelectValue placeholder="Not specified" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Not specified</SelectItem>
+                          <SelectItem value="hot">Hot</SelectItem>
+                          <SelectItem value="cold">Cold</SelectItem>
+                          <SelectItem value="room_temp">Room Temperature</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     <div className="flex items-center gap-2">
                       <Switch
                         id="drink-mocktail"
@@ -1263,7 +1287,17 @@ export default function Dashboard() {
                         disabled={createDrinkMutation.isPending}
                         data-testid="switch-drink-mocktail"
                       />
-                      <Label htmlFor="drink-mocktail" className="text-sm">Mocktail</Label>
+                      <Label htmlFor="drink-mocktail" className="text-sm">Non-Alcoholic</Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id="drink-can-be-mocktail"
+                        checked={newDrink.canBeMocktail}
+                        onCheckedChange={(checked) => setNewDrink({ ...newDrink, canBeMocktail: checked })}
+                        disabled={createDrinkMutation.isPending}
+                        data-testid="switch-drink-can-be-mocktail"
+                      />
+                      <Label htmlFor="drink-can-be-mocktail" className="text-sm">Mocktail Available</Label>
                     </div>
                     <div className="flex items-center gap-2">
                       <Switch
