@@ -41,7 +41,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Trash2 } from "lucide-react";
+import { GripVertical, Trash2, Pencil } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 
 export default function Dashboard() {
@@ -51,6 +51,7 @@ export default function Dashboard() {
   const [selectedMenuId, setSelectedMenuId] = useState<string>("");
   const [selectedDrinks, setSelectedDrinks] = useState<Set<string>>(new Set());
   const [localDrinks, setLocalDrinks] = useState<Drink[]>([]);
+  const [editingDrink, setEditingDrink] = useState<Drink | null>(null);
   
   // Get base URL for QR codes
   const baseUrl = window.location.origin;
@@ -339,6 +340,29 @@ export default function Dashboard() {
     },
   });
 
+  // Update drink mutation
+  const updateDrinkMutation = useMutation({
+    mutationFn: async (drink: Drink) => {
+      return apiRequest("PATCH", `/api/drinks/${drink.id}`, drink);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/drinks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/drinks/all", selectedMenuId] });
+      setEditingDrink(null);
+      toast({
+        title: "Drink Updated",
+        description: "Drink has been updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update drink",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Redirect to login if not authenticated (after all hooks are called)
   useEffect(() => {
     if (!authLoading && !authStatus?.isAuthenticated) {
@@ -489,8 +513,18 @@ export default function Dashboard() {
             {drink.section} • {drink.style || "No style"}
           </p>
         </div>
-        <div className="text-sm text-muted-foreground">
-          Order: {drink.sortOrder}
+        <div className="flex items-center gap-2">
+          <div className="text-sm text-muted-foreground">
+            Order: {drink.sortOrder}
+          </div>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={() => setEditingDrink(drink)}
+            data-testid={`button-edit-drink-${drink.id}`}
+          >
+            <Pencil className="w-4 h-4" />
+          </Button>
         </div>
       </div>
     );
@@ -1143,6 +1177,169 @@ export default function Dashboard() {
                 ) : null}
               </CardContent>
             </Card>
+
+            {/* Edit Drink Dialog */}
+            <Dialog open={!!editingDrink} onOpenChange={(open) => !open && setEditingDrink(null)}>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Edit Drink</DialogTitle>
+                  <DialogDescription>
+                    Update drink information and settings
+                  </DialogDescription>
+                </DialogHeader>
+                {editingDrink && (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      updateDrinkMutation.mutate(editingDrink);
+                    }}
+                    className="space-y-4"
+                  >
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-drink-name">Drink Name</Label>
+                        <Input
+                          id="edit-drink-name"
+                          value={editingDrink.name}
+                          onChange={(e) => setEditingDrink({ ...editingDrink, name: e.target.value })}
+                          placeholder="Midnight Martini"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-drink-section">Section</Label>
+                        <Input
+                          id="edit-drink-section"
+                          value={editingDrink.section}
+                          onChange={(e) => setEditingDrink({ ...editingDrink, section: e.target.value })}
+                          placeholder="Classics"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-drink-style">Style</Label>
+                      <Input
+                        id="edit-drink-style"
+                        value={editingDrink.style || ""}
+                        onChange={(e) => setEditingDrink({ ...editingDrink, style: e.target.value })}
+                        placeholder="Dry, Boozy"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-drink-description">Description</Label>
+                      <Textarea
+                        id="edit-drink-description"
+                        value={editingDrink.description || ""}
+                        onChange={(e) => setEditingDrink({ ...editingDrink, description: e.target.value })}
+                        placeholder="A classic martini with a twist..."
+                        rows={2}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-drink-recipe">Recipe / Instructions</Label>
+                      <Textarea
+                        id="edit-drink-recipe"
+                        value={editingDrink.recipe || ""}
+                        onChange={(e) => setEditingDrink({ ...editingDrink, recipe: e.target.value })}
+                        placeholder="2 oz gin, 0.5 oz dry vermouth, stir with ice..."
+                        rows={3}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-drink-base">Base Spirit</Label>
+                        <Input
+                          id="edit-drink-base"
+                          value={editingDrink.baseSpirit || ""}
+                          onChange={(e) => setEditingDrink({ ...editingDrink, baseSpirit: e.target.value })}
+                          placeholder="Gin"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-drink-temperature">Temperature</Label>
+                        <Select
+                          value={editingDrink.temperature || ""}
+                          onValueChange={(value) => setEditingDrink({ ...editingDrink, temperature: value })}
+                        >
+                          <SelectTrigger id="edit-drink-temperature">
+                            <SelectValue placeholder="Not specified" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Not specified</SelectItem>
+                            <SelectItem value="hot">Hot</SelectItem>
+                            <SelectItem value="cold">Cold</SelectItem>
+                            <SelectItem value="room_temp">Room Temperature</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          id="edit-drink-mocktail"
+                          checked={editingDrink.isMocktail}
+                          onCheckedChange={(checked) => setEditingDrink({ ...editingDrink, isMocktail: checked })}
+                        />
+                        <Label htmlFor="edit-drink-mocktail" className="text-sm">Non-Alcoholic</Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          id="edit-drink-can-be-mocktail"
+                          checked={editingDrink.canBeMocktail}
+                          onCheckedChange={(checked) => setEditingDrink({ ...editingDrink, canBeMocktail: checked })}
+                        />
+                        <Label htmlFor="edit-drink-can-be-mocktail" className="text-sm">Mocktail Available</Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          id="edit-drink-stirred"
+                          checked={editingDrink.isStirred}
+                          onCheckedChange={(checked) => setEditingDrink({ ...editingDrink, isStirred: checked })}
+                        />
+                        <Label htmlFor="edit-drink-stirred" className="text-sm">Stirred</Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          id="edit-drink-shaken"
+                          checked={editingDrink.isShaken}
+                          onCheckedChange={(checked) => setEditingDrink({ ...editingDrink, isShaken: checked })}
+                        />
+                        <Label htmlFor="edit-drink-shaken" className="text-sm">Shaken</Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          id="edit-drink-active"
+                          checked={editingDrink.isActive}
+                          onCheckedChange={(checked) => setEditingDrink({ ...editingDrink, isActive: checked })}
+                        />
+                        <Label htmlFor="edit-drink-active" className="text-sm">Active</Label>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-4">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setEditingDrink(null)}
+                        disabled={updateDrinkMutation.isPending}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="submit"
+                        disabled={updateDrinkMutation.isPending || !editingDrink.name.trim() || !editingDrink.section.trim()}
+                      >
+                        {updateDrinkMutation.isPending ? "Updating..." : "Update Drink"}
+                      </Button>
+                    </div>
+                  </form>
+                )}
+              </DialogContent>
+            </Dialog>
 
             {/* Create Drink Section */}
             <Card>
