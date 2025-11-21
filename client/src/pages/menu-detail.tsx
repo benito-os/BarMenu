@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { Menu, Drink } from "@shared/schema";
-import { Home, Wine, Sparkles, Glasses, Check } from "lucide-react";
+import { Home, Wine, Sparkles, Glasses, Check, Flame, Snowflake, ThermometerSun } from "lucide-react";
 import { useState } from "react";
 
 export default function MenuDetail() {
@@ -193,7 +193,31 @@ export default function MenuDetail() {
                               {drink.isMocktail && (
                                 <Badge variant="outline" className="text-xs">
                                   <Sparkles className="w-3 h-3 mr-1" />
-                                  Mocktail
+                                  Non-Alcoholic
+                                </Badge>
+                              )}
+                              {drink.canBeMocktail && !drink.isMocktail && (
+                                <Badge variant="secondary" className="text-xs">
+                                  <Sparkles className="w-3 h-3 mr-1" />
+                                  Mocktail Available
+                                </Badge>
+                              )}
+                              {drink.temperature === "hot" && (
+                                <Badge variant="outline" className="text-xs">
+                                  <Flame className="w-3 h-3 mr-1" />
+                                  Hot
+                                </Badge>
+                              )}
+                              {drink.temperature === "cold" && (
+                                <Badge variant="outline" className="text-xs">
+                                  <Snowflake className="w-3 h-3 mr-1" />
+                                  Cold
+                                </Badge>
+                              )}
+                              {drink.temperature === "room_temp" && (
+                                <Badge variant="outline" className="text-xs">
+                                  <ThermometerSun className="w-3 h-3 mr-1" />
+                                  Room Temp
                                 </Badge>
                               )}
                               {drink.isStirred && (
