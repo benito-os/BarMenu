@@ -119,7 +119,7 @@ export default function MenuDetail() {
               </Button>
             </Link>
             {menu && (
-              <h1 className="font-serif text-xl md:text-2xl font-bold text-foreground truncate">
+              <h1 className="text-xl md:text-2xl font-bold text-foreground truncate">
                 {menu.name}
               </h1>
             )}
@@ -135,7 +135,7 @@ export default function MenuDetail() {
         >
           <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-black/60 flex items-center justify-center">
             <div className="text-center text-white px-6">
-              <h2 className="font-serif text-4xl md:text-6xl font-bold mb-4">
+              <h2 className="text-4xl md:text-6xl font-bold mb-4">
                 {menu.name}
               </h2>
               {menu.description && (
@@ -174,7 +174,7 @@ export default function MenuDetail() {
             {/* Menu Header - only show if no hero image */}
             {!menu.heroImageUrl && (
               <div className="text-center space-y-4 pb-8 border-b">
-                <h2 className="font-serif text-4xl md:text-5xl font-bold text-foreground">
+                <h2 className="text-4xl md:text-5xl font-bold text-foreground">
                   {menu.name}
                 </h2>
                 {menu.description && (
@@ -189,7 +189,7 @@ export default function MenuDetail() {
             {sections.map((section) => (
               <section key={section} className="space-y-6">
                 <h3 
-                  className="font-sans text-xl md:text-2xl font-semibold text-foreground uppercase tracking-wide border-l-4 pl-4"
+                  className="text-xl md:text-2xl font-semibold text-foreground uppercase tracking-wide border-l-4 pl-4"
                   style={{
                     borderLeftColor: accentColor || undefined,
                     ...(accentColor ? {} : { borderLeftColor: 'hsl(var(--primary))' })
@@ -211,7 +211,7 @@ export default function MenuDetail() {
                           data-testid={`card-drink-${drink.id}`}
                         >
                           <CardHeader className="flex-1">
-                            <CardTitle className="font-serif text-xl text-foreground mb-2">
+                            <CardTitle className="text-xl text-foreground mb-2">
                               {drink.name}
                             </CardTitle>
                             {drink.style && (

@@ -1,245 +1,53 @@
 # Bar Flores - Cocktail Menu Management System
 
 ## Overview
-
-Bar Flores is a mobile-first web application for managing and displaying experimental cocktail menus. The system allows bartenders to create themed menus (e.g., NYE, Spring), showcase drinks with detailed information, accept orders from guests via QR codes, and track analytics on drink popularity. The application emphasizes a premium hospitality design aesthetic with clean typography and sophisticated layouts.
+Bar Flores is a mobile-first web application designed for managing and displaying experimental cocktail menus. It enables bartenders to create themed menus, detail drinks, accept orders via QR codes, and track drink popularity. The application prioritizes a premium hospitality design aesthetic with clean typography and sophisticated layouts. It aims to enhance guest experience through intuitive ordering and provide robust tools for menu administration and analytics.
 
 ## User Preferences
-
 Preferred communication style: Simple, everyday language.
 
 ## System Architecture
 
 ### Frontend Architecture
-
-**Technology Stack:**
-- React with TypeScript for type safety and component development
-- Vite as the build tool and development server
-- Wouter for lightweight client-side routing
-- TanStack Query (React Query) for server state management and caching
-- shadcn/ui component library built on Radix UI primitives
-- Tailwind CSS for styling with custom design tokens
-
-**Design System:**
-- Typography: Playfair Display (serif) for headers/drink names, Inter (sans-serif) for body text
-- Mobile-first responsive design with breakpoints for tablet and desktop
-- Custom color scheme using CSS variables for theming
-- Container max-widths: 7xl for landing/dashboard, 6xl for menu pages
-- Spacing system based on Tailwind's default scale (2, 4, 6, 8, 12, 16, 24)
-
-**Page Structure:**
-- Landing page: Hero section with background image and menu showcase
-- Menu detail page: Displays drinks organized by sections with order functionality
-- Dashboard page: Real-time order queue and drink analytics with filtering options
-- 404 Not Found page for error handling
-
-**State Management:**
-- React Query handles all server state with automatic refetching intervals
-- Local component state using React hooks for UI interactions (e.g., ordered drinks tracking)
-- Toast notifications for user feedback on actions
+- **Technology Stack**: React with TypeScript, Vite, Wouter for routing, TanStack Query for server state, shadcn/ui (Radix UI) for components, Tailwind CSS for styling.
+- **Design System**: Mobile-first responsive design, custom color scheme via CSS variables, Playfair Display (serif) and Inter (sans-serif) fonts, consistent spacing system.
+- **Page Structure**: Includes a landing page, menu detail page with ordering, a dashboard for real-time order queue and analytics, and an admin section for menu and drink management.
+- **State Management**: React Query for server state and caching, React hooks for local UI state, toast notifications for user feedback.
 
 ### Backend Architecture
-
-**Technology Stack:**
-- Express.js server with TypeScript
-- Node.js runtime environment
-- RESTful API design pattern
-- Vite middleware integration for development HMR
-
-**API Endpoints:**
-- `GET /api/menus` - Retrieve all menus
-- `GET /api/menus/:slug` - Get specific menu by slug
-- `POST /api/menus` - Create new menu
-- `PATCH /api/menus/:id` - Update menu (body: {isActive})
-- `GET /api/drinks?menuId=xxx` - Get active drinks for a menu (query parameter)
-- `GET /api/drinks/all?menuId=xxx` - Get ALL drinks for a menu including inactive (for admin)
-- `POST /api/drinks` - Create new drink
-- `PATCH /api/drinks/reorder` - Reorder drinks (body: {drinks: [{id, sortOrder}]})
-- `DELETE /api/drinks/bulk` - Bulk delete drinks (body: {drinkIds: string[]})
-- `PATCH /api/drinks/bulk` - Bulk update drinks active status (body: {drinkIds: string[], isActive: boolean})
-- `POST /api/orders` - Place drink order (body: {drinkId, menuId, guestName?})
-- `GET /api/orders/queue` - Get pending orders with drink details and recipes
-- `PATCH /api/orders/:id` - Update order status (body: {status})
-- `GET /api/analytics` - Get drink popularity analytics with counts
-- `POST /api/auth/login` - Dashboard login (body: {username, password})
-- `POST /api/auth/logout` - Logout and destroy session
-- `GET /api/auth/check` - Check authentication status
-
-**Data Layer:**
-- Storage abstraction through IStorage interface for flexibility
-- DatabaseStorage implementation using Drizzle ORM
-- Schema validation using Zod with drizzle-zod integration
-
-**Request Handling:**
-- JSON body parsing with raw body capture for webhook support
-- Request/response logging middleware with duration tracking
-- Error handling with appropriate HTTP status codes
+- **Technology Stack**: Express.js with TypeScript, Node.js, RESTful API design.
+- **API Endpoints**: Comprehensive set of endpoints for managing menus, drinks, orders, authentication, and analytics.
+- **Data Layer**: Abstracted storage through `IStorage` interface, `DatabaseStorage` implementation using Drizzle ORM, Zod for schema validation.
+- **Request Handling**: JSON body parsing, logging middleware, and structured error handling.
 
 ### Data Storage
-
-**Database:**
-- PostgreSQL via Neon serverless driver
-- Connection pooling for performance
-- WebSocket support for serverless environments
-
-**ORM:**
-- Drizzle ORM for type-safe database queries
-- Schema-first approach with TypeScript inference
-- Migration system via drizzle-kit
-
-**Schema Design:**
-- `menus` table: Stores menu metadata (slug, name, description, active status)
-- `drinks` table: Drink details with foreign key to menus, includes recipe, style, preparation method, base spirit
-- `orders` table: Order tracking with status workflow and timestamps
-- UUID primary keys using PostgreSQL's `gen_random_uuid()`
-- Cascade delete for menu-drink relationships
-
-**Data Types:**
-- Boolean flags for drink characteristics (isMocktail, isStirred, isShaken, isActive)
-- Text fields for flexible content (descriptions, recipes)
-- Integer sort order for drink display sequencing
-- Timestamps for audit trails (createdAt, completedAt)
+- **Database**: PostgreSQL via Neon serverless driver.
+- **ORM**: Drizzle ORM for type-safe queries and schema management via `drizzle-kit`.
+- **Schema Design**: `menus`, `drinks`, and `orders` tables with UUID primary keys and cascade delete for relationships. Includes fields for drink characteristics (e.g., `isMocktail`, `temperature`, `canBeMocktail`) and menu theming (`heroImageUrl`, `backgroundColor`, `accentColor`, `typography`).
 
 ### Authentication and Authorization
+- Basic session-based authentication for the dashboard (`admin` username with a configurable password) for internal use, not production-grade security. The public-facing menu operates without authentication.
 
-Currently not implemented - the application operates in an open access model suitable for public-facing menu displays and internal dashboard use without authentication requirements.
+### System Design Choices
+- **UI/UX**: Emphasis on premium design, dynamic theming for menus (custom hero images, colors, typography), and clear visual feedback.
+- **Feature Specifications**:
+    - **Guest Ordering**: QR code-based ordering, optional guest name capture, three-state order workflow (requested → in_progress → served).
+    - **Dashboard**: Real-time order queue, drink analytics (popularity, "never made," "least ordered"), and admin functionalities.
+    - **Admin Controls**: Create, edit, activate/deactivate, delete menus and drinks; drag-and-drop reordering for drinks; bulk operations (activate, deactivate, delete) for drinks.
+    - **Dynamic Theming**: Menus can be customized with specific hero images, background colors, accent colors, and typography, which are applied to their public-facing pages.
+    - **Drink Attributes**: Support for `temperature` (Hot, Cold, Room Temp, Not Specified), `isMocktail` (exclusively non-alcoholic), and `canBeMocktail` (can be made as a mocktail) with corresponding UI badges.
+- **Technical Implementations**: Frontend uses optimistic UI updates for smooth interactions. Backend enforces order workflow transitions and handles data validation. Query invalidation ensures UI synchronization after mutations.
 
-### External Dependencies
+## External Dependencies
 
-**UI Component Libraries:**
-- Radix UI primitives (@radix-ui/*) - Accessible, unstyled component primitives for dialogs, dropdowns, tooltips, etc.
-- shadcn/ui - Pre-styled component library built on Radix UI with customizable variants
-- Lucide React - Icon library for consistent iconography
-- class-variance-authority - Utility for managing component variants
-- tailwind-merge and clsx - Classname utilities for Tailwind CSS
-
-**Data Visualization:**
-- Recharts - Composable charting library for analytics bar charts
-
-**Form Management:**
-- React Hook Form - Form state and validation
-- @hookform/resolvers - Zod schema integration for form validation
-
-**Database and ORM:**
-- @neondatabase/serverless - Serverless PostgreSQL driver with WebSocket support
-- Drizzle ORM - Type-safe database toolkit
-- drizzle-kit - Migration and schema management CLI
-- ws - WebSocket library for Neon database connections
-
-**Carousel/Slider:**
-- embla-carousel-react - Touch-friendly carousel component
-
-**QR Code Generation:**
-- qrcode.react - QR code generation for menus and landing page
-
-**Drag-and-Drop:**
-- @dnd-kit/core - Core drag-and-drop functionality
-- @dnd-kit/sortable - Sortable list implementation
-- @dnd-kit/utilities - Utility functions for drag-and-drop
-
-**Date Utilities:**
-- date-fns - Date manipulation and formatting
-
-**Build Tools:**
-- Vite - Fast build tool and dev server
-- esbuild - Fast JavaScript bundler for production builds
-- TypeScript - Type checking and compilation
-- PostCSS with Autoprefixer - CSS processing
-
-**Development Tools:**
-- @replit/vite-plugin-runtime-error-modal - Development error overlay
-- @replit/vite-plugin-cartographer - Code mapping for Replit
-- @replit/vite-plugin-dev-banner - Development environment banner
-
-**Session Management:**
-- connect-pg-simple - PostgreSQL session store for Express (prepared for future auth)
-
-**Third-Party Services:**
-- Google Fonts - Playfair Display and Inter font families loaded via CDN
-
-## Recent Changes (November 20, 2025)
-
-### Completed Features
-- **Database Schema**: Implemented 3-table PostgreSQL schema (menus, drinks, orders) with full referential integrity
-- **Seeded Data**: Added NYE 2025 menu (8 drinks, active) and Baltimore Spring menu (3 drinks, inactive)
-- **Guest Name Capture**: 
-  - Optional guest name field in order dialog
-  - Captured names display in dashboard queue
-  - Enhanced hospitality experience with personalized service
-- **Guest Ordering Flow**: Complete ordering system with real-time feedback and status tracking
-- **Order Status Workflow**:
-  - Three-state progression: requested → in_progress → served
-  - "Start Preparing" button for requested orders
-  - "Mark Served" button for in-progress orders
-  - Enforced workflow prevents skipping steps (frontend UI + backend validation)
-  - Queue displays both requested and in-progress orders with drink recipes/instructions
-- **Dashboard Authentication**:
-  - Username + password authentication (username must be "admin")
-  - Session-based authentication with express-session
-  - Default password: "barflores2025" (configurable via DASHBOARD_PASSWORD env var)
-  - Logout functionality with session destruction
-  - Protected routes redirect to login when not authenticated
-  - Login redirect timing fix with 100ms delay to ensure session establishment
-- **Host Dashboard**: 
-  - Live queue tab with auto-refresh every 5 seconds showing drink recipes/instructions for bartender reference
-  - Analytics tab with auto-refresh every 10 seconds
-  - Admin tab for menu and drink management
-  - Three filter modes: All Drinks, Never Made, Least Ordered
-  - Logout button in header
-- **Admin Controls** (Admin tab):
-  - Create new menus with react-hook-form + zodResolver validation (name, slug, description fields)
-  - Toggle menu active/inactive status with switches
-  - QR code generation for each menu (dialog with enlarged QR code and URL)
-  - QR code for home page showing all active menus
-  - Create new drinks with full form (menu, name, section, style, description, recipe, base spirit, mocktail/stirred/shaken flags, sort order)
-  - Real-time menu list showing active/inactive status
-  - All drink fields validated and schema-compliant
-- **Manage Drinks Section** (Admin tab):
-  - Menu selector to choose which menu's drinks to manage
-  - Displays all drinks (both active and inactive) for selected menu
-  - Drag-and-drop reordering using @dnd-kit with visual feedback
-  - Bulk selection with checkboxes for each drink
-  - Select All / Deselect All functionality
-  - Bulk activate operation - activate multiple drinks at once
-  - Bulk deactivate operation - deactivate multiple drinks at once
-  - Bulk delete operation with confirmation dialog
-  - Visual indicators for inactive drinks (badge display)
-  - Real-time updates after all operations with query invalidation
-  - Optimistic UI updates for smooth user experience
-- **Analytics System**:
-  - Counts all non-cancelled orders (requested, in_progress, served)
-  - Never Made filter shows drinks with orderCount === 0
-  - Least Ordered filter shows bottom 25% (minimum 1 drink) sorted ascending
-  - Bar chart visualization of drink popularity
-- **Premium Design**: Playfair Display + Inter fonts, hero image, sophisticated color scheme
-
-### Bug Fixes
-- Fixed import error for queryClient in dashboard.tsx
-- Corrected drinks API query from path parameter to query parameter format
-- Improved Least Ordered filter to guarantee at least 1 result in all scenarios
-- Fixed analytics GROUP BY aggregation for accurate order counting
-- Fixed React hooks order to prevent "Rendered more hooks than during previous render" error
-- Corrected Express middleware order: body parsers before session middleware
-- Removed non-existent preparationMethod field from drink creation form
-- Added required isActive field to drink creation payload
-
-### Technical Decisions
-- Analytics counts ALL non-cancelled orders to show total demand
-- Least Ordered uses ascending sort and takes bottom 25% (min 1 drink)
-- Order workflow: requested → in_progress → served (enforced both frontend and backend)
-- Backend validates status transitions to prevent invalid progressions
-- Frontend uses enabled flag on useQuery to conditionally fetch data when authenticated
-- All React hooks called unconditionally before conditional returns
-- Manual workflow: hosts explicitly manage order status via dashboard buttons
-- Auto-refresh intervals: Queue 5s, Analytics 10s for real-time updates
-- Session-based auth with simple password for basic protection (not production-grade security)
-- Guest name capture is optional to reduce friction in ordering flow
-- Menu creation uses react-hook-form + zodResolver for robust validation following project guidelines
-- Drink creation uses manual state management (could be migrated to react-hook-form in future)
-- Queue now displays drink recipe/instructions instead of section for bartender reference
-- QR codes use QRCodeSVG component with high error correction level (H)
-- Drag-and-drop uses @dnd-kit with closestCenter collision detection
-- Bulk operations clear selections after completion for better UX
-- Manage Drinks fetches ALL drinks (active + inactive) via separate endpoint
-- Query invalidation ensures UI stays in sync after all mutations
-- Optimistic updates for drag-and-drop provide immediate visual feedback
+- **UI Component Libraries**: Radix UI primitives, shadcn/ui, Lucide React (icons), class-variance-authority, tailwind-merge, clsx.
+- **Data Visualization**: Recharts for analytics bar charts.
+- **Form Management**: React Hook Form with Zod resolvers.
+- **Database & ORM**: @neondatabase/serverless, Drizzle ORM, drizzle-kit, ws.
+- **Carousel/Slider**: embla-carousel-react.
+- **QR Code Generation**: qrcode.react.
+- **Drag-and-Drop**: @dnd-kit/core, @dnd-kit/sortable, @dnd-kit/utilities.
+- **Date Utilities**: date-fns.
+- **Build Tools**: Vite, esbuild, TypeScript, PostCSS with Autoprefixer.
+- **Session Management**: connect-pg-simple (for Express sessions).
+- **Third-Party Services**: Google Fonts (Playfair Display, Inter, Roboto, Open Sans, Lora).

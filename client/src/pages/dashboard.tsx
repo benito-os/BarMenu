@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { OrderWithDrink, DrinkAnalytics, Menu, Drink, InsertMenu } from "@shared/schema";
@@ -1332,7 +1333,7 @@ export default function Dashboard() {
                 <div className="space-y-2">
                   <Label htmlFor="manage-menu">Select Menu</Label>
                   <Select
-                    value={selectedMenuId}
+                    value={selectedMenuId || undefined}
                     onValueChange={(value) => {
                       setSelectedMenuId(value);
                       setSelectedDrinks(new Set());
@@ -1551,14 +1552,14 @@ export default function Dashboard() {
                       <div className="space-y-2">
                         <Label htmlFor="edit-drink-temperature">Temperature</Label>
                         <Select
-                          value={editingDrink.temperature || ""}
-                          onValueChange={(value) => setEditingDrink({ ...editingDrink, temperature: value })}
+                          value={editingDrink.temperature || "not_specified"}
+                          onValueChange={(value) => setEditingDrink({ ...editingDrink, temperature: value === "not_specified" ? "" : value })}
                         >
                           <SelectTrigger id="edit-drink-temperature">
-                            <SelectValue placeholder="Not specified" />
+                            <SelectValue placeholder="Select temperature" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Not specified</SelectItem>
+                            <SelectItem value="not_specified">Not Specified</SelectItem>
                             <SelectItem value="hot">Hot</SelectItem>
                             <SelectItem value="cold">Cold</SelectItem>
                             <SelectItem value="room_temp">Room Temperature</SelectItem>
@@ -1748,15 +1749,15 @@ export default function Dashboard() {
                     <div className="space-y-2">
                       <Label htmlFor="drink-temperature">Temperature</Label>
                       <Select
-                        value={newDrink.temperature}
-                        onValueChange={(value) => setNewDrink({ ...newDrink, temperature: value })}
+                        value={newDrink.temperature || "not_specified"}
+                        onValueChange={(value) => setNewDrink({ ...newDrink, temperature: value === "not_specified" ? "" : value })}
                         disabled={createDrinkMutation.isPending}
                       >
                         <SelectTrigger id="drink-temperature" data-testid="select-drink-temperature">
-                          <SelectValue placeholder="Not specified" />
+                          <SelectValue placeholder="Select temperature" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Not specified</SelectItem>
+                          <SelectItem value="not_specified">Not Specified</SelectItem>
                           <SelectItem value="hot">Hot</SelectItem>
                           <SelectItem value="cold">Cold</SelectItem>
                           <SelectItem value="room_temp">Room Temperature</SelectItem>
