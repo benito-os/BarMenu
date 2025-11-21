@@ -14,6 +14,7 @@ export const menus = pgTable("menus", {
   backgroundColor: text("background_color"),
   accentColor: text("accent_color"),
   typography: text("typography"),
+  sections: text("sections").array().notNull().default(sql`ARRAY[]::text[]`),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

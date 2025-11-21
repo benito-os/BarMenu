@@ -100,7 +100,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updateData = req.body;
       
       // Validate allowed fields
-      const allowedFields = ['name', 'slug', 'description', 'isActive', 'heroImageUrl', 'backgroundColor', 'accentColor', 'typography'];
+      const allowedFields = ['name', 'slug', 'description', 'isActive', 'heroImageUrl', 'backgroundColor', 'accentColor', 'typography', 'sections'];
       const hasValidFields = Object.keys(updateData).every(key => allowedFields.includes(key));
       
       if (!hasValidFields) {
