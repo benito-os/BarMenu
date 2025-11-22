@@ -58,10 +58,18 @@ export default function Dashboard() {
   const [selectedMenuId, setSelectedMenuId] = useState<string>("");
   const [selectedDrinks, setSelectedDrinks] = useState<Set<string>>(new Set());
   const [localDrinks, setLocalDrinks] = useState<Drink[]>([]);
+  const [sectionFilter, setSectionFilter] = useState<string>("all");
   const [editingDrink, setEditingDrink] = useState<Drink | null>(null);
   const [editingMenu, setEditingMenu] = useState<Menu | null>(null);
   const [newSectionInput, setNewSectionInput] = useState<string>("");
   const [selectedOrder, setSelectedOrder] = useState<OrderWithDrink | null>(null);
+
+  const getNextSortOrder = useCallback((menuId: string) => {
+    if (!menuId) return 0;
+    const drinksForMenu = localDrinks?.filter(drink => drink.menuId === menuId) || [];
+    const maxSortOrder = drinksForMenu.reduce((max, drink) => Math.max(max, drink.sortOrder || 0), 0);
+    return maxSortOrder + 1;
+  }, [localDrinks]);
 
   // Stable section keys - generated once when editing starts and persists
   const sectionKeysRef = useRef<Map<string, string>>(new Map());
@@ -335,13 +343,6 @@ export default function Dashboard() {
     sortOrder: 0,
   });
 
-  const getNextSortOrder = useCallback((menuId: string) => {
-    if (!menuId) return 0;
-    const drinksForMenu = localDrinks?.filter(drink => drink.menuId === menuId) || [];
-    const maxSortOrder = drinksForMenu.reduce((max, drink) => Math.max(max, drink.sortOrder || 0), 0);
-    return maxSortOrder + 1;
-  }, [localDrinks]);
-
   // Fetch all drinks for selected menu (including inactive) for admin management
   const { data: allDrinks, isLoading: allDrinksLoading } = useQuery<Drink[]>({
     queryKey: ["/api/drinks/all", selectedMenuId],
@@ -357,12 +358,18 @@ export default function Dashboard() {
   // Update localDrinks when allDrinks changes or when selectedMenuId changes
   useEffect(() => {
     if (allDrinks) {
-      setLocalDrinks(allDrinks);
+      const sorted = [...allDrinks].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+      setLocalDrinks(sorted);
     } else if (selectedMenuId) {
       // Clear local drinks when menu changes but data hasn't loaded yet
       setLocalDrinks([]);
     }
   }, [allDrinks, selectedMenuId]);
+
+  useEffect(() => {
+    setSectionFilter("all");
+    setSelectedDrinks(new Set());
+  }, [selectedMenuId]);
 
   useEffect(() => {
     if (newDrink.menuId) {
@@ -580,34 +587,73 @@ export default function Dashboard() {
     }
   };
 
-  // Handle drag end for reordering drinks
-  const handleDragEnd = (event: DragEndEvent) => {
+  const getSectionKey = (section?: string | null) => section?.trim() || "Uncategorized";
+
+  const selectedMenu = useMemo(() => menus?.find(menu => menu.id === selectedMenuId), [menus, selectedMenuId]);
+
+  const sectionOrder = useMemo(() => {
+    const fromMenu = selectedMenu?.sections?.map(section => getSectionKey(section)) || [];
+    const fromDrinks = localDrinks.map(drink => getSectionKey(drink.section));
+    return Array.from(new Set([...fromMenu, ...fromDrinks]));
+  }, [localDrinks, selectedMenu?.sections]);
+
+  const sectionedDrinks = useMemo(() => {
+    const entries = new Map<string, Drink[]>();
+    sectionOrder.forEach(section => entries.set(section, []));
+
+    localDrinks.forEach(drink => {
+      const key = getSectionKey(drink.section);
+      if (!entries.has(key)) entries.set(key, []);
+      entries.get(key)!.push(drink);
+    });
+
+    entries.forEach((drinks, key) => {
+      entries.set(
+        key,
+        [...drinks].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+      );
+    });
+
+    return entries;
+  }, [localDrinks, sectionOrder]);
+
+  const filteredSectionOrder = useMemo(
+    () => (sectionFilter === "all" ? sectionOrder : sectionOrder.filter(section => section === sectionFilter)),
+    [sectionFilter, sectionOrder]
+  );
+
+  const filteredDrinks = useMemo(
+    () => filteredSectionOrder.flatMap(section => sectionedDrinks.get(section) || []),
+    [filteredSectionOrder, sectionedDrinks]
+  );
+
+  const handleSectionDragEnd = (sectionKey: string) => (event: DragEndEvent) => {
     const { active, over } = event;
-    
+
     if (!over || active.id === over.id) {
-      return; // No change in position
-    }
-    
-    const oldIndex = localDrinks.findIndex(d => d.id === active.id);
-    const newIndex = localDrinks.findIndex(d => d.id === over.id);
-    
-    if (oldIndex === -1 || newIndex === -1) {
-      console.error("Could not find drink indices for reorder");
       return;
     }
-    
-    const reordered = arrayMove(localDrinks, oldIndex, newIndex);
-    
-    // Update sort order based on new positions
-    const updates = reordered.map((drink, index) => ({
+
+    const sectionDrinks = sectionedDrinks.get(sectionKey) || [];
+    const oldIndex = sectionDrinks.findIndex(d => d.id === active.id);
+    const newIndex = sectionDrinks.findIndex(d => d.id === over.id);
+
+    if (oldIndex === -1 || newIndex === -1) {
+      console.error("Could not find drink indices for reorder in section", sectionKey);
+      return;
+    }
+
+    const reorderedSection = arrayMove(sectionDrinks, oldIndex, newIndex);
+    const updatedSections = new Map(sectionedDrinks);
+    updatedSections.set(sectionKey, reorderedSection);
+
+    const recombined = sectionOrder.flatMap(section => updatedSections.get(section) || []);
+    const updates = recombined.map((drink, index) => ({
       id: drink.id,
       sortOrder: index,
     }));
-    
-    // Optimistically update UI
-    setLocalDrinks(reordered);
-    
-    // Call mutation to persist to backend
+
+    setLocalDrinks(recombined);
     reorderDrinksMutation.mutate(updates);
   };
 
@@ -624,12 +670,19 @@ export default function Dashboard() {
 
   // Select all or deselect all
   const toggleSelectAll = () => {
-    if (selectedDrinks.size === localDrinks.length) {
+    if (selectedDrinks.size === filteredDrinks.length) {
       setSelectedDrinks(new Set());
     } else {
-      setSelectedDrinks(new Set(localDrinks.map(d => d.id)));
+      setSelectedDrinks(new Set(filteredDrinks.map(d => d.id)));
     }
   };
+
+  useEffect(() => {
+    setSelectedDrinks(prev => {
+      const visibleIds = new Set(filteredDrinks.map(d => d.id));
+      return new Set([...prev].filter(id => visibleIds.has(id)));
+    });
+  }, [filteredDrinks, sectionFilter, selectedMenuId]);
 
   // Sortable Drink Item Component (Card Grid View)
   function SortableDrinkItem({ drink }: { drink: Drink }) {
@@ -1859,6 +1912,7 @@ export default function Dashboard() {
                     onValueChange={(value) => {
                       setSelectedMenuId(value);
                       setSelectedDrinks(new Set());
+                      setSectionFilter("all");
                       setLocalDrinks([]);
                       setNewDrink(prev => ({
                         ...prev,
