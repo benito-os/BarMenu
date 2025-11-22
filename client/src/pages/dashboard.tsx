@@ -25,7 +25,7 @@ import { insertMenuSchema } from "@shared/schema";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { Clock, TrendingUp, AlertCircle, CheckCircle2, Home, LogOut, Settings, QrCode, Download, X, Plus } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { QRCodeSVG } from "qrcode.react";
@@ -62,6 +62,32 @@ export default function Dashboard() {
   const [editingMenu, setEditingMenu] = useState<Menu | null>(null);
   const [newSectionInput, setNewSectionInput] = useState<string>("");
   const [selectedOrder, setSelectedOrder] = useState<OrderWithDrink | null>(null);
+
+  // Stable section keys - generated once when editing starts and persists
+  const sectionKeysRef = useRef<Map<string, string>>(new Map());
+  
+  // Generate stable drag IDs for section reordering
+  const sectionDragMapping = useMemo(() => {
+    if (!editingMenu?.sections) {
+      sectionKeysRef.current = new Map();
+      return [];
+    }
+    
+    // Generate or reuse stable keys for each section
+    const mapping = editingMenu.sections.map((section, i) => {
+      const lookupKey = `${editingMenu.id}-${i}-${section}`;
+      if (!sectionKeysRef.current.has(lookupKey)) {
+        sectionKeysRef.current.set(lookupKey, `section-${Math.random().toString(36).substr(2, 9)}`);
+      }
+      return {
+        section,
+        index: i,
+        dragId: sectionKeysRef.current.get(lookupKey)!,
+      };
+    });
+    
+    return mapping;
+  }, [editingMenu?.id, editingMenu?.sections]); // Update when menu or sections change
   const [qrSize, setQrSize] = useState<number>(200);
   const [qrFgColor, setQrFgColor] = useState<string>("#000000");
   const [qrBgColor, setQrBgColor] = useState<string>("#ffffff");
@@ -71,8 +97,16 @@ export default function Dashboard() {
   // Get base URL for QR codes
   const baseUrl = window.location.origin;
   
-  // Sensors for drag and drop
+  // Sensors for drag and drop (drinks)
   const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Separate sensors for section reordering
+  const sectionSensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
@@ -914,35 +948,35 @@ export default function Dashboard() {
       </TabsContent>
       
       {/* Management Tab - With Sidebar */}
-      <TabsContent value="management" className="flex-1 overflow-hidden m-0">
+      <TabsContent value="management" className="flex-1 h-full overflow-hidden m-0">
         <SidebarProvider style={style}>
-          <div className="flex h-full w-full">
-            <AppSidebar
-              activeSection={activeSection}
-              onSectionChange={setActiveSection}
-              onLogout={() => logoutMutation.mutate()}
-            />
-            <div className="flex flex-col flex-1">
-              <header className="flex items-center justify-between p-4 border-b">
-                <div className="flex items-center gap-4">
-                  <SidebarTrigger data-testid="button-sidebar-toggle" />
-                  <h1 className="font-serif text-2xl md:text-3xl font-bold text-foreground">
-                    Bar Flores Dashboard
-                  </h1>
-                </div>
-                <Link href="/">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    data-testid="button-back-home"
-                  >
-                    <Home className="w-4 h-4 mr-2" />
-                    Home
-                  </Button>
-                </Link>
-              </header>
+            <div className="flex flex-1 w-full min-h-0">
+              <AppSidebar
+                activeSection={activeSection}
+                onSectionChange={setActiveSection}
+                onLogout={() => logoutMutation.mutate()}
+              />
+              <div className="flex flex-col flex-1 min-h-0">
+                <header className="flex-shrink-0 flex items-center justify-between p-4 border-b">
+                  <div className="flex items-center gap-4">
+                    <SidebarTrigger data-testid="button-sidebar-toggle" />
+                    <h1 className="font-serif text-2xl md:text-3xl font-bold text-foreground">
+                      Bar Flores Dashboard
+                    </h1>
+                  </div>
+                  <Link href="/">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      data-testid="button-back-home"
+                    >
+                      <Home className="w-4 h-4 mr-2" />
+                      Home
+                    </Button>
+                  </Link>
+                </header>
 
-              <main className="flex-1 overflow-auto p-6">
+                <main className="flex-1 overflow-y-auto p-6 min-h-0">
                 <div className="max-w-7xl mx-auto space-y-6">
                   {/* Analytics Section */}
                   {activeSection === "analytics" && (
@@ -1510,27 +1544,82 @@ export default function Dashboard() {
                         <div className="space-y-2">
                           <Label>Menu Sections</Label>
                           <p className="text-xs text-muted-foreground">
-                            Define sections to organize drinks (e.g., "Classic Elegance", "Festive and Fruity")
+                            Define and reorder sections to organize drinks (drag to reorder)
                           </p>
-                          {editingMenu.sections && editingMenu.sections.length > 0 && (
-                            <div className="flex flex-wrap gap-2 p-3 border rounded-md bg-muted/20">
-                              {editingMenu.sections.map((section, index) => (
-                                <Badge key={index} variant="secondary" className="gap-1" data-testid={`badge-section-${index}`}>
-                                  {section}
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const newSections = editingMenu.sections.filter((_, i) => i !== index);
-                                      setEditingMenu({ ...editingMenu, sections: newSections });
-                                    }}
-                                    className="ml-1 hover:bg-destructive/20 rounded-full p-0.5"
-                                    data-testid={`button-remove-section-${index}`}
-                                  >
-                                    <X className="w-3 h-3" />
-                                  </button>
-                                </Badge>
-                              ))}
-                            </div>
+                          {editingMenu.sections && editingMenu.sections.length > 0 && sectionDragMapping.length > 0 && (
+                            <DndContext
+                              sensors={sectionSensors}
+                              collisionDetection={closestCenter}
+                              onDragEnd={(event) => {
+                                const { active, over } = event;
+                                if (over && active.id !== over.id) {
+                                  const oldMapping = sectionDragMapping.find(m => m.dragId === active.id);
+                                  const newMapping = sectionDragMapping.find(m => m.dragId === over.id);
+                                  if (oldMapping && newMapping && oldMapping.index !== newMapping.index) {
+                                    const reordered = [...editingMenu.sections];
+                                    const [moved] = reordered.splice(oldMapping.index, 1);
+                                    reordered.splice(newMapping.index, 0, moved);
+                                    setEditingMenu({ ...editingMenu, sections: reordered });
+                                  }
+                                }
+                              }}
+                            >
+                              <SortableContext
+                                items={sectionDragMapping.map(m => m.dragId)}
+                                strategy={verticalListSortingStrategy}
+                              >
+                                <div className="space-y-2 p-3 border rounded-md bg-muted/20">
+                                  {sectionDragMapping.map((mapping) => {
+                                    const {
+                                      attributes,
+                                      listeners,
+                                      setNodeRef,
+                                      transform,
+                                      transition,
+                                      isDragging,
+                                    } = useSortable({ id: mapping.dragId });
+
+                                    const style = {
+                                      transform: CSS.Transform.toString(transform),
+                                      transition,
+                                      opacity: isDragging ? 0.5 : 1,
+                                    };
+
+                                    return (
+                                      <div
+                                        key={mapping.dragId}
+                                        ref={setNodeRef}
+                                        style={style}
+                                        className="flex items-center gap-2 p-2 bg-background border rounded hover-elevate"
+                                        data-testid={`section-item-${mapping.index}`}
+                                      >
+                                        <div
+                                          {...attributes}
+                                          {...listeners}
+                                          className="cursor-grab active:cursor-grabbing p-1"
+                                        >
+                                          <GripVertical className="w-4 h-4 text-muted-foreground" />
+                                        </div>
+                                        <Badge variant="secondary" className="flex-1" data-testid={`badge-section-${mapping.index}`}>
+                                          {mapping.section}
+                                        </Badge>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            const newSections = editingMenu.sections.filter((_, i) => i !== mapping.index);
+                                            setEditingMenu({ ...editingMenu, sections: newSections });
+                                          }}
+                                          className="p-1 hover:bg-destructive/20 rounded-full"
+                                          data-testid={`button-remove-section-${mapping.index}`}
+                                        >
+                                          <X className="w-4 h-4" />
+                                        </button>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </SortableContext>
+                            </DndContext>
                           )}
                           <div className="flex gap-2">
                             <Input
