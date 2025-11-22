@@ -1,0 +1,117 @@
+import { createSelectSchema } from "drizzle-zod";
+import { z } from "zod";
+import {
+  drinks,
+  insertDrinkSchema,
+  insertMenuSchema,
+  insertOrderSchema,
+  menus,
+  orders,
+} from "../schema";
+
+export const menuSchema = createSelectSchema(menus);
+export const drinkSchema = createSelectSchema(drinks);
+export const orderSchema = createSelectSchema(orders);
+
+export const menuCreateSchema = insertMenuSchema.strict();
+export const menuUpdateSchema = menuCreateSchema
+  .partial()
+  .strict()
+  .refine((data) => Object.keys(data).length > 0, {
+    message: "At least one menu field must be provided",
+  });
+
+export const drinkCreateSchema = insertDrinkSchema.strict();
+export const drinkUpdateSchema = drinkCreateSchema
+  .partial()
+  .strict()
+  .refine((data) => Object.keys(data).length > 0, {
+    message: "At least one drink field must be provided",
+  });
+
+export const drinkReorderSchema = z.object({
+  drinks: z
+    .array(
+      z.object({
+        id: z.string().min(1, "id is required"),
+        sortOrder: z.number().int(),
+      }),
+    )
+    .nonempty("At least one drink reorder entry is required"),
+});
+
+export const drinkBulkDeleteSchema = z.object({
+  drinkIds: z.array(z.string().min(1)).nonempty("drinkIds is required"),
+});
+
+export const drinkBulkUpdateSchema = z.object({
+  drinkIds: z.array(z.string().min(1)).nonempty("drinkIds is required"),
+  isActive: z.boolean(),
+});
+
+export const orderCreateSchema = insertOrderSchema
+  .extend({
+    guestName: z.string().min(1).optional(),
+  })
+  .strict();
+
+export const orderStatusUpdateSchema = z.object({
+  status: z.enum(["requested", "in_progress", "served", "cancelled"]),
+});
+
+export const menuSlugSchema = z.object({
+  slug: z.string().min(1, "slug is required"),
+});
+
+export const menuIdQuerySchema = z.object({
+  menuId: z.string().min(1, "menuId query parameter is required"),
+});
+
+export const idParamsSchema = z.object({
+  id: z.string().min(1, "id is required"),
+});
+
+export const drinkIdParamsSchema = idParamsSchema;
+
+export const analyticsQuerySchema = z.object({
+  menuId: z.string().min(1).optional(),
+});
+
+export const drinkAnalyticsSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  section: z.string(),
+  menuId: z.string(),
+  orderCount: z.number(),
+  isNeverMade: z.boolean(),
+});
+
+export const orderWithDrinkSchema = orderSchema
+  .omit({
+    guestName: true,
+  })
+  .extend({
+    guestName: z.string().nullable(),
+    drinkName: z.string(),
+    drinkSection: z.string(),
+    drinkRecipe: z.string(),
+    drinkDescription: z.string(),
+    drinkStyle: z.string(),
+    drinkBaseSpirit: z.string(),
+    drinkTemperature: z.string(),
+    drinkIsMocktail: z.boolean(),
+    drinkCanBeMocktail: z.boolean(),
+    drinkIsStirred: z.boolean(),
+    drinkIsShaken: z.boolean(),
+  });
+
+export type Menu = z.infer<typeof menuSchema>;
+export type Drink = z.infer<typeof drinkSchema>;
+export type Order = z.infer<typeof orderSchema>;
+export type InsertMenu = z.infer<typeof menuCreateSchema>;
+export type InsertDrink = z.infer<typeof drinkCreateSchema>;
+export type InsertOrder = z.infer<typeof orderCreateSchema>;
+export type DrinkReorderRequest = z.infer<typeof drinkReorderSchema>;
+export type DrinkBulkUpdateRequest = z.infer<typeof drinkBulkUpdateSchema>;
+export type OrderWithDrink = z.infer<typeof orderWithDrinkSchema>;
+export type DrinkAnalytics = z.infer<typeof drinkAnalyticsSchema>;
