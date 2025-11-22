@@ -25,7 +25,7 @@ import { menuCreateSchema } from "@shared/validation";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { Clock, TrendingUp, AlertCircle, CheckCircle2, Home, LogOut, Settings, QrCode, Download, X, Plus } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { QRCodeSVG } from "qrcode.react";
@@ -182,6 +182,22 @@ export default function Dashboard() {
     enabled: !!authStatus?.isAuthenticated,
   });
 
+  const defaultMenu = useMemo(() => {
+    if (!menus || menus.length === 0) return null;
+    return menus.find(menu => menu.isActive) ?? menus[0];
+  }, [menus]);
+
+  useEffect(() => {
+    if (!selectedMenuId && !menusLoading && defaultMenu) {
+      setSelectedMenuId(defaultMenu.id);
+      setNewDrink(prev => ({
+        ...prev,
+        menuId: prev.menuId || defaultMenu.id,
+        sortOrder: prev.menuId ? prev.sortOrder : getNextSortOrder(defaultMenu.id),
+      }));
+    }
+  }, [defaultMenu, getNextSortOrder, menusLoading, selectedMenuId]);
+
   // Create menu form
   const menuForm = useForm<InsertMenu>({
     resolver: zodResolver(menuCreateSchema),
@@ -302,6 +318,13 @@ export default function Dashboard() {
     sortOrder: 0,
   });
 
+  const getNextSortOrder = useCallback((menuId: string) => {
+    if (!menuId) return 0;
+    const drinksForMenu = localDrinks?.filter(drink => drink.menuId === menuId) || [];
+    const maxSortOrder = drinksForMenu.reduce((max, drink) => Math.max(max, drink.sortOrder || 0), 0);
+    return maxSortOrder + 1;
+  }, [localDrinks]);
+
   // Fetch all drinks for selected menu (including inactive) for admin management
   const { data: allDrinks, isLoading: allDrinksLoading } = useQuery<Drink[]>({
     queryKey: ["/api/drinks/all", selectedMenuId],
@@ -323,6 +346,15 @@ export default function Dashboard() {
       setLocalDrinks([]);
     }
   }, [allDrinks, selectedMenuId]);
+
+  useEffect(() => {
+    if (newDrink.menuId) {
+      setNewDrink(prev => ({
+        ...prev,
+        sortOrder: getNextSortOrder(prev.menuId),
+      }));
+    }
+  }, [getNextSortOrder, newDrink.menuId]);
 
   // Reorder drinks mutation
   const reorderDrinksMutation = useMutation({
@@ -407,13 +439,24 @@ export default function Dashboard() {
       };
       return apiRequest("POST", "/api/drinks", payload);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/drinks"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/drinks/all"] });
-      setNewDrink({
-        menuId: "",
+    onSuccess: (_data, variables) => {
+      const menuId = variables.menuId || selectedMenuId;
+
+      if (menuId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/drinks/all", menuId] });
+        queryClient.invalidateQueries({ queryKey: ["/api/drinks", menuId] });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ["/api/drinks"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/drinks/all"] });
+      }
+
+      const nextSortOrder = menuId ? getNextSortOrder(menuId) : 0;
+
+      setNewDrink(prev => ({
+        ...prev,
+        menuId: menuId || prev.menuId,
+        section: variables.section ?? prev.section,
         name: "",
-        section: "",
         description: "",
         recipe: "",
         style: "",
@@ -424,8 +467,8 @@ export default function Dashboard() {
         isStirred: false,
         isShaken: false,
         isActive: true,
-        sortOrder: 0,
-      });
+        sortOrder: nextSortOrder,
+      }));
       toast({
         title: "Drink Created",
         description: "New drink has been added to the menu",
@@ -1707,13 +1750,26 @@ export default function Dashboard() {
               <CardContent className="space-y-4">
                 {/* Menu Selector */}
                 <div className="space-y-2">
-                  <Label htmlFor="manage-menu">Select Menu</Label>
+                  <div className="flex items-center justify-between gap-2">
+                    <Label htmlFor="manage-menu">Select Menu</Label>
+                    {defaultMenu && (
+                      <Badge variant="outline" className="text-xs font-normal" data-testid="badge-default-menu">
+                        Default: {defaultMenu.name}
+                        {defaultMenu.isActive ? " (Active)" : ""}
+                      </Badge>
+                    )}
+                  </div>
                   <Select
                     value={selectedMenuId || undefined}
                     onValueChange={(value) => {
                       setSelectedMenuId(value);
                       setSelectedDrinks(new Set());
                       setLocalDrinks([]);
+                      setNewDrink(prev => ({
+                        ...prev,
+                        menuId: value,
+                        sortOrder: getNextSortOrder(value),
+                      }));
                     }}
                     disabled={menusLoading || !menus || menus.length === 0}
                   >
@@ -2059,7 +2115,11 @@ export default function Dashboard() {
                       <Label htmlFor="drink-menu">Menu</Label>
                       <Select
                         value={newDrink.menuId}
-                        onValueChange={(value) => setNewDrink({ ...newDrink, menuId: value })}
+                        onValueChange={(value) => setNewDrink(prev => ({
+                          ...prev,
+                          menuId: value,
+                          sortOrder: getNextSortOrder(value),
+                        }))}
                         disabled={createDrinkMutation.isPending || menusLoading || !menus || menus.length === 0}
                       >
                         <SelectTrigger id="drink-menu" data-testid="select-drink-menu">
