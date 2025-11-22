@@ -1882,106 +1882,108 @@ export default function Dashboard() {
                 </div>
 
                 {selectedMenuId && (
-                  <>
-                    {/* Sticky Bulk Actions Bar */}
-                    {localDrinks.length > 0 && (
-                      <div className="sticky top-0 z-50 bg-background pb-4">
-                        <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/20">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={toggleSelectAll}
-                            data-testid="button-toggle-select-all"
-                          >
-                            {selectedDrinks.size === localDrinks.length ? "Deselect All" : "Select All"}
-                          </Button>
-                          
-                          {selectedDrinks.size > 0 && (
-                            <>
-                              <div className="text-sm text-muted-foreground">
-                                {selectedDrinks.size} selected
-                              </div>
-                              <div className="flex-1" />
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  bulkUpdateMutation.mutate({
-                                    drinkIds: Array.from(selectedDrinks),
-                                    isActive: true,
-                                  });
-                                }}
-                                disabled={bulkUpdateMutation.isPending}
-                                data-testid="button-bulk-activate"
-                              >
-                                <CheckCircle2 className="w-4 h-4 mr-1" />
-                                Activate
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  bulkUpdateMutation.mutate({
-                                    drinkIds: Array.from(selectedDrinks),
-                                    isActive: false,
-                                  });
-                                }}
-                                disabled={bulkUpdateMutation.isPending}
-                                data-testid="button-bulk-deactivate"
-                              >
-                                <AlertCircle className="w-4 h-4 mr-1" />
-                                Deactivate
-                              </Button>
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => {
-                                  if (confirm(`Delete ${selectedDrinks.size} drink(s)? This cannot be undone.`)) {
-                                    bulkDeleteMutation.mutate(Array.from(selectedDrinks));
-                                  }
-                                }}
-                                disabled={bulkDeleteMutation.isPending}
-                                data-testid="button-bulk-delete"
-                              >
-                                <Trash2 className="w-4 h-4 mr-1" />
-                                Delete
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    )}
+                  <ScrollArea className="max-h-[70vh] pr-2">
+                    <div className="space-y-4">
+                      {/* Sticky Bulk Actions Bar */}
+                      {localDrinks.length > 0 && (
+                        <div className="sticky top-0 z-50 bg-background pb-4">
+                          <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/20">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={toggleSelectAll}
+                              data-testid="button-toggle-select-all"
+                            >
+                              {selectedDrinks.size === localDrinks.length ? "Deselect All" : "Select All"}
+                            </Button>
 
-                    {/* Drinks Grid with Drag and Drop */}
-                    {allDrinksLoading ? (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {[1, 2, 3, 4, 5, 6].map((i) => (
-                          <Skeleton key={i} className="h-64 w-full" />
-                        ))}
-                      </div>
-                    ) : localDrinks.length > 0 ? (
-                      <DndContext
-                        sensors={sensors}
-                        collisionDetection={closestCenter}
-                        onDragEnd={handleDragEnd}
-                      >
-                        <SortableContext
-                          items={localDrinks.map(d => d.id)}
-                          strategy={verticalListSortingStrategy}
-                        >
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="drinks-list">
-                            {localDrinks.map((drink) => (
-                              <SortableDrinkItem key={drink.id} drink={drink} />
-                            ))}
+                            {selectedDrinks.size > 0 && (
+                              <>
+                                <div className="text-sm text-muted-foreground">
+                                  {selectedDrinks.size} selected
+                                </div>
+                                <div className="flex-1" />
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    bulkUpdateMutation.mutate({
+                                      drinkIds: Array.from(selectedDrinks),
+                                      isActive: true,
+                                    });
+                                  }}
+                                  disabled={bulkUpdateMutation.isPending}
+                                  data-testid="button-bulk-activate"
+                                >
+                                  <CheckCircle2 className="w-4 h-4 mr-1" />
+                                  Activate
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    bulkUpdateMutation.mutate({
+                                      drinkIds: Array.from(selectedDrinks),
+                                      isActive: false,
+                                    });
+                                  }}
+                                  disabled={bulkUpdateMutation.isPending}
+                                  data-testid="button-bulk-deactivate"
+                                >
+                                  <AlertCircle className="w-4 h-4 mr-1" />
+                                  Deactivate
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => {
+                                    if (confirm(`Delete ${selectedDrinks.size} drink(s)? This cannot be undone.`)) {
+                                      bulkDeleteMutation.mutate(Array.from(selectedDrinks));
+                                    }
+                                  }}
+                                  disabled={bulkDeleteMutation.isPending}
+                                  data-testid="button-bulk-delete"
+                                >
+                                  <Trash2 className="w-4 h-4 mr-1" />
+                                  Delete
+                                </Button>
+                              </>
+                            )}
                           </div>
-                        </SortableContext>
-                      </DndContext>
-                    ) : (
-                      <p className="text-muted-foreground text-center py-8">
-                        No drinks in this menu. Create drinks below!
-                      </p>
-                    )}
-                  </>
+                        </div>
+                      )}
+
+                      {/* Drinks Grid with Drag and Drop */}
+                      {allDrinksLoading ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {[1, 2, 3, 4, 5, 6].map((i) => (
+                            <Skeleton key={i} className="h-64 w-full" />
+                          ))}
+                        </div>
+                      ) : localDrinks.length > 0 ? (
+                        <DndContext
+                          sensors={sensors}
+                          collisionDetection={closestCenter}
+                          onDragEnd={handleDragEnd}
+                        >
+                          <SortableContext
+                            items={localDrinks.map(d => d.id)}
+                            strategy={verticalListSortingStrategy}
+                          >
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="drinks-list">
+                              {localDrinks.map((drink) => (
+                                <SortableDrinkItem key={drink.id} drink={drink} />
+                              ))}
+                            </div>
+                          </SortableContext>
+                        </DndContext>
+                      ) : (
+                        <p className="text-muted-foreground text-center py-8">
+                          No drinks in this menu. Create drinks below!
+                        </p>
+                      )}
+                    </div>
+                  </ScrollArea>
                 )}
 
                 {!selectedMenuId && !menusLoading && menus && menus.length > 0 && (
