@@ -26,7 +26,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Clock, TrendingUp, AlertCircle, CheckCircle2, Home, LogOut, Settings, QrCode, Download, X, Plus } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { useForm } from "react-hook-form";
+import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { QRCodeSVG } from "qrcode.react";
 import {
@@ -206,11 +206,21 @@ export default function Dashboard() {
       slug: "",
       description: "",
       isActive: false,
+      sections: ["Signature Cocktails", "Classics"],
       heroImageUrl: "",
       backgroundColor: "",
       accentColor: "",
       typography: "",
     },
+  });
+
+  const {
+    fields: sectionFields,
+    append: appendSection,
+    remove: removeSection,
+  } = useFieldArray({
+    control: menuForm.control,
+    name: "sections",
   });
 
   // Create menu mutation
@@ -236,7 +246,14 @@ export default function Dashboard() {
   });
 
   const onMenuSubmit = (data: InsertMenu) => {
-    createMenuMutation.mutate(data);
+    const cleanedSections = (data.sections || [])
+      .map(section => section.trim())
+      .filter(Boolean);
+
+    createMenuMutation.mutate({
+      ...data,
+      sections: cleanedSections,
+    });
   };
 
   // Toggle menu active status mutation
@@ -1196,7 +1213,7 @@ export default function Dashboard() {
                 ) : (
                 <Form {...menuForm}>
                   <form onSubmit={menuForm.handleSubmit(onMenuSubmit)} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <FormField
                         control={menuForm.control}
                         name="name"
@@ -1233,6 +1250,31 @@ export default function Dashboard() {
                           </FormItem>
                         )}
                       />
+                      <FormField
+                        control={menuForm.control}
+                        name="isActive"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-col justify-end space-y-2">
+                            <div className="flex items-start justify-between gap-3 rounded-md border p-3">
+                              <div>
+                                <FormLabel>Active Menu</FormLabel>
+                                <FormDescription>
+                                  Immediately make this menu visible to guests
+                                </FormDescription>
+                              </div>
+                              <FormControl>
+                                <Switch
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                  disabled={createMenuMutation.isPending}
+                                  data-testid="switch-menu-active"
+                                />
+                              </FormControl>
+                            </div>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </div>
                     <FormField
                       control={menuForm.control}
@@ -1254,6 +1296,59 @@ export default function Dashboard() {
                         </FormItem>
                       )}
                     />
+                    <div className="border rounded-md p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-sm font-semibold">Sections</h3>
+                          <p className="text-xs text-muted-foreground">Organize drinks into groups before adding them</p>
+                        </div>
+                        <Button
+                          type="button"
+                          onClick={() => appendSection("")}
+                          variant="secondary"
+                          size="sm"
+                          disabled={createMenuMutation.isPending}
+                          data-testid="button-add-section"
+                        >
+                          <Plus className="h-4 w-4 mr-1" /> Add section
+                        </Button>
+                      </div>
+                      <div className="space-y-3">
+                        {sectionFields.map((sectionField, index) => (
+                          <FormField
+                            key={sectionField.id}
+                            control={menuForm.control}
+                            name={`sections.${index}`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="sr-only">Section {index + 1}</FormLabel>
+                                <div className="flex gap-2">
+                                  <FormControl>
+                                    <Input
+                                      placeholder={`e.g. Section ${index + 1}`}
+                                      {...field}
+                                      disabled={createMenuMutation.isPending}
+                                      data-testid={`input-menu-section-${index}`}
+                                    />
+                                  </FormControl>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => removeSection(index)}
+                                    disabled={createMenuMutation.isPending || sectionFields.length === 1}
+                                    data-testid={`button-remove-section-${index}`}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        ))}
+                      </div>
+                    </div>
                     <div className="border-t pt-4">
                       <h3 className="text-sm font-semibold mb-4">Theme Customization (Optional)</h3>
                       <div className="space-y-4">
