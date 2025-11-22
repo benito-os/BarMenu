@@ -2155,39 +2155,60 @@ export default function Dashboard() {
               {/* Settings Section */}
               {activeSection === "settings" && (
                 <>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-xl">Dashboard Settings</CardTitle>
-                      <CardDescription>
-                        Configure dashboard access and preferences
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      <div className="space-y-2">
-                        <h3 className="text-sm font-semibold">Dashboard Password</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Current password: Set via DASHBOARD_PASSWORD environment variable
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          Default: barflores2025
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <h3 className="text-sm font-semibold">Session Management</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Sessions are managed securely via encrypted cookies
-                        </p>
-                        <Button 
-                          variant="outline" 
-                          onClick={() => logoutMutation.mutate()}
-                          data-testid="button-logout-settings"
-                        >
-                          <LogOut className="w-4 h-4 mr-2" />
-                          Logout
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <div className="space-y-6">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-xl">Application Settings</CardTitle>
+                        <CardDescription>
+                          System configuration and information
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        <div className="space-y-2">
+                          <h3 className="text-sm font-semibold">Dashboard Access</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Username: <span className="font-mono">admin</span>
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Password: Configured via <span className="font-mono">DASHBOARD_PASSWORD</span> environment variable
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            To change the password, update the environment variable in your Replit project settings
+                          </p>
+                        </div>
+
+                        <div className="space-y-2 border-t pt-4">
+                          <h3 className="text-sm font-semibold">Session Security</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Sessions use encrypted HTTP-only cookies with secure session storage
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Session secret: Configured via <span className="font-mono">SESSION_SECRET</span> environment variable
+                          </p>
+                        </div>
+
+                        <div className="space-y-2 border-t pt-4">
+                          <h3 className="text-sm font-semibold">Database</h3>
+                          <p className="text-sm text-muted-foreground">
+                            PostgreSQL database via Neon serverless driver
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Connection: Configured via <span className="font-mono">DATABASE_URL</span> environment variable
+                          </p>
+                        </div>
+
+                        <div className="space-y-2 border-t pt-4">
+                          <h3 className="text-sm font-semibold">Application Version</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Bar Flores Cocktail Management System
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Built with React, Express, and PostgreSQL
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
                 </>
               )}
             </div>
