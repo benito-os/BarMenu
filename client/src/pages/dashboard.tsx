@@ -2119,8 +2119,8 @@ export default function Dashboard() {
                 </>
               )}
 
-              {/* Settings Section */}
-              {activeSection === "settings" && (
+              {/* QR Codes Section */}
+              {activeSection === "qr-codes" && (
                 <>
             {/* Home Page QR Code Section */}
             <Card>
@@ -2149,6 +2149,45 @@ export default function Dashboard() {
                 </div>
               </CardContent>
             </Card>
+                </>
+              )}
+
+              {/* Settings Section */}
+              {activeSection === "settings" && (
+                <>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-xl">Dashboard Settings</CardTitle>
+                      <CardDescription>
+                        Configure dashboard access and preferences
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      <div className="space-y-2">
+                        <h3 className="text-sm font-semibold">Dashboard Password</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Current password: Set via DASHBOARD_PASSWORD environment variable
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Default: barflores2025
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <h3 className="text-sm font-semibold">Session Management</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Sessions are managed securely via encrypted cookies
+                        </p>
+                        <Button 
+                          variant="outline" 
+                          onClick={() => logoutMutation.mutate()}
+                          data-testid="button-logout-settings"
+                        >
+                          <LogOut className="w-4 h-4 mr-2" />
+                          Logout
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </>
               )}
             </div>

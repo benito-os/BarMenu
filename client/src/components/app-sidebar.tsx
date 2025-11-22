@@ -1,4 +1,4 @@
-import { LayoutDashboard, BarChart3, Menu as MenuIcon, Wine, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, BarChart3, Menu as MenuIcon, Wine, QrCode, Settings, LogOut } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -36,6 +36,12 @@ const menuItems = [
     icon: Wine,
     value: "drinks",
     testId: "sidebar-drinks",
+  },
+  {
+    title: "QR Codes",
+    icon: QrCode,
+    value: "qr-codes",
+    testId: "sidebar-qr-codes",
   },
   {
     title: "Settings",
