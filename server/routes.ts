@@ -318,9 +318,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/orders - Create new order (guest requests drink)
   app.post("/api/orders", async (req, res) => {
     try {
-      const validatedData = validate(orderCreateSchema, req.body, res, "Invalid order data");
-      if (!validatedData) return;
-      const order = await storage.createOrder(validatedData);
+      // Extend the schema to allow optional guestName
+      const orderSchema = insertOrderSchema.extend({
+        guestName: z.string().optional(),
+        menuId: z.string().optional(),
+      });
+      const validatedData = orderSchema.parse(req.body);
+
+      // Validate drink and menu relationship before creating the order
+      const drink = await storage.getDrinkById(validatedData.drinkId);
+      if (!drink) {
+        return res.status(400).json({ error: "Drink not found" });
+      }
+
+      const menuId = validatedData.menuId ?? drink.menuId;
+
+      if (validatedData.menuId && validatedData.menuId !== drink.menuId) {
+        return res.status(400).json({ error: "Drink does not belong to the specified menu" });
+      }
+
+      const order = await storage.createOrder({
+        ...validatedData,
+        menuId,
+      });
       res.status(201).json(order);
     } catch (error) {
       console.error("Error creating order:", error);
