@@ -1922,7 +1922,7 @@ export default function Dashboard() {
                   >
                     <ScrollArea className="flex-1 pr-4">
                       <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="edit-drink-name">Drink Name</Label>
                         <Input
@@ -1933,14 +1933,49 @@ export default function Dashboard() {
                         />
                       </div>
                       <div className="space-y-2">
+                        <Label htmlFor="edit-drink-menu">Menu</Label>
+                        <Select
+                          value={editingDrink.menuId || "not_specified"}
+                          onValueChange={(value) => {
+                            const nextMenuId = value === "not_specified" ? "" : value;
+                            const targetMenu = menus?.find(m => m.id === nextMenuId);
+                            const targetSections = targetMenu?.sections || [];
+
+                            setEditingDrink(prev => {
+                              if (!prev) return prev;
+                              const shouldResetSection = prev.section && !targetSections.includes(prev.section);
+                              const nextSection = shouldResetSection ? "" : prev.section;
+                              return {
+                                ...prev,
+                                menuId: nextMenuId,
+                                section: nextSection,
+                                sortOrder: nextMenuId ? getNextSortOrder(nextMenuId) : prev.sortOrder,
+                              };
+                            });
+                          }}
+                        >
+                          <SelectTrigger id="edit-drink-menu" data-testid="select-edit-drink-menu">
+                            <SelectValue placeholder="Select menu" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="not_specified">Not Specified</SelectItem>
+                            {(menus || []).map(menu => (
+                              <SelectItem key={menu.id} value={menu.id}>
+                                {menu.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
                         <Label htmlFor="edit-drink-section">Section</Label>
                         {(() => {
                           const drinkMenu = menus?.find(m => m.id === editingDrink.menuId);
                           const menuSections = drinkMenu?.sections || [];
                           // Include current section if it's not in the menu sections (for legacy drinks)
                           const currentSection = editingDrink.section;
-                          const allSections = currentSection && !menuSections.includes(currentSection) 
-                            ? [currentSection, ...menuSections] 
+                          const allSections = currentSection && !menuSections.includes(currentSection)
+                            ? [currentSection, ...menuSections]
                             : menuSections;
                           return (
                             <Select
