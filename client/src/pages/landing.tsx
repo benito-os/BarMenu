@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { Menu } from "@shared/schema";
+import type { Menu } from "@shared/validation";
 import heroImage from "@assets/generated_images/Bar_hero_cocktails_overhead_0be3299c.png";
 import { Calendar, Sparkles } from "lucide-react";
 

@@ -1,10 +1,52 @@
-import type { Express } from "express";
+import type { Express, Response } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
-import { insertMenuSchema, insertDrinkSchema, insertOrderSchema } from "@shared/schema";
 import { z } from "zod";
+import { storage } from "./storage";
+import {
+  analyticsQuerySchema,
+  drinkBulkDeleteSchema,
+  drinkBulkUpdateSchema,
+  drinkCreateSchema,
+  drinkIdParamsSchema,
+  drinkReorderSchema,
+  drinkUpdateSchema,
+  menuCreateSchema,
+  menuIdQuerySchema,
+  menuSlugSchema,
+  menuUpdateSchema,
+  idParamsSchema,
+  orderCreateSchema,
+  orderStatusUpdateSchema,
+} from "@shared/validation";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  const respondValidationError = (
+    res: Response,
+    error: unknown,
+    message: string,
+  ) => {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: message, details: error.issues });
+    }
+
+    return res.status(400).json({ error: message });
+  };
+
+  const validate = <T>(
+    schema: z.ZodSchema<T>,
+    data: unknown,
+    res: Response,
+    message: string,
+  ): T | undefined => {
+    const result = schema.safeParse(data);
+    if (!result.success) {
+      respondValidationError(res, result.error, message);
+      return undefined;
+    }
+
+    return result.data;
+  };
+
   // Simple hardcoded password - in production this would use proper hashing
   const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD || "barflores2025";
 
@@ -71,9 +113,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET /api/menus/:slug - Get menu by slug
   app.get("/api/menus/:slug", async (req, res) => {
     try {
-      const { slug } = req.params;
+      const params = validate(menuSlugSchema, req.params, res, "Invalid menu slug");
+      if (!params) return;
+      const { slug } = params;
       const menu = await storage.getMenuBySlug(slug);
-      
+
       if (!menu) {
         return res.status(404).json({ error: "Menu not found" });
       }
@@ -88,13 +132,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/menus - Create new menu
   app.post("/api/menus", async (req, res) => {
     try {
-      const validatedData = insertMenuSchema.parse(req.body);
+      const validatedData = validate(menuCreateSchema, req.body, res, "Invalid menu data");
+      if (!validatedData) return;
       const menu = await storage.createMenu(validatedData);
       res.status(201).json(menu);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: "Invalid menu data", details: error.errors });
-      }
       console.error("Error creating menu:", error);
       res.status(500).json({ error: "Failed to create menu" });
     }
@@ -103,18 +145,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PATCH /api/menus/:id - Update menu (any fields including theming)
   app.patch("/api/menus/:id", async (req, res) => {
     try {
-      const { id } = req.params;
-      const updateData = req.body;
-      
-      // Validate allowed fields
-      const allowedFields = ['name', 'slug', 'description', 'isActive', 'heroImageUrl', 'backgroundColor', 'accentColor', 'typography', 'sections'];
-      const hasValidFields = Object.keys(updateData).every(key => allowedFields.includes(key));
-      
-      if (!hasValidFields) {
-        return res.status(400).json({ error: "Invalid fields in update data" });
-      }
-      
-      const menu = await storage.updateMenu(id, updateData);
+      const params = validate(idParamsSchema, req.params, res, "Menu id is required");
+      if (!params) return;
+      const updateData = validate(menuUpdateSchema, req.body, res, "Invalid menu update data");
+      if (!updateData) return;
+
+      const menu = await storage.updateMenu(params.id, updateData);
       if (!menu) {
         return res.status(404).json({ error: "Menu not found" });
       }
@@ -128,8 +164,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // DELETE /api/menus/:id - Delete menu
   app.delete("/api/menus/:id", async (req, res) => {
     try {
-      const { id } = req.params;
-      await storage.deleteMenu(id);
+      const params = validate(idParamsSchema, req.params, res, "Menu id is required");
+      if (!params) return;
+      await storage.deleteMenu(params.id);
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting menu:", error);
@@ -140,13 +177,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET /api/drinks?menuId=xxx - Get drinks by menu ID (active only)
   app.get("/api/drinks", async (req, res) => {
     try {
-      const { menuId } = req.query;
-      
-      if (!menuId || typeof menuId !== "string") {
-        return res.status(400).json({ error: "menuId query parameter is required" });
-      }
-      
-      const drinks = await storage.getDrinksByMenuId(menuId);
+      const query = validate(menuIdQuerySchema, req.query, res, "menuId query parameter is required");
+      if (!query) return;
+
+      const drinks = await storage.getDrinksByMenuId(query.menuId);
       res.json(drinks);
     } catch (error) {
       console.error("Error fetching drinks:", error);
@@ -157,13 +191,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET /api/drinks/all?menuId=xxx - Get all drinks by menu ID (including inactive, for admin)
   app.get("/api/drinks/all", async (req, res) => {
     try {
-      const { menuId } = req.query;
-      
-      if (!menuId || typeof menuId !== "string") {
-        return res.status(400).json({ error: "menuId query parameter is required" });
-      }
-      
-      const drinks = await storage.getAllDrinksByMenuId(menuId);
+      const query = validate(menuIdQuerySchema, req.query, res, "menuId query parameter is required");
+      if (!query) return;
+
+      const drinks = await storage.getAllDrinksByMenuId(query.menuId);
       res.json(drinks);
     } catch (error) {
       console.error("Error fetching all drinks:", error);
@@ -174,9 +205,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET /api/drinks/:id - Get drink by ID
   app.get("/api/drinks/:id", async (req, res) => {
     try {
-      const { id } = req.params;
-      const drink = await storage.getDrinkById(id);
-      
+      const params = validate(drinkIdParamsSchema, req.params, res, "Invalid drink id");
+      if (!params) return;
+      const drink = await storage.getDrinkById(params.id);
+
       if (!drink) {
         return res.status(404).json({ error: "Drink not found" });
       }
@@ -191,13 +223,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/drinks - Create new drink
   app.post("/api/drinks", async (req, res) => {
     try {
-      const validatedData = insertDrinkSchema.parse(req.body);
+      const validatedData = validate(drinkCreateSchema, req.body, res, "Invalid drink data");
+      if (!validatedData) return;
       const drink = await storage.createDrink(validatedData);
       res.status(201).json(drink);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: "Invalid drink data", details: error.errors });
-      }
       console.error("Error creating drink:", error);
       res.status(500).json({ error: "Failed to create drink" });
     }
@@ -206,13 +236,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PATCH /api/drinks/reorder - Update drink sort orders
   app.patch("/api/drinks/reorder", async (req, res) => {
     try {
-      const { drinks } = req.body; // Array of { id, sortOrder }
-      
-      if (!Array.isArray(drinks)) {
-        return res.status(400).json({ error: "drinks must be an array" });
-      }
-      
-      await storage.reorderDrinks(drinks);
+      const payload = validate(drinkReorderSchema, req.body, res, "Invalid reorder payload");
+      if (!payload) return;
+
+      await storage.reorderDrinks(payload.drinks);
       res.json({ success: true });
     } catch (error) {
       console.error("Error reordering drinks:", error);
@@ -223,14 +250,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // DELETE /api/drinks/bulk - Bulk delete drinks
   app.delete("/api/drinks/bulk", async (req, res) => {
     try {
-      const { drinkIds } = req.body;
-      
-      if (!Array.isArray(drinkIds) || drinkIds.length === 0) {
-        return res.status(400).json({ error: "drinkIds must be a non-empty array" });
-      }
-      
-      await storage.bulkDeleteDrinks(drinkIds);
-      res.json({ success: true, deleted: drinkIds.length });
+      const payload = validate(drinkBulkDeleteSchema, req.body, res, "Invalid bulk delete payload");
+      if (!payload) return;
+
+      await storage.bulkDeleteDrinks(payload.drinkIds);
+      res.json({ success: true, deleted: payload.drinkIds.length });
     } catch (error) {
       console.error("Error bulk deleting drinks:", error);
       res.status(500).json({ error: "Failed to delete drinks" });
@@ -241,22 +265,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/drinks/bulk", async (req, res) => {
     try {
       console.log("Bulk update request body:", req.body);
-      const { drinkIds, isActive } = req.body;
-      
-      if (!Array.isArray(drinkIds) || drinkIds.length === 0) {
-        console.log("Invalid drinkIds:", drinkIds);
-        return res.status(400).json({ error: "drinkIds must be a non-empty array" });
-      }
-      
-      if (typeof isActive !== "boolean") {
-        console.log("Invalid isActive:", isActive);
-        return res.status(400).json({ error: "isActive must be a boolean" });
-      }
-      
-      console.log(`Updating ${drinkIds.length} drinks, setting isActive to ${isActive}`);
-      await storage.bulkUpdateDrinks(drinkIds, isActive);
+      const payload = validate(drinkBulkUpdateSchema, req.body, res, "Invalid bulk update payload");
+      if (!payload) return;
+
+      console.log(`Updating ${payload.drinkIds.length} drinks, setting isActive to ${payload.isActive}`);
+      await storage.bulkUpdateDrinks(payload.drinkIds, payload.isActive);
       console.log("Bulk update successful");
-      res.json({ success: true, updated: drinkIds.length });
+      res.json({ success: true, updated: payload.drinkIds.length });
     } catch (error) {
       console.error("Error bulk updating drinks:", error);
       res.status(500).json({ error: "Failed to update drinks" });
@@ -266,20 +281,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PATCH /api/drinks/:id - Update drink
   app.patch("/api/drinks/:id", async (req, res) => {
     try {
-      const { id } = req.params;
-      const updateData = req.body;
-      
-      // Validate allowed fields
-      const allowedFields = ['name', 'section', 'description', 'recipe', 'style', 'temperature', 
-                            'isMocktail', 'canBeMocktail', 'isStirred', 'isShaken', 
-                            'baseSpirit', 'isActive', 'sortOrder', 'menuId'];
-      const hasValidFields = Object.keys(updateData).every(key => allowedFields.includes(key));
-      
-      if (!hasValidFields) {
-        return res.status(400).json({ error: "Invalid fields in update data" });
-      }
-      
-      const drink = await storage.updateDrink(id, updateData);
+      const params = validate(drinkIdParamsSchema, req.params, res, "Invalid drink id");
+      if (!params) return;
+      const updateData = validate(drinkUpdateSchema, req.body, res, "Invalid drink update data");
+      if (!updateData) return;
+
+      const drink = await storage.updateDrink(params.id, updateData);
       if (!drink) {
         return res.status(404).json({ error: "Drink not found" });
       }
@@ -293,17 +300,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/orders - Create new order (guest requests drink)
   app.post("/api/orders", async (req, res) => {
     try {
-      // Extend the schema to allow optional guestName
-      const orderSchema = insertOrderSchema.extend({
-        guestName: z.string().optional(),
-      });
-      const validatedData = orderSchema.parse(req.body);
+      const validatedData = validate(orderCreateSchema, req.body, res, "Invalid order data");
+      if (!validatedData) return;
       const order = await storage.createOrder(validatedData);
       res.status(201).json(order);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: "Invalid order data", details: error.errors });
-      }
       console.error("Error creating order:", error);
       res.status(500).json({ error: "Failed to create order" });
     }
@@ -323,15 +324,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PATCH /api/orders/:id - Update order status
   app.patch("/api/orders/:id", async (req, res) => {
     try {
-      const { id } = req.params;
-      const { status } = req.body;
-      
-      if (!status || typeof status !== "string") {
-        return res.status(400).json({ error: "status is required" });
-      }
-      
+      const params = validate(idParamsSchema, req.params, res, "Order id is required");
+      if (!params) return;
+      const body = validate(orderStatusUpdateSchema, req.body, res, "Invalid order status");
+      if (!body) return;
+
       // Get current order to validate transition
-      const currentOrder = await storage.getOrderById(id);
+      const currentOrder = await storage.getOrderById(params.id);
       if (!currentOrder) {
         return res.status(404).json({ error: "Order not found" });
       }
@@ -345,17 +344,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       const allowedStatuses = validTransitions[currentOrder.status] || [];
-      if (!allowedStatuses.includes(status)) {
-        return res.status(400).json({ 
-          error: `Invalid status transition from ${currentOrder.status} to ${status}`,
+      if (!allowedStatuses.includes(body.status)) {
+        return res.status(400).json({
+          error: `Invalid status transition from ${currentOrder.status} to ${body.status}`,
           allowedTransitions: allowedStatuses
         });
       }
-      
+
       const order = await storage.updateOrderStatus(
-        id, 
-        status, 
-        status === "served" ? new Date() : undefined
+        params.id,
+        body.status,
+        body.status === "served" ? new Date() : undefined
       );
       
       res.json(order);
@@ -368,10 +367,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET /api/analytics - Get drink analytics
   app.get("/api/analytics", async (req, res) => {
     try {
-      const { menuId } = req.query;
-      const analytics = await storage.getDrinkAnalytics(
-        menuId && typeof menuId === "string" ? menuId : undefined
-      );
+      const query = validate(analyticsQuerySchema, req.query, res, "Invalid analytics query");
+      if (!query) return;
+
+      const analytics = await storage.getDrinkAnalytics(query.menuId);
       res.json(analytics);
     } catch (error) {
       console.error("Error fetching analytics:", error);

@@ -20,8 +20,8 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import type { OrderWithDrink, DrinkAnalytics, Menu, Drink, InsertMenu } from "@shared/schema";
-import { insertMenuSchema } from "@shared/schema";
+import type { OrderWithDrink, DrinkAnalytics, Menu, Drink, InsertMenu } from "@shared/validation";
+import { menuCreateSchema } from "@shared/validation";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { Clock, TrendingUp, AlertCircle, CheckCircle2, Home, LogOut, Settings, QrCode, Download, X, Plus } from "lucide-react";
 import { Link, useLocation } from "wouter";
@@ -184,7 +184,7 @@ export default function Dashboard() {
 
   // Create menu form
   const menuForm = useForm<InsertMenu>({
-    resolver: zodResolver(insertMenuSchema),
+    resolver: zodResolver(menuCreateSchema),
     defaultValues: {
       name: "",
       slug: "",
