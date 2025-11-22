@@ -542,11 +542,6 @@ export default function Dashboard() {
     }
   }, [authStatus, authLoading, setLocation]);
 
-  // Don't render dashboard if not authenticated
-  if (authLoading || !authStatus?.isAuthenticated) {
-    return null;
-  }
-
   // Filter analytics data
   const filteredAnalytics = (() => {
     if (!analytics || analytics.length === 0) return [];
@@ -680,7 +675,7 @@ export default function Dashboard() {
   useEffect(() => {
     setSelectedDrinks(prev => {
       const visibleIds = new Set(filteredDrinks.map(d => d.id));
-      return new Set([...prev].filter(id => visibleIds.has(id)));
+      return new Set(Array.from(prev).filter(id => visibleIds.has(id)));
     });
   }, [filteredDrinks, sectionFilter, selectedMenuId]);
 
@@ -784,6 +779,11 @@ export default function Dashboard() {
   const style = {
     "--sidebar-width": "16rem",
   } as React.CSSProperties;
+
+  // Don't render dashboard if not authenticated
+  if (authLoading || !authStatus?.isAuthenticated) {
+    return null;
+  }
 
   return (
     <Tabs defaultValue="queue" value={mainTab} onValueChange={setMainTab} className="h-screen flex flex-col">
@@ -1936,108 +1936,158 @@ export default function Dashboard() {
                 </div>
 
                 {selectedMenuId && (
-                  <ScrollArea className="max-h-[70vh] pr-2">
-                    <div className="space-y-4">
-                      {/* Sticky Bulk Actions Bar */}
-                      {localDrinks.length > 0 && (
-                        <div className="sticky top-0 z-50 bg-background pb-4">
-                          <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/20">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={toggleSelectAll}
-                              data-testid="button-toggle-select-all"
-                            >
-                              {selectedDrinks.size === localDrinks.length ? "Deselect All" : "Select All"}
-                            </Button>
-
-                            {selectedDrinks.size > 0 && (
-                              <>
-                                <div className="text-sm text-muted-foreground">
-                                  {selectedDrinks.size} selected
-                                </div>
-                                <div className="flex-1" />
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    bulkUpdateMutation.mutate({
-                                      drinkIds: Array.from(selectedDrinks),
-                                      isActive: true,
-                                    });
-                                  }}
-                                  disabled={bulkUpdateMutation.isPending}
-                                  data-testid="button-bulk-activate"
-                                >
-                                  <CheckCircle2 className="w-4 h-4 mr-1" />
-                                  Activate
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    bulkUpdateMutation.mutate({
-                                      drinkIds: Array.from(selectedDrinks),
-                                      isActive: false,
-                                    });
-                                  }}
-                                  disabled={bulkUpdateMutation.isPending}
-                                  data-testid="button-bulk-deactivate"
-                                >
-                                  <AlertCircle className="w-4 h-4 mr-1" />
-                                  Deactivate
-                                </Button>
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={() => {
-                                    if (confirm(`Delete ${selectedDrinks.size} drink(s)? This cannot be undone.`)) {
-                                      bulkDeleteMutation.mutate(Array.from(selectedDrinks));
-                                    }
-                                  }}
-                                  disabled={bulkDeleteMutation.isPending}
-                                  data-testid="button-bulk-delete"
-                                >
-                                  <Trash2 className="w-4 h-4 mr-1" />
-                                  Delete
-                                </Button>
-                              </>
-                            )}
-                          </div>
+                  <>
+                    {sectionOrder.length > 0 && (
+                      <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+                        <div className="space-y-1">
+                          <Label htmlFor="section-filter">Section Filter</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Drag-and-drop and bulk actions apply to the selected section scope.
+                          </p>
                         </div>
-                      )}
-
-                      {/* Drinks Grid with Drag and Drop */}
-                      {allDrinksLoading ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {[1, 2, 3, 4, 5, 6].map((i) => (
-                            <Skeleton key={i} className="h-64 w-full" />
-                          ))}
-                        </div>
-                      ) : localDrinks.length > 0 ? (
-                        <DndContext
-                          sensors={sensors}
-                          collisionDetection={closestCenter}
-                          onDragEnd={handleDragEnd}
+                        <Select
+                          value={sectionFilter}
+                          onValueChange={(value) => {
+                            setSectionFilter(value);
+                            setSelectedDrinks(new Set());
+                          }}
                         >
-                          <SortableContext
-                            items={localDrinks.map(d => d.id)}
-                            strategy={verticalListSortingStrategy}
+                          <SelectTrigger id="section-filter" className="w-full md:w-64" data-testid="select-section-filter">
+                            <SelectValue placeholder="Choose a section" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Sections</SelectItem>
+                            {sectionOrder.map(section => (
+                              <SelectItem key={section} value={section}>
+                                {section}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {/* Sticky Bulk Actions Bar */}
+                    {filteredDrinks.length > 0 && (
+                      <div className="sticky top-0 z-50 bg-background pb-4">
+                        <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/20">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={toggleSelectAll}
+                            data-testid="button-toggle-select-all"
                           >
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="drinks-list">
-                              {localDrinks.map((drink) => (
-                                <SortableDrinkItem key={drink.id} drink={drink} />
-                              ))}
-                            </div>
-                          </SortableContext>
-                        </DndContext>
-                      ) : (
-                        <p className="text-muted-foreground text-center py-8">
-                          No drinks in this menu. Create drinks below!
-                        </p>
+                            {selectedDrinks.size === filteredDrinks.length ? "Deselect All" : "Select All"}
+                          </Button>
+                          
+                          {selectedDrinks.size > 0 && (
+                            <>
+                              <div className="text-sm text-muted-foreground">
+                                {selectedDrinks.size} selected
+                              </div>
+                              <div className="flex-1" />
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  bulkUpdateMutation.mutate({
+                                    drinkIds: Array.from(selectedDrinks),
+                                    isActive: true,
+                                  });
+                                }}
+                                disabled={bulkUpdateMutation.isPending}
+                                data-testid="button-bulk-activate"
+                              >
+                                <CheckCircle2 className="w-4 h-4 mr-1" />
+                                Activate
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  bulkUpdateMutation.mutate({
+                                    drinkIds: Array.from(selectedDrinks),
+                                    isActive: false,
+                                  });
+                                }}
+                                disabled={bulkUpdateMutation.isPending}
+                                data-testid="button-bulk-deactivate"
+                              >
+                                <AlertCircle className="w-4 h-4 mr-1" />
+                                Deactivate
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => {
+                                  if (confirm(`Delete ${selectedDrinks.size} drink(s)? This cannot be undone.`)) {
+                                    bulkDeleteMutation.mutate(Array.from(selectedDrinks));
+                                  }
+                                }}
+                                disabled={bulkDeleteMutation.isPending}
+                                data-testid="button-bulk-delete"
+                              >
+                                <Trash2 className="w-4 h-4 mr-1" />
+                                Delete
+                              </Button>
+                            </>
+                          )}
+                        </div>
                       )}
-                    </div>
-                  </ScrollArea>
+
+                    {/* Drinks Grid with Drag and Drop */}
+                    {allDrinksLoading ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {[1, 2, 3, 4, 5, 6].map((i) => (
+                          <Skeleton key={i} className="h-64 w-full" />
+                        ))}
+                      </div>
+                    ) : filteredSectionOrder.length > 0 && filteredDrinks.length > 0 ? (
+                      <div className="space-y-8" data-testid="drinks-list">
+                        {filteredSectionOrder.map(section => {
+                          const drinks = sectionedDrinks.get(section) || [];
+
+                          return (
+                            <div key={section} className="space-y-3">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <h4 className="font-semibold text-lg">{section}</h4>
+                                  <Badge variant="outline" className="text-xs">
+                                    {drinks.length} {drinks.length === 1 ? "drink" : "drinks"}
+                                  </Badge>
+                                </div>
+                              </div>
+
+                              {drinks.length > 0 ? (
+                                <DndContext
+                                  sensors={sensors}
+                                  collisionDetection={closestCenter}
+                                  onDragEnd={handleSectionDragEnd(section)}
+                                >
+                                  <SortableContext
+                                    items={drinks.map(d => d.id)}
+                                    strategy={verticalListSortingStrategy}
+                                  >
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                      {drinks.map((drink) => (
+                                        <SortableDrinkItem key={drink.id} drink={drink} />
+                                      ))}
+                                    </div>
+                                  </SortableContext>
+                                </DndContext>
+                              ) : (
+                                <p className="text-sm text-muted-foreground">No drinks in this section.</p>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground text-center py-8">
+                        No drinks match this section. Create drinks below or change the filter.
+                      </p>
+                    )}
+                  </>
                 )}
 
                 {!selectedMenuId && !menusLoading && menus && menus.length > 0 && (
