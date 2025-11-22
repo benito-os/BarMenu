@@ -136,6 +136,14 @@ export class DatabaseStorage implements IStorage {
         drinkName: drinks.name,
         drinkSection: drinks.section,
         drinkRecipe: drinks.recipe,
+        drinkDescription: drinks.description,
+        drinkStyle: drinks.style,
+        drinkBaseSpirit: drinks.baseSpirit,
+        drinkTemperature: drinks.temperature,
+        drinkIsMocktail: drinks.isMocktail,
+        drinkCanBeMocktail: drinks.canBeMocktail,
+        drinkIsStirred: drinks.isStirred,
+        drinkIsShaken: drinks.isShaken,
       })
       .from(orders)
       .innerJoin(drinks, eq(orders.drinkId, drinks.id))
@@ -145,7 +153,12 @@ export class DatabaseStorage implements IStorage {
     // Map to ensure drinkRecipe is never null (provide fallback)
     return results.map(r => ({
       ...r,
+      guestName: r.guestName || undefined,
       drinkRecipe: r.drinkRecipe || "-",
+      drinkDescription: r.drinkDescription || "",
+      drinkStyle: r.drinkStyle || "",
+      drinkBaseSpirit: r.drinkBaseSpirit || "",
+      drinkTemperature: r.drinkTemperature || "",
     }));
   }
 

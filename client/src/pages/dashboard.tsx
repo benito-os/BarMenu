@@ -1,7 +1,8 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,6 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { OrderWithDrink, DrinkAnalytics, Menu, Drink, InsertMenu } from "@shared/schema";
@@ -48,6 +51,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 export default function Dashboard() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const [activeSection, setActiveSection] = useState<string>("queue");
   const [filterMode, setFilterMode] = useState<"all" | "never-made" | "least-ordered">("all");
   const [selectedMenuId, setSelectedMenuId] = useState<string>("");
   const [selectedDrinks, setSelectedDrinks] = useState<Set<string>>(new Set());
@@ -55,6 +59,7 @@ export default function Dashboard() {
   const [editingDrink, setEditingDrink] = useState<Drink | null>(null);
   const [editingMenu, setEditingMenu] = useState<Menu | null>(null);
   const [newSectionInput, setNewSectionInput] = useState<string>("");
+  const [selectedOrder, setSelectedOrder] = useState<OrderWithDrink | null>(null);
   
   // Get base URL for QR codes
   const baseUrl = window.location.origin;
@@ -93,7 +98,7 @@ export default function Dashboard() {
     },
     onSuccess: () => {
       queryClient.clear();
-      setLocation("/dashboard/login");
+      setLocation("/dashboard-login");
       toast({
         title: "Logged Out",
         description: "You have been logged out successfully",
@@ -425,7 +430,7 @@ export default function Dashboard() {
   // Redirect to login if not authenticated (after all hooks are called)
   useEffect(() => {
     if (!authLoading && !authStatus?.isAuthenticated) {
-      setLocation("/dashboard/login");
+      setLocation("/dashboard-login");
     }
   }, [authStatus, authLoading, setLocation]);
 
@@ -525,7 +530,7 @@ export default function Dashboard() {
     }
   };
 
-  // Sortable Drink Item Component
+  // Sortable Drink Item Component (Card Grid View)
   function SortableDrinkItem({ drink }: { drink: Drink }) {
     const {
       attributes,
@@ -543,198 +548,366 @@ export default function Dashboard() {
     };
 
     return (
-      <div
+      <Card
         ref={setNodeRef}
         style={style}
-        className="flex items-center gap-3 p-3 border rounded-md bg-card"
+        className="hover-elevate cursor-pointer"
+        onClick={() => toggleDrinkSelection(drink.id)}
         data-testid={`drink-item-${drink.id}`}
       >
-        <Checkbox
-          checked={selectedDrinks.has(drink.id)}
-          onCheckedChange={() => toggleDrinkSelection(drink.id)}
-          data-testid={`checkbox-drink-${drink.id}`}
-        />
-        <div
-          {...attributes}
-          {...listeners}
-          className="cursor-grab active:cursor-grabbing p-1 hover-elevate rounded"
-        >
-          <GripVertical className="w-5 h-5 text-muted-foreground" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <p className="font-medium truncate">{drink.name}</p>
-            {!drink.isActive && (
-              <Badge variant="secondary" className="text-xs">Inactive</Badge>
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0">
+              <CardTitle className="font-serif text-lg line-clamp-1">{drink.name}</CardTitle>
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                {drink.section && (
+                  <Badge variant="secondary" className="text-xs">{drink.section}</Badge>
+                )}
+                {!drink.isActive && (
+                  <Badge variant="outline" className="text-xs">Inactive</Badge>
+                )}
+              </div>
+            </div>
+            <Checkbox
+              checked={selectedDrinks.has(drink.id)}
+              onCheckedChange={(e) => {
+                e.stopPropagation?.();
+                toggleDrinkSelection(drink.id);
+              }}
+              onClick={(e) => e.stopPropagation()}
+              data-testid={`checkbox-drink-${drink.id}`}
+            />
+          </div>
+        </CardHeader>
+        <CardContent className="pb-3">
+          {drink.description && (
+            <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+              {drink.description}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            {drink.style && (
+              <Badge variant="outline" className="text-xs">{drink.style}</Badge>
+            )}
+            {drink.baseSpirit && (
+              <Badge variant="outline" className="text-xs">{drink.baseSpirit}</Badge>
+            )}
+            {drink.temperature && (
+              <Badge variant="outline" className="text-xs capitalize">{drink.temperature.replace('_', ' ')}</Badge>
             )}
           </div>
-          <p className="text-sm text-muted-foreground truncate">
-            {drink.section} • {drink.style || "No style"}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="text-sm text-muted-foreground">
-            Order: {drink.sortOrder}
+        </CardContent>
+        <CardFooter className="pt-3 border-t justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <div
+              {...attributes}
+              {...listeners}
+              className="cursor-grab active:cursor-grabbing p-1 hover-elevate rounded"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <GripVertical className="w-4 h-4 text-muted-foreground" />
+            </div>
+            <span className="text-xs text-muted-foreground">Order: {drink.sortOrder}</span>
           </div>
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={() => setEditingDrink(drink)}
-            data-testid={`button-edit-drink-${drink.id}`}
-          >
-            <Pencil className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
+          <div className="flex gap-1">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={(e) => {
+                e.stopPropagation();
+                setEditingDrink(drink);
+              }}
+              data-testid={`button-edit-drink-${drink.id}`}
+            >
+              <Pencil className="w-3 h-3 mr-1" />
+              Edit
+            </Button>
+          </div>
+        </CardFooter>
+      </Card>
     );
   }
 
+  const style = {
+    "--sidebar-width": "16rem",
+  } as React.CSSProperties;
+
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <h1 className="font-serif text-2xl md:text-3xl font-bold text-foreground">
-              Host Dashboard
-            </h1>
-            <div className="flex gap-2">
-              <Link href="/">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  data-testid="button-back-home"
-                >
-                  <Home className="w-4 h-4 mr-2" />
-                  Home
-                </Button>
-              </Link>
+    <SidebarProvider style={style}>
+      <div className="flex h-screen w-full">
+        <AppSidebar
+          activeSection={activeSection}
+          onSectionChange={setActiveSection}
+          onLogout={() => logoutMutation.mutate()}
+        />
+        <div className="flex flex-col flex-1">
+          <header className="flex items-center justify-between p-4 border-b">
+            <div className="flex items-center gap-4">
+              <SidebarTrigger data-testid="button-sidebar-toggle" />
+              <h1 className="font-serif text-2xl md:text-3xl font-bold text-foreground">
+                Bar Flores Dashboard
+              </h1>
+            </div>
+            <Link href="/">
               <Button 
                 variant="outline" 
                 size="sm"
-                onClick={() => logoutMutation.mutate()}
-                disabled={logoutMutation.isPending}
-                data-testid="button-logout"
+                data-testid="button-back-home"
               >
-                <LogOut className="w-4 h-4 mr-2" />
-                Logout
+                <Home className="w-4 h-4 mr-2" />
+                Home
               </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+            </Link>
+          </header>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <Tabs defaultValue="queue" className="space-y-6">
-          <TabsList className="grid w-full max-w-2xl grid-cols-3">
-            <TabsTrigger value="queue" data-testid="tab-queue">
-              <Clock className="w-4 h-4 mr-2" />
-              Live Queue
-            </TabsTrigger>
-            <TabsTrigger value="analytics" data-testid="tab-analytics">
-              <TrendingUp className="w-4 h-4 mr-2" />
-              Analytics
-            </TabsTrigger>
-            <TabsTrigger value="admin" data-testid="tab-admin">
-              <Settings className="w-4 h-4 mr-2" />
-              Admin
-            </TabsTrigger>
-          </TabsList>
+          <main className="flex-1 overflow-auto p-6">
+            <div className="max-w-7xl mx-auto space-y-6">
+              {/* Queue Section */}
+              {activeSection === "queue" && (
+                <>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-xl">Pending Orders</CardTitle>
+                      <CardDescription>
+                        Live view of drink requests - auto-refreshes every 5 seconds
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {queueLoading ? (
+                        <div className="space-y-4">
+                          {[1, 2, 3].map(i => (
+                            <Skeleton key={i} className="h-16 w-full" />
+                          ))}
+                        </div>
+                      ) : queue && queue.length > 0 ? (
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Time</TableHead>
+                                <TableHead>Guest</TableHead>
+                                <TableHead>Drink</TableHead>
+                                <TableHead>Instructions</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {queue.map((order) => (
+                                <TableRow 
+                                  key={order.id}
+                                  data-testid={`row-order-${order.id}`}
+                                  className="cursor-pointer hover-elevate"
+                                  onClick={() => setSelectedOrder(order)}
+                                >
+                                  <TableCell className="font-medium">
+                                    {formatTime(order.requestedAt.toString())}
+                                  </TableCell>
+                                  <TableCell className="text-muted-foreground">
+                                    {order.guestName || "-"}
+                                  </TableCell>
+                                  <TableCell className="font-serif">
+                                    {order.drinkName}
+                                  </TableCell>
+                                  <TableCell className="text-sm">
+                                    {order.drinkRecipe || "-"}
+                                  </TableCell>
+                                  <TableCell>
+                                    {getStatusBadge(order.status)}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    {order.status === "requested" && (
+                                      <Button
+                                        size="sm"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          inProgressMutation.mutate(order.id);
+                                        }}
+                                        disabled={inProgressMutation.isPending}
+                                        data-testid={`button-in-progress-${order.id}`}
+                                      >
+                                        <Clock className="w-4 h-4 mr-2" />
+                                        Start Preparing
+                                      </Button>
+                                    )}
+                                    {order.status === "in_progress" && (
+                                      <Button
+                                        size="sm"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          serveMutation.mutate(order.id);
+                                        }}
+                                        disabled={serveMutation.isPending}
+                                        data-testid={`button-serve-${order.id}`}
+                                      >
+                                        <CheckCircle2 className="w-4 h-4 mr-2" />
+                                        Mark Served
+                                      </Button>
+                                    )}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      ) : (
+                        <div className="text-center py-12">
+                          <AlertCircle className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                          <p className="text-muted-foreground text-lg">No pending orders</p>
+                          <p className="text-sm text-muted-foreground mt-2">
+                            Orders will appear here when guests request drinks
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
 
-          {/* Queue Tab */}
-          <TabsContent value="queue" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-xl">Pending Orders</CardTitle>
-                <CardDescription>
-                  Live view of drink requests - auto-refreshes every 5 seconds
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {queueLoading ? (
-                  <div className="space-y-4">
-                    {[1, 2, 3].map(i => (
-                      <Skeleton key={i} className="h-16 w-full" />
-                    ))}
-                  </div>
-                ) : queue && queue.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Time</TableHead>
-                          <TableHead>Guest</TableHead>
-                          <TableHead>Drink</TableHead>
-                          <TableHead>Instructions</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {queue.map((order) => (
-                          <TableRow 
-                            key={order.id}
-                            data-testid={`row-order-${order.id}`}
-                          >
-                            <TableCell className="font-medium">
-                              {formatTime(order.requestedAt.toString())}
-                            </TableCell>
-                            <TableCell className="text-muted-foreground">
-                              {order.guestName || "-"}
-                            </TableCell>
-                            <TableCell className="font-serif">
-                              {order.drinkName}
-                            </TableCell>
-                            <TableCell className="text-sm max-w-xs truncate">
-                              {order.drinkRecipe || "-"}
-                            </TableCell>
-                            <TableCell>
-                              {getStatusBadge(order.status)}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              {order.status === "requested" && (
+                  {/* Order Detail Drawer */}
+                  <Sheet open={!!selectedOrder} onOpenChange={(open) => !open && setSelectedOrder(null)}>
+                    <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+                      {selectedOrder && (
+                        <>
+                          <SheetHeader>
+                            <SheetTitle className="font-serif text-2xl">{selectedOrder.drinkName}</SheetTitle>
+                            <SheetDescription>
+                              Ordered {formatTime(selectedOrder.requestedAt.toString())}
+                              {selectedOrder.guestName && ` by ${selectedOrder.guestName}`}
+                            </SheetDescription>
+                          </SheetHeader>
+
+                          <div className="mt-6 space-y-6">
+                            {/* Status */}
+                            <div>
+                              <h3 className="font-semibold mb-2">Status</h3>
+                              {getStatusBadge(selectedOrder.status)}
+                            </div>
+
+                            {/* Guest Name */}
+                            {selectedOrder.guestName && (
+                              <div>
+                                <h3 className="font-semibold mb-2">Guest Name</h3>
+                                <p className="text-muted-foreground">{selectedOrder.guestName}</p>
+                              </div>
+                            )}
+
+                            {/* Recipe/Instructions */}
+                            {selectedOrder.drinkRecipe && (
+                              <div>
+                                <h3 className="font-semibold mb-2">Recipe & Instructions</h3>
+                                <p className="text-sm leading-relaxed whitespace-pre-wrap">{selectedOrder.drinkRecipe}</p>
+                              </div>
+                            )}
+
+                            {/* Description */}
+                            {selectedOrder.drinkDescription && (
+                              <div>
+                                <h3 className="font-semibold mb-2">Description</h3>
+                                <p className="text-sm text-muted-foreground leading-relaxed">{selectedOrder.drinkDescription}</p>
+                              </div>
+                            )}
+
+                            {/* Drink Details */}
+                            <div>
+                              <h3 className="font-semibold mb-3">Drink Details</h3>
+                              <div className="space-y-2 text-sm">
+                                {selectedOrder.drinkStyle && (
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Style:</span>
+                                    <span className="font-medium">{selectedOrder.drinkStyle}</span>
+                                  </div>
+                                )}
+                                {selectedOrder.drinkBaseSpirit && (
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Base Spirit:</span>
+                                    <span className="font-medium">{selectedOrder.drinkBaseSpirit}</span>
+                                  </div>
+                                )}
+                                {selectedOrder.drinkTemperature && (
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Temperature:</span>
+                                    <span className="font-medium">{selectedOrder.drinkTemperature}</span>
+                                  </div>
+                                )}
+                                {selectedOrder.drinkSection && (
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Section:</span>
+                                    <span className="font-medium">{selectedOrder.drinkSection}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Characteristics */}
+                            {(selectedOrder.drinkIsMocktail || selectedOrder.drinkCanBeMocktail || selectedOrder.drinkIsStirred || selectedOrder.drinkIsShaken) && (
+                              <div>
+                                <h3 className="font-semibold mb-3">Characteristics</h3>
+                                <div className="flex flex-wrap gap-2">
+                                  {selectedOrder.drinkIsMocktail && (
+                                    <Badge variant="secondary">Mocktail</Badge>
+                                  )}
+                                  {selectedOrder.drinkCanBeMocktail && !selectedOrder.drinkIsMocktail && (
+                                    <Badge variant="outline">Can be Mocktail</Badge>
+                                  )}
+                                  {selectedOrder.drinkIsStirred && (
+                                    <Badge variant="outline">Stirred</Badge>
+                                  )}
+                                  {selectedOrder.drinkIsShaken && (
+                                    <Badge variant="outline">Shaken</Badge>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Actions */}
+                            <div className="pt-4 border-t space-y-3">
+                              {selectedOrder.status === "requested" && (
                                 <Button
-                                  size="sm"
-                                  onClick={() => inProgressMutation.mutate(order.id)}
+                                  className="w-full"
+                                  onClick={() => {
+                                    inProgressMutation.mutate(selectedOrder.id);
+                                    setSelectedOrder(null);
+                                  }}
                                   disabled={inProgressMutation.isPending}
-                                  data-testid={`button-in-progress-${order.id}`}
+                                  data-testid="sheet-button-start-preparing"
                                 >
                                   <Clock className="w-4 h-4 mr-2" />
                                   Start Preparing
                                 </Button>
                               )}
-                              {order.status === "in_progress" && (
+                              {selectedOrder.status === "in_progress" && (
                                 <Button
-                                  size="sm"
-                                  onClick={() => serveMutation.mutate(order.id)}
+                                  className="w-full"
+                                  onClick={() => {
+                                    serveMutation.mutate(selectedOrder.id);
+                                    setSelectedOrder(null);
+                                  }}
                                   disabled={serveMutation.isPending}
-                                  data-testid={`button-serve-${order.id}`}
+                                  data-testid="sheet-button-mark-served"
                                 >
                                   <CheckCircle2 className="w-4 h-4 mr-2" />
-                                  Mark Served
+                                  Mark as Served
                                 </Button>
                               )}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <AlertCircle className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground text-lg">No pending orders</p>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Orders will appear here when guests request drinks
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+                              <Button
+                                variant="outline"
+                                className="w-full"
+                                onClick={() => setSelectedOrder(null)}
+                                data-testid="sheet-button-close"
+                              >
+                                Close
+                              </Button>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </SheetContent>
+                  </Sheet>
+                </>
+              )}
 
-          {/* Analytics Tab */}
-          <TabsContent value="analytics" className="space-y-6">
+        {/* Analytics Section */}
+              {activeSection === "analytics" && (
+                <>
             {/* Filters */}
             <Card>
               <CardHeader>
@@ -883,10 +1056,12 @@ export default function Dashboard() {
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
+                </>
+              )}
 
-          {/* Admin Tab */}
-          <TabsContent value="admin" className="space-y-6">
+              {/* Menus Section */}
+              {activeSection === "menus" && (
+                <>
             {/* Create Menu Section */}
             <Card>
               <CardHeader>
@@ -1179,7 +1354,7 @@ export default function Dashboard() {
 
             {/* Edit Menu Dialog */}
             <Dialog open={!!editingMenu} onOpenChange={(open) => !open && setEditingMenu(null)}>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
                 <DialogHeader>
                   <DialogTitle>Edit Menu</DialogTitle>
                   <DialogDescription>
@@ -1192,8 +1367,10 @@ export default function Dashboard() {
                       e.preventDefault();
                       updateMenuMutation.mutate(editingMenu);
                     }}
-                    className="space-y-4"
+                    className="flex flex-col flex-1 min-h-0"
                   >
+                    <ScrollArea className="flex-1 pr-4">
+                      <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="edit-menu-name">Menu Name</Label>
@@ -1342,18 +1519,20 @@ export default function Dashboard() {
                           </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="flex items-center gap-2 border-t pt-4">
-                      <Switch
-                        id="edit-menu-active"
-                        checked={editingMenu.isActive}
-                        onCheckedChange={(checked) => setEditingMenu({ ...editingMenu, isActive: checked })}
-                      />
-                      <Label htmlFor="edit-menu-active" className="text-sm">Menu is Active (visible to guests)</Label>
+                      <div className="flex items-center gap-2 border-t pt-4">
+                        <Switch
+                          id="edit-menu-active"
+                          checked={editingMenu.isActive}
+                          onCheckedChange={(checked) => setEditingMenu({ ...editingMenu, isActive: checked })}
+                        />
+                        <Label htmlFor="edit-menu-active" className="text-sm">Menu is Active (visible to guests)</Label>
+                      </div>
                     </div>
+                  </div>
+                    </ScrollArea>
 
-                    <div className="flex justify-end gap-2 pt-4">
+                    <div className="flex justify-end gap-2 pt-4 border-t mt-4">
                       <Button
                         type="button"
                         variant="outline"
@@ -1373,35 +1552,12 @@ export default function Dashboard() {
                 )}
               </DialogContent>
             </Dialog>
+                </>
+              )}
 
-            {/* Home Page QR Code Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-xl">Home Page QR Code</CardTitle>
-                <CardDescription>
-                  QR code for the main landing page showing all active menus
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col items-center gap-4">
-                  <div className="bg-white p-4 rounded-lg border">
-                    <QRCodeSVG
-                      value={baseUrl}
-                      size={200}
-                      level="H"
-                      includeMargin={true}
-                    />
-                  </div>
-                  <p className="text-sm text-muted-foreground text-center">
-                    {baseUrl}
-                  </p>
-                  <p className="text-xs text-muted-foreground text-center max-w-md">
-                    This QR code links to your home page where guests can see all active menus
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
+              {/* Drinks Section */}
+              {activeSection === "drinks" && (
+                <>
             {/* Manage Drinks Section */}
             <Card>
               <CardHeader>
@@ -1438,97 +1594,101 @@ export default function Dashboard() {
 
                 {selectedMenuId && (
                   <>
-                    {/* Bulk Actions Bar */}
+                    {/* Sticky Bulk Actions Bar */}
                     {localDrinks.length > 0 && (
-                      <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/20">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={toggleSelectAll}
-                          data-testid="button-toggle-select-all"
-                        >
-                          {selectedDrinks.size === localDrinks.length ? "Deselect All" : "Select All"}
-                        </Button>
-                        
-                        {selectedDrinks.size > 0 && (
-                          <>
-                            <div className="text-sm text-muted-foreground">
-                              {selectedDrinks.size} selected
-                            </div>
-                            <div className="flex-1" />
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                bulkUpdateMutation.mutate({
-                                  drinkIds: Array.from(selectedDrinks),
-                                  isActive: true,
-                                });
-                              }}
-                              disabled={bulkUpdateMutation.isPending}
-                              data-testid="button-bulk-activate"
-                            >
-                              <CheckCircle2 className="w-4 h-4 mr-1" />
-                              Activate
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                bulkUpdateMutation.mutate({
-                                  drinkIds: Array.from(selectedDrinks),
-                                  isActive: false,
-                                });
-                              }}
-                              disabled={bulkUpdateMutation.isPending}
-                              data-testid="button-bulk-deactivate"
-                            >
-                              <AlertCircle className="w-4 h-4 mr-1" />
-                              Deactivate
-                            </Button>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => {
-                                if (confirm(`Delete ${selectedDrinks.size} drink(s)? This cannot be undone.`)) {
-                                  bulkDeleteMutation.mutate(Array.from(selectedDrinks));
-                                }
-                              }}
-                              disabled={bulkDeleteMutation.isPending}
-                              data-testid="button-bulk-delete"
-                            >
-                              <Trash2 className="w-4 h-4 mr-1" />
-                              Delete
-                            </Button>
-                          </>
-                        )}
+                      <div className="sticky top-0 z-50 bg-background pb-4">
+                        <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/20">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={toggleSelectAll}
+                            data-testid="button-toggle-select-all"
+                          >
+                            {selectedDrinks.size === localDrinks.length ? "Deselect All" : "Select All"}
+                          </Button>
+                          
+                          {selectedDrinks.size > 0 && (
+                            <>
+                              <div className="text-sm text-muted-foreground">
+                                {selectedDrinks.size} selected
+                              </div>
+                              <div className="flex-1" />
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  bulkUpdateMutation.mutate({
+                                    drinkIds: Array.from(selectedDrinks),
+                                    isActive: true,
+                                  });
+                                }}
+                                disabled={bulkUpdateMutation.isPending}
+                                data-testid="button-bulk-activate"
+                              >
+                                <CheckCircle2 className="w-4 h-4 mr-1" />
+                                Activate
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  bulkUpdateMutation.mutate({
+                                    drinkIds: Array.from(selectedDrinks),
+                                    isActive: false,
+                                  });
+                                }}
+                                disabled={bulkUpdateMutation.isPending}
+                                data-testid="button-bulk-deactivate"
+                              >
+                                <AlertCircle className="w-4 h-4 mr-1" />
+                                Deactivate
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => {
+                                  if (confirm(`Delete ${selectedDrinks.size} drink(s)? This cannot be undone.`)) {
+                                    bulkDeleteMutation.mutate(Array.from(selectedDrinks));
+                                  }
+                                }}
+                                disabled={bulkDeleteMutation.isPending}
+                                data-testid="button-bulk-delete"
+                              >
+                                <Trash2 className="w-4 h-4 mr-1" />
+                                Delete
+                              </Button>
+                            </>
+                          )}
+                        </div>
                       </div>
                     )}
 
-                    {/* Drinks List with Drag and Drop */}
+                    {/* Drinks Grid with Drag and Drop */}
                     {allDrinksLoading ? (
-                      <div className="space-y-3">
-                        {[1, 2, 3].map((i) => (
-                          <Skeleton key={i} className="h-16 w-full" />
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {[1, 2, 3, 4, 5, 6].map((i) => (
+                          <Skeleton key={i} className="h-64 w-full" />
                         ))}
                       </div>
                     ) : localDrinks.length > 0 ? (
-                      <DndContext
-                        sensors={sensors}
-                        collisionDetection={closestCenter}
-                        onDragEnd={handleDragEnd}
-                      >
-                        <SortableContext
-                          items={localDrinks.map(d => d.id)}
-                          strategy={verticalListSortingStrategy}
+                      <ScrollArea className="max-h-[600px]">
+                        <DndContext
+                          sensors={sensors}
+                          collisionDetection={closestCenter}
+                          onDragEnd={handleDragEnd}
                         >
-                          <div className="space-y-2" data-testid="drinks-list">
-                            {localDrinks.map((drink) => (
-                              <SortableDrinkItem key={drink.id} drink={drink} />
-                            ))}
-                          </div>
-                        </SortableContext>
-                      </DndContext>
+                          <SortableContext
+                            items={localDrinks.map(d => d.id)}
+                            strategy={verticalListSortingStrategy}
+                          >
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pr-4" data-testid="drinks-list">
+                              {localDrinks.map((drink) => (
+                                <SortableDrinkItem key={drink.id} drink={drink} />
+                              ))}
+                            </div>
+                          </SortableContext>
+                        </DndContext>
+                      </ScrollArea>
                     ) : (
                       <p className="text-muted-foreground text-center py-8">
                         No drinks in this menu. Create drinks below!
@@ -1553,7 +1713,7 @@ export default function Dashboard() {
 
             {/* Edit Drink Dialog */}
             <Dialog open={!!editingDrink} onOpenChange={(open) => !open && setEditingDrink(null)}>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
                 <DialogHeader>
                   <DialogTitle>Edit Drink</DialogTitle>
                   <DialogDescription>
@@ -1566,8 +1726,10 @@ export default function Dashboard() {
                       e.preventDefault();
                       updateDrinkMutation.mutate(editingDrink);
                     }}
-                    className="space-y-4"
+                    className="flex flex-col flex-1 min-h-0"
                   >
+                    <ScrollArea className="flex-1 pr-4">
+                      <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="edit-drink-name">Drink Name</Label>
@@ -1672,50 +1834,52 @@ export default function Dashboard() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          id="edit-drink-mocktail"
-                          checked={editingDrink.isMocktail}
-                          onCheckedChange={(checked) => setEditingDrink({ ...editingDrink, isMocktail: checked })}
-                        />
-                        <Label htmlFor="edit-drink-mocktail" className="text-sm">Non-Alcoholic</Label>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              id="edit-drink-mocktail"
+                              checked={editingDrink.isMocktail}
+                              onCheckedChange={(checked) => setEditingDrink({ ...editingDrink, isMocktail: checked })}
+                            />
+                            <Label htmlFor="edit-drink-mocktail" className="text-sm">Non-Alcoholic</Label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              id="edit-drink-can-be-mocktail"
+                              checked={editingDrink.canBeMocktail}
+                              onCheckedChange={(checked) => setEditingDrink({ ...editingDrink, canBeMocktail: checked })}
+                            />
+                            <Label htmlFor="edit-drink-can-be-mocktail" className="text-sm">Mocktail Available</Label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              id="edit-drink-stirred"
+                              checked={editingDrink.isStirred}
+                              onCheckedChange={(checked) => setEditingDrink({ ...editingDrink, isStirred: checked })}
+                            />
+                            <Label htmlFor="edit-drink-stirred" className="text-sm">Stirred</Label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              id="edit-drink-shaken"
+                              checked={editingDrink.isShaken}
+                              onCheckedChange={(checked) => setEditingDrink({ ...editingDrink, isShaken: checked })}
+                            />
+                            <Label htmlFor="edit-drink-shaken" className="text-sm">Shaken</Label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              id="edit-drink-active"
+                              checked={editingDrink.isActive}
+                              onCheckedChange={(checked) => setEditingDrink({ ...editingDrink, isActive: checked })}
+                            />
+                            <Label htmlFor="edit-drink-active" className="text-sm">Active</Label>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          id="edit-drink-can-be-mocktail"
-                          checked={editingDrink.canBeMocktail}
-                          onCheckedChange={(checked) => setEditingDrink({ ...editingDrink, canBeMocktail: checked })}
-                        />
-                        <Label htmlFor="edit-drink-can-be-mocktail" className="text-sm">Mocktail Available</Label>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          id="edit-drink-stirred"
-                          checked={editingDrink.isStirred}
-                          onCheckedChange={(checked) => setEditingDrink({ ...editingDrink, isStirred: checked })}
-                        />
-                        <Label htmlFor="edit-drink-stirred" className="text-sm">Stirred</Label>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          id="edit-drink-shaken"
-                          checked={editingDrink.isShaken}
-                          onCheckedChange={(checked) => setEditingDrink({ ...editingDrink, isShaken: checked })}
-                        />
-                        <Label htmlFor="edit-drink-shaken" className="text-sm">Shaken</Label>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          id="edit-drink-active"
-                          checked={editingDrink.isActive}
-                          onCheckedChange={(checked) => setEditingDrink({ ...editingDrink, isActive: checked })}
-                        />
-                        <Label htmlFor="edit-drink-active" className="text-sm">Active</Label>
-                      </div>
-                    </div>
+                    </ScrollArea>
 
-                    <div className="flex justify-end gap-2 pt-4">
+                    <div className="flex justify-end gap-2 pt-4 border-t mt-4">
                       <Button
                         type="button"
                         variant="outline"
@@ -1952,9 +2116,45 @@ export default function Dashboard() {
                 </form>
               </CardContent>
             </Card>
-          </TabsContent>
-        </Tabs>
+                </>
+              )}
+
+              {/* Settings Section */}
+              {activeSection === "settings" && (
+                <>
+            {/* Home Page QR Code Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-xl">Home Page QR Code</CardTitle>
+                <CardDescription>
+                  QR code for the main landing page showing all active menus
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col items-center gap-4">
+                  <div className="bg-white p-4 rounded-lg border">
+                    <QRCodeSVG
+                      value={baseUrl}
+                      size={200}
+                      level="H"
+                      includeMargin={true}
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground text-center">
+                    {baseUrl}
+                  </p>
+                  <p className="text-xs text-muted-foreground text-center max-w-md">
+                    This QR code links to your home page where guests can see all active menus
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+                </>
+              )}
+            </div>
+          </main>
+        </div>
       </div>
-    </div>
+    </SidebarProvider>
   );
 }

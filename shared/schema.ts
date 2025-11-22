@@ -87,5 +87,13 @@ export type OrderWithDrink = Order & {
   drinkName: string;
   drinkSection: string;
   drinkRecipe: string;
+  drinkDescription: string;
+  drinkStyle: string;
+  drinkBaseSpirit: string;
+  drinkTemperature: string;
+  drinkIsMocktail: boolean;
+  drinkCanBeMocktail: boolean;
+  drinkIsStirred: boolean;
+  drinkIsShaken: boolean;
   guestName?: string;
 };

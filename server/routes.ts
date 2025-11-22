@@ -203,33 +203,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // PATCH /api/drinks/:id - Update drink
-  app.patch("/api/drinks/:id", async (req, res) => {
-    try {
-      const { id } = req.params;
-      const updateData = req.body;
-      
-      // Validate allowed fields
-      const allowedFields = ['name', 'section', 'description', 'recipe', 'style', 'temperature', 
-                            'isMocktail', 'canBeMocktail', 'isStirred', 'isShaken', 
-                            'baseSpirit', 'isActive', 'sortOrder', 'menuId'];
-      const hasValidFields = Object.keys(updateData).every(key => allowedFields.includes(key));
-      
-      if (!hasValidFields) {
-        return res.status(400).json({ error: "Invalid fields in update data" });
-      }
-      
-      const drink = await storage.updateDrink(id, updateData);
-      if (!drink) {
-        return res.status(404).json({ error: "Drink not found" });
-      }
-      res.json(drink);
-    } catch (error) {
-      console.error("Error updating drink:", error);
-      res.status(500).json({ error: "Failed to update drink" });
-    }
-  });
-
   // PATCH /api/drinks/reorder - Update drink sort orders
   app.patch("/api/drinks/reorder", async (req, res) => {
     try {
@@ -267,21 +240,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PATCH /api/drinks/bulk - Bulk update drinks (activate/deactivate)
   app.patch("/api/drinks/bulk", async (req, res) => {
     try {
+      console.log("Bulk update request body:", req.body);
       const { drinkIds, isActive } = req.body;
       
       if (!Array.isArray(drinkIds) || drinkIds.length === 0) {
+        console.log("Invalid drinkIds:", drinkIds);
         return res.status(400).json({ error: "drinkIds must be a non-empty array" });
       }
       
       if (typeof isActive !== "boolean") {
+        console.log("Invalid isActive:", isActive);
         return res.status(400).json({ error: "isActive must be a boolean" });
       }
       
+      console.log(`Updating ${drinkIds.length} drinks, setting isActive to ${isActive}`);
       await storage.bulkUpdateDrinks(drinkIds, isActive);
+      console.log("Bulk update successful");
       res.json({ success: true, updated: drinkIds.length });
     } catch (error) {
       console.error("Error bulk updating drinks:", error);
       res.status(500).json({ error: "Failed to update drinks" });
+    }
+  });
+
+  // PATCH /api/drinks/:id - Update drink
+  app.patch("/api/drinks/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updateData = req.body;
+      
+      // Validate allowed fields
+      const allowedFields = ['name', 'section', 'description', 'recipe', 'style', 'temperature', 
+                            'isMocktail', 'canBeMocktail', 'isStirred', 'isShaken', 
+                            'baseSpirit', 'isActive', 'sortOrder', 'menuId'];
+      const hasValidFields = Object.keys(updateData).every(key => allowedFields.includes(key));
+      
+      if (!hasValidFields) {
+        return res.status(400).json({ error: "Invalid fields in update data" });
+      }
+      
+      const drink = await storage.updateDrink(id, updateData);
+      if (!drink) {
+        return res.status(404).json({ error: "Drink not found" });
+      }
+      res.json(drink);
+    } catch (error) {
+      console.error("Error updating drink:", error);
+      res.status(500).json({ error: "Failed to update drink" });
     }
   });
 
