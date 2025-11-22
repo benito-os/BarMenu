@@ -2379,6 +2379,16 @@ export default function Dashboard() {
                       />
                       <Label htmlFor="drink-shaken" className="text-sm">Shaken</Label>
                     </div>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id="drink-active"
+                        checked={newDrink.isActive}
+                        onCheckedChange={(checked) => setNewDrink({ ...newDrink, isActive: checked })}
+                        disabled={createDrinkMutation.isPending}
+                        data-testid="switch-drink-active"
+                      />
+                      <Label htmlFor="drink-active" className="text-sm">Active</Label>
+                    </div>
                     <div className="space-y-2">
                       <Label htmlFor="drink-order" className="text-sm">Sort Order</Label>
                       <Input
