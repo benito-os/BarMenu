@@ -24,7 +24,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (password === DASHBOARD_PASSWORD) {
         req.session.isAuthenticated = true;
-        res.json({ success: true });
+        // Explicitly save session to ensure it persists
+        req.session.save((err) => {
+          if (err) {
+            console.error("Error saving session:", err);
+            return res.status(500).json({ error: "Session save failed" });
+          }
+          res.json({ success: true });
+        });
       } else {
         res.status(401).json({ error: "Invalid credentials" });
       }
