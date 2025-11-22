@@ -64,6 +64,13 @@ export default function Dashboard() {
   const [newSectionInput, setNewSectionInput] = useState<string>("");
   const [selectedOrder, setSelectedOrder] = useState<OrderWithDrink | null>(null);
 
+  const getNextSortOrder = useCallback((menuId: string) => {
+    if (!menuId) return 0;
+    const drinksForMenu = localDrinks?.filter(drink => drink.menuId === menuId) || [];
+    const maxSortOrder = drinksForMenu.reduce((max, drink) => Math.max(max, drink.sortOrder || 0), 0);
+    return maxSortOrder + 1;
+  }, [localDrinks]);
+
   // Stable section keys - generated once when editing starts and persists
   const sectionKeysRef = useRef<Map<string, string>>(new Map());
   
@@ -335,13 +342,6 @@ export default function Dashboard() {
     isActive: true,
     sortOrder: 0,
   });
-
-  const getNextSortOrder = useCallback((menuId: string) => {
-    if (!menuId) return 0;
-    const drinksForMenu = localDrinks?.filter(drink => drink.menuId === menuId) || [];
-    const maxSortOrder = drinksForMenu.reduce((max, drink) => Math.max(max, drink.sortOrder || 0), 0);
-    return maxSortOrder + 1;
-  }, [localDrinks]);
 
   // Fetch all drinks for selected menu (including inactive) for admin management
   const { data: allDrinks, isLoading: allDrinksLoading } = useQuery<Drink[]>({
