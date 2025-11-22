@@ -1,6 +1,7 @@
 import type { Express, Response } from "express";
 import { createServer, type Server } from "http";
 import { z } from "zod";
+import { isStorageError } from "./errors";
 import { storage } from "./storage";
 import {
   analyticsQuerySchema,
@@ -319,8 +320,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/orders", async (req, res) => {
     try {
       // Extend the schema to allow optional guestName
-      const orderSchema = insertOrderSchema.extend({
-        guestName: z.string().optional(),
+      const orderSchema = orderCreateSchema.extend({
         menuId: z.string().optional(),
       });
       const validatedData = orderSchema.parse(req.body);
