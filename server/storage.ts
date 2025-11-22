@@ -1,6 +1,6 @@
 // Reference: blueprint:javascript_database
-import { 
-  type Menu, 
+import {
+  type Menu,
   type InsertMenu,
   type Drink,
   type InsertDrink,
@@ -14,6 +14,8 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, sql, inArray } from "drizzle-orm";
+import { withTransaction } from "./transactions";
+import { StorageError } from "./errors";
 
 export interface IStorage {
   // Menu operations
@@ -99,23 +101,120 @@ export class DatabaseStorage implements IStorage {
   }
 
   async reorderDrinks(drinksToUpdate: Array<{ id: string; sortOrder: number }>): Promise<void> {
-    // Update each drink's sortOrder in a transaction
-    for (const { id, sortOrder } of drinksToUpdate) {
-      await db.update(drinks).set({ sortOrder }).where(eq(drinks.id, id));
-    }
+    await withTransaction("reorderDrinks", async (tx) => {
+      const updatedIds: string[] = [];
+
+      for (const { id, sortOrder } of drinksToUpdate) {
+        const updated = await tx
+          .update(drinks)
+          .set({ sortOrder })
+          .where(eq(drinks.id, id))
+          .returning({ id: drinks.id });
+
+        if (updated.length === 0) {
+          throw new StorageError("Drink not found while reordering", {
+            status: 404,
+            code: "DRINK_NOT_FOUND",
+            context: { id },
+          });
+        }
+
+        updatedIds.push(updated[0].id);
+      }
+
+      if (updatedIds.length !== drinksToUpdate.length) {
+        throw new StorageError("Mismatch while reordering drinks", {
+          status: 409,
+          code: "DRINK_UPDATE_MISMATCH",
+          context: { expected: drinksToUpdate.length, updated: updatedIds.length },
+        });
+      }
+    });
   }
 
   async bulkDeleteDrinks(drinkIds: string[]): Promise<void> {
-    await db.delete(drinks).where(inArray(drinks.id, drinkIds));
+    await withTransaction("bulkDeleteDrinks", async (tx) => {
+      const deleted = await tx
+        .delete(drinks)
+        .where(inArray(drinks.id, drinkIds))
+        .returning({ id: drinks.id });
+
+      const deletedIds = new Set(deleted.map((d) => d.id));
+      const missing = drinkIds.filter((id) => !deletedIds.has(id));
+
+      if (missing.length > 0) {
+        throw new StorageError("Some drinks were not deleted", {
+          status: 404,
+          code: "DRINK_DELETE_MISMATCH",
+          context: { missing },
+        });
+      }
+    });
   }
 
   async bulkUpdateDrinks(drinkIds: string[], isActive: boolean): Promise<void> {
-    await db.update(drinks).set({ isActive }).where(inArray(drinks.id, drinkIds));
+    await withTransaction("bulkUpdateDrinks", async (tx) => {
+      const updated = await tx
+        .update(drinks)
+        .set({ isActive })
+        .where(inArray(drinks.id, drinkIds))
+        .returning({ id: drinks.id });
+
+      const updatedIds = new Set(updated.map((d) => d.id));
+      const missing = drinkIds.filter((id) => !updatedIds.has(id));
+
+      if (missing.length > 0) {
+        throw new StorageError("Some drinks were not updated", {
+          status: 404,
+          code: "DRINK_UPDATE_MISMATCH",
+          context: { missing },
+        });
+      }
+    });
   }
 
   async createOrder(insertOrder: InsertOrder): Promise<Order> {
-    const [order] = await db.insert(orders).values(insertOrder).returning();
-    return order;
+    return await withTransaction("createOrder", async (tx) => {
+      const [targetDrink] = await tx
+        .select({ id: drinks.id, menuId: drinks.menuId, isActive: drinks.isActive })
+        .from(drinks)
+        .where(eq(drinks.id, insertOrder.drinkId));
+
+      if (!targetDrink) {
+        throw new StorageError("Drink not found for order", {
+          status: 404,
+          code: "DRINK_NOT_FOUND",
+          context: { drinkId: insertOrder.drinkId },
+        });
+      }
+
+      if (targetDrink.menuId !== insertOrder.menuId) {
+        throw new StorageError("Drink does not belong to menu", {
+          status: 400,
+          code: "MENU_MISMATCH",
+          context: { drinkMenuId: targetDrink.menuId, requestMenuId: insertOrder.menuId },
+        });
+      }
+
+      if (!targetDrink.isActive) {
+        throw new StorageError("Drink is inactive", {
+          status: 400,
+          code: "DRINK_INACTIVE",
+          context: { drinkId: insertOrder.drinkId },
+        });
+      }
+
+      const [order] = await tx.insert(orders).values(insertOrder).returning();
+
+      if (!order) {
+        throw new StorageError("Order could not be created", {
+          status: 500,
+          code: "ORDER_INSERT_FAILED",
+        });
+      }
+
+      return order;
+    });
   }
 
   async getOrderById(id: string): Promise<Order | undefined> {
@@ -151,9 +250,9 @@ export class DatabaseStorage implements IStorage {
       .orderBy(orders.requestedAt);
 
     // Map to ensure drinkRecipe is never null (provide fallback)
-    return results.map(r => ({
+    return results.map((r): OrderWithDrink => ({
       ...r,
-      guestName: r.guestName || null,
+      guestName: r.guestName ?? null,
       drinkRecipe: r.drinkRecipe || "-",
       drinkDescription: r.drinkDescription || "",
       drinkStyle: r.drinkStyle || "",

@@ -307,7 +307,7 @@ export default function Dashboard() {
     queryKey: ["/api/drinks/all", selectedMenuId],
     queryFn: async () => {
       if (!selectedMenuId) return [];
-      const response = await fetch(`/api/drinks/all?menuId=${selectedMenuId}`);
+      const response = await apiRequest("GET", `/api/drinks/all?menuId=${selectedMenuId}`);
       if (!response.ok) throw new Error("Failed to fetch drinks");
       return response.json();
     },

@@ -242,6 +242,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.reorderDrinks(payload.drinks);
       res.json({ success: true });
     } catch (error) {
+      const mappedError = mapStorageError(error);
+      if (mappedError) {
+        console.warn("Reorder drinks failed", mappedError);
+        return res.status(mappedError.status).json(mappedError.body);
+      }
+
       console.error("Error reordering drinks:", error);
       res.status(500).json({ error: "Failed to reorder drinks" });
     }
@@ -256,6 +262,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.bulkDeleteDrinks(payload.drinkIds);
       res.json({ success: true, deleted: payload.drinkIds.length });
     } catch (error) {
+      const mappedError = mapStorageError(error);
+      if (mappedError) {
+        console.warn("Bulk delete failed", mappedError);
+        return res.status(mappedError.status).json(mappedError.body);
+      }
+
       console.error("Error bulk deleting drinks:", error);
       res.status(500).json({ error: "Failed to delete drinks" });
     }
@@ -273,6 +285,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Bulk update successful");
       res.json({ success: true, updated: payload.drinkIds.length });
     } catch (error) {
+      const mappedError = mapStorageError(error);
+      if (mappedError) {
+        console.warn("Bulk update failed", mappedError);
+        return res.status(mappedError.status).json(mappedError.body);
+      }
+
       console.error("Error bulk updating drinks:", error);
       res.status(500).json({ error: "Failed to update drinks" });
     }
@@ -381,3 +399,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   return httpServer;
 }
+  const mapStorageError = (error: unknown) => {
+    if (isStorageError(error)) {
+      return {
+        status: error.options.status,
+        body: {
+          error: error.message,
+          code: error.options.code,
+          details: error.options.context,
+        },
+      } as const;
+    }
+
+    return null;
+  };
+
