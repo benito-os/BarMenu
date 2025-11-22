@@ -296,9 +296,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Extend the schema to allow optional guestName
       const orderSchema = insertOrderSchema.extend({
         guestName: z.string().optional(),
+        menuId: z.string().optional(),
       });
       const validatedData = orderSchema.parse(req.body);
-      const order = await storage.createOrder(validatedData);
+
+      // Validate drink and menu relationship before creating the order
+      const drink = await storage.getDrinkById(validatedData.drinkId);
+      if (!drink) {
+        return res.status(400).json({ error: "Drink not found" });
+      }
+
+      const menuId = validatedData.menuId ?? drink.menuId;
+
+      if (validatedData.menuId && validatedData.menuId !== drink.menuId) {
+        return res.status(400).json({ error: "Drink does not belong to the specified menu" });
+      }
+
+      const order = await storage.createOrder({
+        ...validatedData,
+        menuId,
+      });
       res.status(201).json(order);
     } catch (error) {
       if (error instanceof z.ZodError) {

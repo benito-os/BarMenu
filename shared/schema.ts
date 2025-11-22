@@ -95,5 +95,5 @@ export type OrderWithDrink = Order & {
   drinkCanBeMocktail: boolean;
   drinkIsStirred: boolean;
   drinkIsShaken: boolean;
-  guestName?: string;
+  guestName: string | null;
 };

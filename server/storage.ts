@@ -153,7 +153,7 @@ export class DatabaseStorage implements IStorage {
     // Map to ensure drinkRecipe is never null (provide fallback)
     return results.map(r => ({
       ...r,
-      guestName: r.guestName || undefined,
+      guestName: r.guestName ?? null,
       drinkRecipe: r.drinkRecipe || "-",
       drinkDescription: r.drinkDescription || "",
       drinkStyle: r.drinkStyle || "",
