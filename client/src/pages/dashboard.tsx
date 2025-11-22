@@ -2033,7 +2033,8 @@ export default function Dashboard() {
                             </>
                           )}
                         </div>
-                      )}
+                      </div>
+                    )}
 
                     {/* Drinks Grid with Drag and Drop */}
                     {allDrinksLoading ? (
