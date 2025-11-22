@@ -1296,6 +1296,16 @@ export default function Dashboard() {
                           <h3 className="font-serif text-lg font-semibold">{menu.name}</h3>
                           <p className="text-sm text-muted-foreground">{menu.description}</p>
                           <p className="text-xs text-muted-foreground mt-1">Slug: {menu.slug}</p>
+                          {menu.sections && menu.sections.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              <span className="text-xs text-muted-foreground">Sections:</span>
+                              {menu.sections.map((section, idx) => (
+                                <Badge key={idx} variant="outline" className="text-xs">
+                                  {section}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
                         </div>
                         <div className="flex items-center gap-3">
                           <Button
@@ -1710,24 +1720,22 @@ export default function Dashboard() {
                         ))}
                       </div>
                     ) : localDrinks.length > 0 ? (
-                      <ScrollArea className="max-h-[600px]">
-                        <DndContext
-                          sensors={sensors}
-                          collisionDetection={closestCenter}
-                          onDragEnd={handleDragEnd}
+                      <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={handleDragEnd}
+                      >
+                        <SortableContext
+                          items={localDrinks.map(d => d.id)}
+                          strategy={verticalListSortingStrategy}
                         >
-                          <SortableContext
-                            items={localDrinks.map(d => d.id)}
-                            strategy={verticalListSortingStrategy}
-                          >
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pr-4" data-testid="drinks-list">
-                              {localDrinks.map((drink) => (
-                                <SortableDrinkItem key={drink.id} drink={drink} />
-                              ))}
-                            </div>
-                          </SortableContext>
-                        </DndContext>
-                      </ScrollArea>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="drinks-list">
+                            {localDrinks.map((drink) => (
+                              <SortableDrinkItem key={drink.id} drink={drink} />
+                            ))}
+                          </div>
+                        </SortableContext>
+                      </DndContext>
                     ) : (
                       <p className="text-muted-foreground text-center py-8">
                         No drinks in this menu. Create drinks below!
