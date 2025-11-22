@@ -2,6 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -51,7 +52,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 export default function Dashboard() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const [activeSection, setActiveSection] = useState<string>("queue");
+  const [mainTab, setMainTab] = useState<string>("queue");
+  const [activeSection, setActiveSection] = useState<string>("analytics");
   const [filterMode, setFilterMode] = useState<"all" | "never-made" | "least-ordered">("all");
   const [selectedMenuId, setSelectedMenuId] = useState<string>("");
   const [selectedDrinks, setSelectedDrinks] = useState<Set<string>>(new Set());
@@ -60,6 +62,11 @@ export default function Dashboard() {
   const [editingMenu, setEditingMenu] = useState<Menu | null>(null);
   const [newSectionInput, setNewSectionInput] = useState<string>("");
   const [selectedOrder, setSelectedOrder] = useState<OrderWithDrink | null>(null);
+  const [qrSize, setQrSize] = useState<number>(200);
+  const [qrFgColor, setQrFgColor] = useState<string>("#000000");
+  const [qrBgColor, setQrBgColor] = useState<string>("#ffffff");
+  const [qrLevel, setQrLevel] = useState<"L" | "M" | "Q" | "H">("H");
+  const [qrIncludeMargin, setQrIncludeMargin] = useState<boolean>(true);
   
   // Get base URL for QR codes
   const baseUrl = window.location.origin;
@@ -570,8 +577,7 @@ export default function Dashboard() {
             </div>
             <Checkbox
               checked={selectedDrinks.has(drink.id)}
-              onCheckedChange={(e) => {
-                e.stopPropagation?.();
+              onCheckedChange={() => {
                 toggleDrinkSelection(drink.id);
               }}
               onClick={(e) => e.stopPropagation()}
@@ -633,21 +639,19 @@ export default function Dashboard() {
   } as React.CSSProperties;
 
   return (
-    <SidebarProvider style={style}>
-      <div className="flex h-screen w-full">
-        <AppSidebar
-          activeSection={activeSection}
-          onSectionChange={setActiveSection}
-          onLogout={() => logoutMutation.mutate()}
-        />
-        <div className="flex flex-col flex-1">
+    <Tabs defaultValue="queue" value={mainTab} onValueChange={setMainTab} className="h-screen flex flex-col">
+      <TabsList className="w-full rounded-none border-b" data-testid="main-tabs">
+        <TabsTrigger value="queue" data-testid="tab-queue">Live Queue</TabsTrigger>
+        <TabsTrigger value="management" data-testid="tab-management">Management</TabsTrigger>
+      </TabsList>
+      
+      {/* Live Queue Tab - Full Width, No Sidebar */}
+      <TabsContent value="queue" className="flex-1 overflow-hidden m-0">
+        <div className="flex flex-col h-full">
           <header className="flex items-center justify-between p-4 border-b">
-            <div className="flex items-center gap-4">
-              <SidebarTrigger data-testid="button-sidebar-toggle" />
-              <h1 className="font-serif text-2xl md:text-3xl font-bold text-foreground">
-                Bar Flores Dashboard
-              </h1>
-            </div>
+            <h1 className="font-serif text-2xl md:text-3xl font-bold text-foreground">
+              Bar Flores Dashboard
+            </h1>
             <Link href="/">
               <Button 
                 variant="outline" 
@@ -662,8 +666,8 @@ export default function Dashboard() {
 
           <main className="flex-1 overflow-auto p-6">
             <div className="max-w-7xl mx-auto space-y-6">
-              {/* Queue Section */}
-              {activeSection === "queue" && (
+              {/* Queue Section Content */}
+              {(
                 <>
                   <Card>
                     <CardHeader>
@@ -904,9 +908,44 @@ export default function Dashboard() {
                   </Sheet>
                 </>
               )}
+            </div>
+          </main>
+        </div>
+      </TabsContent>
+      
+      {/* Management Tab - With Sidebar */}
+      <TabsContent value="management" className="flex-1 overflow-hidden m-0">
+        <SidebarProvider style={style}>
+          <div className="flex h-full w-full">
+            <AppSidebar
+              activeSection={activeSection}
+              onSectionChange={setActiveSection}
+              onLogout={() => logoutMutation.mutate()}
+            />
+            <div className="flex flex-col flex-1">
+              <header className="flex items-center justify-between p-4 border-b">
+                <div className="flex items-center gap-4">
+                  <SidebarTrigger data-testid="button-sidebar-toggle" />
+                  <h1 className="font-serif text-2xl md:text-3xl font-bold text-foreground">
+                    Bar Flores Dashboard
+                  </h1>
+                </div>
+                <Link href="/">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    data-testid="button-back-home"
+                  >
+                    <Home className="w-4 h-4 mr-2" />
+                    Home
+                  </Button>
+                </Link>
+              </header>
 
-        {/* Analytics Section */}
-              {activeSection === "analytics" && (
+              <main className="flex-1 overflow-auto p-6">
+                <div className="max-w-7xl mx-auto space-y-6">
+                  {/* Analytics Section */}
+                  {activeSection === "analytics" && (
                 <>
             {/* Filters */}
             <Card>
@@ -2122,33 +2161,184 @@ export default function Dashboard() {
               {/* QR Codes Section */}
               {activeSection === "qr-codes" && (
                 <>
-            {/* Home Page QR Code Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-xl">Home Page QR Code</CardTitle>
-                <CardDescription>
-                  QR code for the main landing page showing all active menus
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col items-center gap-4">
-                  <div className="bg-white p-4 rounded-lg border">
-                    <QRCodeSVG
-                      value={baseUrl}
-                      size={200}
-                      level="H"
-                      includeMargin={true}
-                    />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* QR Code Preview */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-xl">Home Page QR Code</CardTitle>
+                  <CardDescription>
+                    QR code for the main landing page showing all active menus
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="bg-white p-6 rounded-lg border" style={{ backgroundColor: qrBgColor }}>
+                      <QRCodeSVG
+                        value={baseUrl}
+                        size={qrSize}
+                        level={qrLevel}
+                        includeMargin={qrIncludeMargin}
+                        fgColor={qrFgColor}
+                        bgColor={qrBgColor}
+                      />
+                    </div>
+                    <p className="text-sm text-muted-foreground text-center">
+                      {baseUrl}
+                    </p>
+                    <p className="text-xs text-muted-foreground text-center max-w-md">
+                      This QR code links to your home page where guests can see all active menus
+                    </p>
                   </div>
-                  <p className="text-sm text-muted-foreground text-center">
-                    {baseUrl}
-                  </p>
-                  <p className="text-xs text-muted-foreground text-center max-w-md">
-                    This QR code links to your home page where guests can see all active menus
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+
+              {/* QR Code Customization */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-xl">QR Code Styling</CardTitle>
+                  <CardDescription>
+                    Customize the appearance of your QR codes
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="qr-size">Size: {qrSize}px</Label>
+                    <div className="flex items-center gap-4">
+                      <Input
+                        id="qr-size"
+                        type="range"
+                        min="128"
+                        max="512"
+                        step="16"
+                        value={qrSize}
+                        onChange={(e) => setQrSize(parseInt(e.target.value))}
+                        className="flex-1"
+                      />
+                      <span className="text-sm text-muted-foreground min-w-[60px]">{qrSize}px</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="qr-fg-color">Foreground Color</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="qr-fg-color"
+                          type="color"
+                          value={qrFgColor}
+                          onChange={(e) => setQrFgColor(e.target.value)}
+                          className="h-10 w-20"
+                        />
+                        <Input
+                          type="text"
+                          value={qrFgColor}
+                          onChange={(e) => setQrFgColor(e.target.value)}
+                          placeholder="#000000"
+                          className="flex-1 font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="qr-bg-color">Background Color</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="qr-bg-color"
+                          type="color"
+                          value={qrBgColor}
+                          onChange={(e) => setQrBgColor(e.target.value)}
+                          className="h-10 w-20"
+                        />
+                        <Input
+                          type="text"
+                          value={qrBgColor}
+                          onChange={(e) => setQrBgColor(e.target.value)}
+                          placeholder="#ffffff"
+                          className="flex-1 font-mono"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="qr-level">Error Correction Level</Label>
+                    <Select value={qrLevel} onValueChange={(value: "L" | "M" | "Q" | "H") => setQrLevel(value)}>
+                      <SelectTrigger id="qr-level">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="L">Low (7% recovery)</SelectItem>
+                        <SelectItem value="M">Medium (15% recovery)</SelectItem>
+                        <SelectItem value="Q">Quartile (25% recovery)</SelectItem>
+                        <SelectItem value="H">High (30% recovery)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Higher levels allow the QR code to be read even if partially damaged or obscured
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="qr-margin"
+                      checked={qrIncludeMargin}
+                      onCheckedChange={setQrIncludeMargin}
+                    />
+                    <Label htmlFor="qr-margin" className="text-sm">Include quiet zone margin</Label>
+                  </div>
+
+                  <div className="border-t pt-4">
+                    <h3 className="text-sm font-semibold mb-2">Quick Presets</h3>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setQrFgColor("#000000");
+                          setQrBgColor("#ffffff");
+                          setQrSize(200);
+                        }}
+                      >
+                        Classic
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setQrFgColor("#1a1a1a");
+                          setQrBgColor("#f5f5f5");
+                          setQrSize(256);
+                        }}
+                      >
+                        Elegant
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setQrFgColor("#8b5cf6");
+                          setQrBgColor("#faf5ff");
+                          setQrSize(300);
+                        }}
+                      >
+                        Purple
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setQrFgColor("#ef4444");
+                          setQrBgColor("#fef2f2");
+                          setQrSize(300);
+                        }}
+                      >
+                        Red
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
                 </>
               )}
 
@@ -2211,10 +2401,12 @@ export default function Dashboard() {
                   </div>
                 </>
               )}
+                </div>
+              </main>
             </div>
-          </main>
-        </div>
-      </div>
-    </SidebarProvider>
+          </div>
+        </SidebarProvider>
+      </TabsContent>
+    </Tabs>
   );
 }

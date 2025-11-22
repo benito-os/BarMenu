@@ -14,12 +14,6 @@ import { Button } from "@/components/ui/button";
 
 const menuItems = [
   {
-    title: "Live Queue",
-    icon: LayoutDashboard,
-    value: "queue",
-    testId: "sidebar-queue",
-  },
-  {
     title: "Analytics",
     icon: BarChart3,
     value: "analytics",
