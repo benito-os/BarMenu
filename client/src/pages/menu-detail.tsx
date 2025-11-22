@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import type { Menu, Drink } from "@shared/schema";
+import type { Menu, Drink } from "@shared/validation";
 import { Home, Wine, Sparkles, Glasses, Check, Flame, Snowflake, ThermometerSun } from "lucide-react";
 import { useState } from "react";
 
