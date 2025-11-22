@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertMenuSchema, insertDrinkSchema, insertOrderSchema } from "@shared/schema";
 import { z } from "zod";
+import { isStorageError } from "./errors";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Simple hardcoded password - in production this would use proper hashing
@@ -215,6 +216,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.reorderDrinks(drinks);
       res.json({ success: true });
     } catch (error) {
+      const mappedError = mapStorageError(error);
+      if (mappedError) {
+        console.warn("Reorder drinks failed", mappedError);
+        return res.status(mappedError.status).json(mappedError.body);
+      }
+
       console.error("Error reordering drinks:", error);
       res.status(500).json({ error: "Failed to reorder drinks" });
     }
@@ -232,6 +239,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.bulkDeleteDrinks(drinkIds);
       res.json({ success: true, deleted: drinkIds.length });
     } catch (error) {
+      const mappedError = mapStorageError(error);
+      if (mappedError) {
+        console.warn("Bulk delete failed", mappedError);
+        return res.status(mappedError.status).json(mappedError.body);
+      }
+
       console.error("Error bulk deleting drinks:", error);
       res.status(500).json({ error: "Failed to delete drinks" });
     }
@@ -258,6 +271,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Bulk update successful");
       res.json({ success: true, updated: drinkIds.length });
     } catch (error) {
+      const mappedError = mapStorageError(error);
+      if (mappedError) {
+        console.warn("Bulk update failed", mappedError);
+        return res.status(mappedError.status).json(mappedError.body);
+      }
+
       console.error("Error bulk updating drinks:", error);
       res.status(500).json({ error: "Failed to update drinks" });
     }
@@ -303,6 +322,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: "Invalid order data", details: error.errors });
+      }
+
+      const mappedError = mapStorageError(error);
+      if (mappedError) {
+        console.warn("Order creation failed", mappedError);
+        return res.status(mappedError.status).json(mappedError.body);
       }
       console.error("Error creating order:", error);
       res.status(500).json({ error: "Failed to create order" });
@@ -382,3 +407,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   return httpServer;
 }
+  const mapStorageError = (error: unknown) => {
+    if (isStorageError(error)) {
+      return {
+        status: error.options.status,
+        body: {
+          error: error.message,
+          code: error.options.code,
+          details: error.options.context,
+        },
+      } as const;
+    }
+
+    return null;
+  };
+
