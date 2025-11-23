@@ -846,7 +846,7 @@ export default function Dashboard() {
         </TabsList>
       
       {/* Live Queue Tab - Full Width, No Sidebar */}
-      <TabsContent value="queue" className="flex-1 flex flex-col h-full overflow-hidden m-0">
+      <TabsContent value="queue" className="flex-1 flex flex-col h-full overflow-hidden mt-0 border-0 data-[state=active]:flex">
         <div className="flex flex-col h-full">
           <header className="flex items-center justify-between p-4 border-b">
             <h1 className="font-serif text-2xl md:text-3xl font-bold text-foreground">
@@ -1114,7 +1114,7 @@ export default function Dashboard() {
       </TabsContent>
       
       {/* Management Tab - With Sidebar */}
-      <TabsContent value="management" className="flex-1 flex flex-col h-full overflow-hidden m-0">
+      <TabsContent value="management" className="flex-1 flex flex-col h-full overflow-hidden mt-0 border-0 data-[state=active]:flex">
         <div className="flex flex-1 h-full w-full overflow-hidden">
           <SidebarProvider style={style}>
             <div className="flex h-full w-full">
