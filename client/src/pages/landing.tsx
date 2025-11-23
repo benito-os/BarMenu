@@ -33,7 +33,7 @@ export default function Landing() {
             Bar Flores
           </h1>
           <p className="text-lg md:text-xl text-white/90 mb-8 max-w-2xl">
-            Experimental cocktail menus crafted with passion
+            Whimsical drinks with friends
           </p>
           {activeMenu && (
             <Link href={`/menu/${activeMenu.slug}`}>
