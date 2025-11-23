@@ -776,6 +776,58 @@ export default function Dashboard() {
     );
   }
 
+  // Sortable Section Item Component for Menu Editing
+  function SortableSectionItem({ 
+    mapping, 
+    onRemove 
+  }: { 
+    mapping: { section: string; index: number; dragId: string }; 
+    onRemove: () => void;
+  }) {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+    } = useSortable({ id: mapping.dragId });
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.5 : 1,
+    };
+
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        className="flex items-center gap-2 p-2 bg-background border rounded hover-elevate"
+        data-testid={`section-item-${mapping.index}`}
+      >
+        <div
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing p-1"
+        >
+          <GripVertical className="w-4 h-4 text-muted-foreground" />
+        </div>
+        <Badge variant="secondary" className="flex-1" data-testid={`badge-section-${mapping.index}`}>
+          {mapping.section}
+        </Badge>
+        <button
+          type="button"
+          onClick={onRemove}
+          className="p-1 hover:bg-destructive/20 rounded-full"
+          data-testid={`button-remove-section-${mapping.index}`}
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+    );
+  }
+
   const style = {
     "--sidebar-width": "16rem",
   } as React.CSSProperties;
@@ -1760,54 +1812,16 @@ export default function Dashboard() {
                                 strategy={verticalListSortingStrategy}
                               >
                                 <div className="space-y-2 p-3 border rounded-md bg-muted/20">
-                                  {sectionDragMapping.map((mapping) => {
-                                    const {
-                                      attributes,
-                                      listeners,
-                                      setNodeRef,
-                                      transform,
-                                      transition,
-                                      isDragging,
-                                    } = useSortable({ id: mapping.dragId });
-
-                                    const style = {
-                                      transform: CSS.Transform.toString(transform),
-                                      transition,
-                                      opacity: isDragging ? 0.5 : 1,
-                                    };
-
-                                    return (
-                                      <div
-                                        key={mapping.dragId}
-                                        ref={setNodeRef}
-                                        style={style}
-                                        className="flex items-center gap-2 p-2 bg-background border rounded hover-elevate"
-                                        data-testid={`section-item-${mapping.index}`}
-                                      >
-                                        <div
-                                          {...attributes}
-                                          {...listeners}
-                                          className="cursor-grab active:cursor-grabbing p-1"
-                                        >
-                                          <GripVertical className="w-4 h-4 text-muted-foreground" />
-                                        </div>
-                                        <Badge variant="secondary" className="flex-1" data-testid={`badge-section-${mapping.index}`}>
-                                          {mapping.section}
-                                        </Badge>
-                                        <button
-                                          type="button"
-                                          onClick={() => {
-                                            const newSections = editingMenu.sections.filter((_, i) => i !== mapping.index);
-                                            setEditingMenu({ ...editingMenu, sections: newSections });
-                                          }}
-                                          className="p-1 hover:bg-destructive/20 rounded-full"
-                                          data-testid={`button-remove-section-${mapping.index}`}
-                                        >
-                                          <X className="w-4 h-4" />
-                                        </button>
-                                      </div>
-                                    );
-                                  })}
+                                  {sectionDragMapping.map((mapping) => (
+                                    <SortableSectionItem
+                                      key={mapping.dragId}
+                                      mapping={mapping}
+                                      onRemove={() => {
+                                        const newSections = editingMenu.sections.filter((_, i) => i !== mapping.index);
+                                        setEditingMenu({ ...editingMenu, sections: newSections });
+                                      }}
+                                    />
+                                  ))}
                                 </div>
                               </SortableContext>
                             </DndContext>
