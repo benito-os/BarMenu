@@ -30,7 +30,10 @@ export function useDrinks(menuId?: string, enabled = true) {
       if (mId) {
         queryClient.invalidateQueries({ queryKey: ["/api/drinks/all", mId] });
       } else {
-        queryClient.invalidateQueries({ queryKey: ["/api/drinks/all"] });
+        // Invalidate all drinks queries across all menus when menuId is not specified
+        queryClient.invalidateQueries({ 
+          predicate: (query) => query.queryKey[0] === "/api/drinks/all"
+        });
       }
       toast({
         title: "Drink Created",
@@ -59,7 +62,10 @@ export function useDrinks(menuId?: string, enabled = true) {
       if (mId) {
         queryClient.invalidateQueries({ queryKey: ["/api/drinks/all", mId] });
       } else {
-        queryClient.invalidateQueries({ queryKey: ["/api/drinks/all"] });
+        // Invalidate all drinks queries across all menus when menuId is not specified
+        queryClient.invalidateQueries({ 
+          predicate: (query) => query.queryKey[0] === "/api/drinks/all"
+        });
       }
       toast({
         title: "Drink Updated",
