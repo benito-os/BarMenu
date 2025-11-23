@@ -838,14 +838,15 @@ export default function Dashboard() {
   }
 
   return (
-    <Tabs defaultValue="queue" value={mainTab} onValueChange={setMainTab} className="h-screen flex flex-col">
-      <TabsList className="w-full rounded-none border-b" data-testid="main-tabs">
-        <TabsTrigger value="queue" data-testid="tab-queue">Live Queue</TabsTrigger>
-        <TabsTrigger value="management" data-testid="tab-management">Management</TabsTrigger>
-      </TabsList>
+    <div className="flex flex-col h-screen">
+      <Tabs defaultValue="queue" value={mainTab} onValueChange={setMainTab} className="flex-1 flex flex-col">
+        <TabsList className="w-full rounded-none border-b" data-testid="main-tabs">
+          <TabsTrigger value="queue" data-testid="tab-queue">Live Queue</TabsTrigger>
+          <TabsTrigger value="management" data-testid="tab-management">Management</TabsTrigger>
+        </TabsList>
       
       {/* Live Queue Tab - Full Width, No Sidebar */}
-      <TabsContent value="queue" className="flex-1 overflow-hidden m-0">
+      <TabsContent value="queue" className="flex-1 flex flex-col h-full overflow-hidden m-0">
         <div className="flex flex-col h-full">
           <header className="flex items-center justify-between p-4 border-b">
             <h1 className="font-serif text-2xl md:text-3xl font-bold text-foreground">
@@ -1113,9 +1114,10 @@ export default function Dashboard() {
       </TabsContent>
       
       {/* Management Tab - With Sidebar */}
-      <TabsContent value="management" className="flex-1 overflow-hidden m-0">
-        <SidebarProvider style={style}>
-            <div className="flex flex-1 w-full">
+      <TabsContent value="management" className="flex-1 flex flex-col h-full overflow-hidden m-0">
+        <div className="flex flex-1 h-full w-full overflow-hidden">
+          <SidebarProvider style={style}>
+            <div className="flex h-full w-full">
               <AppSidebar
                 activeSection={activeSection}
                 onSectionChange={setActiveSection}
@@ -2824,7 +2826,9 @@ export default function Dashboard() {
             </div>
           </div>
         </SidebarProvider>
+        </div>
       </TabsContent>
     </Tabs>
+    </div>
   );
 }
