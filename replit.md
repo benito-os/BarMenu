@@ -37,6 +37,7 @@ Preferred communication style: Simple, everyday language.
     - **Dynamic Theming**: Menus can be customized with specific hero images, background colors, accent colors, and typography, which are applied to their public-facing pages.
     - **Drink Attributes**: Support for `temperature` (Hot, Cold, Room Temp, Not Specified), `isMocktail` (exclusively non-alcoholic), and `canBeMocktail` (can be made as a mocktail) with corresponding UI badges.
 - **Technical Implementations**: Frontend uses optimistic UI updates for smooth interactions. Backend enforces order workflow transitions and handles data validation. Query invalidation ensures UI synchronization after mutations.
+- **Dashboard Layout Implementation**: Dashboard uses a two-tab layout (Live Queue and Management) with proper height constraints to ensure scrolling works correctly. The Management tab uses shadcn's SidebarProvider which has internal `min-h-screen` styling that must be constrained. The solution uses a wrapper div with `flex flex-1 h-full w-full overflow-hidden` around the SidebarProvider to constrain its height and enable proper scrolling. The complete height chain is: root wrapper (`h-screen`) → Tabs (`flex-1`) → TabsContent (`flex-1 h-full overflow-hidden`) → wrapper div (`flex flex-1 h-full w-full overflow-hidden`) → SidebarProvider → content containers → main scrollable area (`overflow-y-auto`).
 
 ## External Dependencies
 
