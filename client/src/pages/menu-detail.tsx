@@ -43,15 +43,22 @@ export default function MenuDetail() {
     },
     onSuccess: (_, { drinkId }) => {
       const drink = drinks?.find(d => d.id === drinkId);
+      
+      // Update state in a batch to prevent race conditions
       setOrderedDrinks(prev => new Set(prev).add(drinkId));
-      setDialogOpen(false);
-      setGuestName("");
-      setSelectedDrinkId(null);
-      toast({
-        title: "Order Placed!",
-        description: `Your ${drink?.name} is in the queue`,
-        duration: 3000,
-      });
+      
+      // Use setTimeout to ensure dialog closes after state updates
+      setTimeout(() => {
+        setDialogOpen(false);
+        setGuestName("");
+        setSelectedDrinkId(null);
+        
+        toast({
+          title: "Order Placed!",
+          description: `Your ${drink?.name} is in the queue`,
+          duration: 3000,
+        });
+      }, 0);
     },
     onError: () => {
       toast({
@@ -101,6 +108,14 @@ export default function MenuDetail() {
   } : {};
 
   const accentColor = menu?.accentColor || undefined;
+  
+  // Determine if we need light text (dark background)
+  const needsLightText = menu?.backgroundColor && 
+    (menu.backgroundColor.toLowerCase().includes('#4a2e0f') || 
+     menu.backgroundColor.toLowerCase().includes('#000') ||
+     menu.backgroundColor.toLowerCase().includes('rgb(74, 46, 15)'));
+  
+  const sectionHeaderColor = needsLightText ? '#f5e6d3' : undefined;
 
   return (
     <div className="min-h-screen bg-background" style={themingStyle}>
@@ -189,9 +204,10 @@ export default function MenuDetail() {
             {sections.map((section) => (
               <section key={section} className="space-y-6">
                 <h3 
-                  className="text-xl md:text-2xl font-semibold text-foreground uppercase tracking-wide border-l-4 pl-4"
+                  className="text-xl md:text-2xl font-semibold uppercase tracking-wide border-l-4 pl-4"
                   style={{
                     borderLeftColor: accentColor || undefined,
+                    color: sectionHeaderColor || undefined,
                     ...(accentColor ? {} : { borderLeftColor: 'hsl(var(--primary))' })
                   }}
                 >
