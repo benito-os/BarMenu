@@ -1061,15 +1061,15 @@ export default function Dashboard() {
       </TabsContent>
       
       {/* Management Tab - With Sidebar */}
-      <TabsContent value="management" className="flex-1 h-full overflow-hidden m-0">
+      <TabsContent value="management" className="flex-1 overflow-hidden m-0">
         <SidebarProvider style={style}>
-            <div className="flex flex-1 w-full min-h-0">
+            <div className="flex h-full w-full">
               <AppSidebar
                 activeSection={activeSection}
                 onSectionChange={setActiveSection}
                 onLogout={() => logoutMutation.mutate()}
               />
-              <div className="flex flex-col flex-1 min-h-0">
+              <div className="flex flex-col flex-1 h-full overflow-hidden">
                 <header className="flex-shrink-0 flex items-center justify-between p-4 border-b">
                   <div className="flex items-center gap-4">
                     <SidebarTrigger data-testid="button-sidebar-toggle" />
@@ -1089,7 +1089,7 @@ export default function Dashboard() {
                   </Link>
                 </header>
 
-                <main className="flex-1 overflow-y-auto p-6 min-h-0">
+                <main className="flex-1 overflow-y-auto p-6">
                 <div className="max-w-7xl mx-auto space-y-6">
                   {/* Analytics Section */}
                   {activeSection === "analytics" && (
