@@ -1,0 +1,71 @@
+Based on the code provided, the scrolling issue is caused by a **broken flexbox chain** in your layout structure.
+
+Specifically, you are using `h-screen` on the root `Tabs` component, but the `TabsContent` and `SidebarProvider` are not configured to restrict their height to the remaining available space. This causes the internal components to default to `100vh` (screen height) or auto-expand beyond the viewport, resulting in either double scrollbars or content getting cut off.
+
+Here is the fix.
+
+### 1\. Fix the Management Tab Structure
+
+Locate the `TabsContent` for "management" (around line 777). You need to ensure the container, the provider, and the wrapper strictly follow `h-full` to respect the parent boundaries.
+
+**Change this block:**
+
+```tsx
+{/* Management Tab - With Sidebar */}
+<TabsContent value="management" className="flex-1 overflow-hidden m-0">
+  <SidebarProvider style={style}>
+    <div className="flex flex-1 w-full">
+      {/* ... */}
+```
+
+**To this (Updates marked with comments):**
+
+```tsx
+{/* Management Tab - With Sidebar */}
+{/* FIX 1: Add 'flex flex-col h-full' so it fills the remaining space from the Tabs parent */}
+<TabsContent value="management" className="flex-1 flex flex-col h-full overflow-hidden m-0">
+  {/* FIX 2: Add 'h-full' to SidebarProvider to stop it from forcing min-h-screen */}
+  <SidebarProvider style={style} className="h-full">
+    {/* FIX 3: Change 'flex-1' to 'h-full' to ensure explicit height inheritance */}
+    <div className="flex h-full w-full">
+      <AppSidebar
+        activeSection={activeSection}
+        onSectionChange={setActiveSection}
+        onLogout={() => logoutMutation.mutate()}
+      />
+      <div className="flex flex-col flex-1 overflow-hidden">
+        {/* ... header ... */}
+        {/* ... main ... */}
+      </div>
+    </div>
+  </SidebarProvider>
+</TabsContent>
+```
+
+### 2\. Fix the Live Queue Tab Structure
+
+Similar logic applies to the "queue" tab to ensure it doesn't overflow if the list gets long.
+
+**Find this block (around line 527):**
+
+```tsx
+{/* Live Queue Tab - Full Width, No Sidebar */}
+<TabsContent value="queue" className="flex-1 overflow-hidden m-0">
+  <div className="flex flex-col h-full">
+```
+
+**Update to:**
+
+```tsx
+{/* Live Queue Tab - Full Width, No Sidebar */}
+{/* FIX: Add 'flex flex-col h-full' here as well */}
+<TabsContent value="queue" className="flex-1 flex flex-col h-full overflow-hidden m-0">
+  <div className="flex flex-col h-full">
+     {/* ... rest of code */}
+```
+
+### Why this works
+
+1.  **`TabsContent`:** By default, this is just a `div`. Even if it has `flex-1`, it doesn't automatically constrain its children unless it is also a flex container (`display: flex`) with a defined direction (`flex-col`).
+2.  **`SidebarProvider`:** In `shadcn/ui`, this component often defaults to `min-height: 100vh`. Since it is nesting inside a Tab (which already has a header), `100vh` + `header height` = overflow. Adding `h-full` forces it to fit exactly within the tab content area.
+3.  **`overflow-hidden` vs `overflow-y-auto`:** The parent containers must be `overflow-hidden` so that the specific child `<main>` tag (which has `overflow-y-auto`) becomes the only scrollable area.
