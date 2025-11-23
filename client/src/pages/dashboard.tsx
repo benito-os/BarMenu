@@ -1115,13 +1115,13 @@ export default function Dashboard() {
       {/* Management Tab - With Sidebar */}
       <TabsContent value="management" className="flex-1 overflow-hidden m-0">
         <SidebarProvider style={style}>
-            <div className="flex h-full w-full">
+            <div className="flex flex-1 w-full">
               <AppSidebar
                 activeSection={activeSection}
                 onSectionChange={setActiveSection}
                 onLogout={() => logoutMutation.mutate()}
               />
-              <div className="flex flex-col flex-1 h-full overflow-hidden">
+              <div className="flex flex-col flex-1 overflow-hidden">
                 <header className="flex-shrink-0 flex items-center justify-between p-4 border-b">
                   <div className="flex items-center gap-4">
                     <SidebarTrigger data-testid="button-sidebar-toggle" />
