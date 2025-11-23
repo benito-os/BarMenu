@@ -37,7 +37,13 @@ Preferred communication style: Simple, everyday language.
     - **Dynamic Theming**: Menus can be customized with specific hero images, background colors, accent colors, and typography, which are applied to their public-facing pages.
     - **Drink Attributes**: Support for `temperature` (Hot, Cold, Room Temp, Not Specified), `isMocktail` (exclusively non-alcoholic), and `canBeMocktail` (can be made as a mocktail) with corresponding UI badges.
 - **Technical Implementations**: Frontend uses optimistic UI updates for smooth interactions. Backend enforces order workflow transitions and handles data validation. Query invalidation ensures UI synchronization after mutations.
-- **Dashboard Layout Implementation**: Dashboard uses a two-tab layout (Live Queue and Management) with proper height constraints to ensure scrolling works correctly. The Management tab uses shadcn's SidebarProvider which has internal `min-h-screen` styling that must be constrained. The solution uses a wrapper div with `flex flex-1 h-full w-full overflow-hidden` around the SidebarProvider to constrain its height and enable proper scrolling. The complete height chain is: root wrapper (`h-screen`) → Tabs (`flex-1`) → TabsContent (`flex-1 h-full overflow-hidden`) → wrapper div (`flex flex-1 h-full w-full overflow-hidden`) → SidebarProvider → content containers → main scrollable area (`overflow-y-auto`).
+- **Dashboard Layout Implementation**: Dashboard has been refactored from single-page conditional rendering to a multi-page routing structure for better performance, cleaner URLs, and optimal layouts. The architecture includes:
+    - **Routing Structure**: 6 separate dashboard pages at `/dashboard/*` (Queue, Analytics, Menus, Drinks, QR Codes, Settings)
+    - **Shared Components**: DashboardLayout wrapper provides consistent header, sidebar, and navigation across all pages
+    - **Reusable Hooks**: Extracted shared logic into custom hooks (useOrders, useMenus, useDrinks, useAnalytics, useDashboardAuth) for better code organization
+    - **Navigation**: AppSidebar uses wouter Link components for client-side routing with automatic active state management
+    - **Authentication**: DashboardLayout protects all routes with session-based auth, redirecting to `/dashboard-login` when unauthenticated
+    - **Layout Pattern**: SidebarProvider at root level, pages manage their own scrolling and height constraints for flexible content
 
 ## External Dependencies
 

@@ -12,28 +12,21 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { authStatus, authLoading, logout } = useDashboardAuth();
-  const [location, setLocation] = useLocation();
+  const [, setLocation] = useLocation();
 
   // Redirect to login if not authenticated
   useEffect(() => {
-    if (!authLoading && !authStatus?.isAuthenticated) {
+    if (!authLoading && authStatus && !authStatus.isAuthenticated) {
       setLocation("/dashboard-login");
     }
   }, [authStatus, authLoading, setLocation]);
 
-  // Show loading while checking auth
+  // Show loading only while initial auth check is in progress
   if (authLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
+    return null; // Return null instead of spinner for cleaner redirect
   }
 
-  // Don't render if not authenticated
+  // Don't render content if not authenticated (redirect will handle it)
   if (!authStatus?.isAuthenticated) {
     return null;
   }
@@ -44,11 +37,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   return (
-    <div className="flex h-screen w-full overflow-hidden">
-      <SidebarProvider style={style as React.CSSProperties}>
+    <SidebarProvider style={style as React.CSSProperties}>
+      <div className="flex w-full">
         <AppSidebar onLogout={logout} />
-        <div className="flex flex-col flex-1 overflow-hidden">
-          <header className="flex-shrink-0 flex items-center justify-between p-4 border-b">
+        <div className="flex flex-col w-full">
+          <header className="flex items-center justify-between p-4 border-b">
             <div className="flex items-center gap-4">
               <SidebarTrigger data-testid="button-sidebar-toggle" />
               <h1 className="font-serif text-2xl md:text-3xl font-bold text-foreground">
@@ -67,11 +60,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </Link>
           </header>
 
-          <main className="flex-1 overflow-y-auto">
+          <main>
             {children}
           </main>
         </div>
-      </SidebarProvider>
-    </div>
+      </div>
+    </SidebarProvider>
   );
 }

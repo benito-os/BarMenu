@@ -18,7 +18,7 @@ export default function QRCodesPage() {
   const qrRef = useRef<HTMLDivElement>(null);
 
   // QR Code customization state
-  const [selectedMenuId, setSelectedMenuId] = useState<string>("");
+  const [selectedMenuId, setSelectedMenuId] = useState<string>("HOME");
   const [qrSize, setQrSize] = useState<number>(256);
   const [qrFgColor, setQrFgColor] = useState<string>("#000000");
   const [qrBgColor, setQrBgColor] = useState<string>("#ffffff");
@@ -30,7 +30,7 @@ export default function QRCodesPage() {
 
   // Set default menu when menus load
   useEffect(() => {
-    if (!selectedMenuId && defaultMenu) {
+    if (selectedMenuId === "HOME" && defaultMenu) {
       setSelectedMenuId(defaultMenu.id);
     }
   }, [defaultMenu, selectedMenuId]);
@@ -153,7 +153,7 @@ export default function QRCodesPage() {
                       <SelectValue placeholder="Choose a menu" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="" data-testid="select-menu-home">
+                      <SelectItem value="HOME" data-testid="select-menu-home">
                         Home Page (All Menus)
                       </SelectItem>
                       {menus.map((menu) => (

@@ -29,9 +29,7 @@ export function useDrinks(menuId?: string, enabled = true) {
       const mId = variables.menuId || menuId;
       if (mId) {
         queryClient.invalidateQueries({ queryKey: ["/api/drinks/all", mId] });
-        queryClient.invalidateQueries({ queryKey: ["/api/drinks", mId] });
       } else {
-        queryClient.invalidateQueries({ queryKey: ["/api/drinks"] });
         queryClient.invalidateQueries({ queryKey: ["/api/drinks/all"] });
       }
       toast({
@@ -56,9 +54,13 @@ export function useDrinks(menuId?: string, enabled = true) {
                           isMocktail, canBeMocktail, isStirred, isShaken, baseSpirit, isActive, sortOrder };
       return apiRequest("PATCH", `/api/drinks/${id}`, updateData);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/drinks"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/drinks/all", menuId] });
+    onSuccess: (_data, drink) => {
+      const mId = drink.menuId || menuId;
+      if (mId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/drinks/all", mId] });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ["/api/drinks/all"] });
+      }
       toast({
         title: "Drink Updated",
         description: "Drink has been updated successfully",
@@ -79,7 +81,6 @@ export function useDrinks(menuId?: string, enabled = true) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/drinks/all", menuId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/drinks", menuId] });
       toast({
         title: "Drinks reordered",
         description: "Drink order has been updated successfully",
@@ -101,7 +102,6 @@ export function useDrinks(menuId?: string, enabled = true) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/drinks/all", menuId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/drinks", menuId] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics"] });
       toast({
         title: "Drinks deleted",
@@ -123,7 +123,6 @@ export function useDrinks(menuId?: string, enabled = true) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/drinks/all", menuId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/drinks", menuId] });
       toast({
         title: "Drinks updated",
         description: "Selected drinks have been updated successfully",
