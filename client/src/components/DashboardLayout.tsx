@@ -46,14 +46,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <div className="flex h-screen w-full overflow-hidden">
       <SidebarProvider style={style as React.CSSProperties}>
-        <AppSidebar
-          activeSection={location.replace("/dashboard/", "") || "queue"}
-          onSectionChange={(section) => {
-            const path = section === "queue" ? "/dashboard" : `/dashboard/${section}`;
-            setLocation(path);
-          }}
-          onLogout={logout}
-        />
+        <AppSidebar onLogout={logout} />
         <div className="flex flex-col flex-1 overflow-hidden">
           <header className="flex-shrink-0 flex items-center justify-between p-4 border-b">
             <div className="flex items-center gap-4">

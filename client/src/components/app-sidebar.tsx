@@ -1,4 +1,5 @@
 import { LayoutDashboard, BarChart3, Menu as MenuIcon, Wine, QrCode, Settings, LogOut } from "lucide-react";
+import { Link, useLocation } from "wouter";
 import {
   Sidebar,
   SidebarContent,
@@ -10,48 +11,53 @@ import {
   SidebarMenuItem,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
 
 const menuItems = [
   {
+    title: "Queue",
+    icon: LayoutDashboard,
+    href: "/dashboard",
+    testId: "sidebar-queue",
+  },
+  {
     title: "Analytics",
     icon: BarChart3,
-    value: "analytics",
+    href: "/dashboard/analytics",
     testId: "sidebar-analytics",
   },
   {
     title: "Menus",
     icon: MenuIcon,
-    value: "menus",
+    href: "/dashboard/menus",
     testId: "sidebar-menus",
   },
   {
     title: "Drinks",
     icon: Wine,
-    value: "drinks",
+    href: "/dashboard/drinks",
     testId: "sidebar-drinks",
   },
   {
     title: "QR Codes",
     icon: QrCode,
-    value: "qr-codes",
+    href: "/dashboard/qr-codes",
     testId: "sidebar-qr-codes",
   },
   {
     title: "Settings",
     icon: Settings,
-    value: "settings",
+    href: "/dashboard/settings",
     testId: "sidebar-settings",
   },
 ];
 
 interface AppSidebarProps {
-  activeSection: string;
-  onSectionChange: (section: string) => void;
   onLogout: () => void;
 }
 
-export function AppSidebar({ activeSection, onSectionChange, onLogout }: AppSidebarProps) {
+export function AppSidebar({ onLogout }: AppSidebarProps) {
+  const [location] = useLocation();
+
   return (
     <Sidebar>
       <SidebarContent>
@@ -62,14 +68,16 @@ export function AppSidebar({ activeSection, onSectionChange, onLogout }: AppSide
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
-                <SidebarMenuItem key={item.value}>
+                <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
-                    onClick={() => onSectionChange(item.value)}
-                    isActive={activeSection === item.value}
+                    asChild
+                    isActive={location === item.href}
                     data-testid={item.testId}
                   >
-                    <item.icon className="w-4 h-4" />
-                    <span>{item.title}</span>
+                    <Link href={item.href}>
+                      <item.icon className="w-4 h-4" />
+                      <span>{item.title}</span>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
