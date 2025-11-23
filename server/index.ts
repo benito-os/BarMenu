@@ -25,6 +25,11 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: false }));
 
+// Trust proxy for production (Replit uses a proxy)
+if (process.env.NODE_ENV === "production") {
+  app.set("trust proxy", 1);
+}
+
 // Session setup for dashboard authentication (after body parsers)
 app.use(session({
   secret: process.env.SESSION_SECRET || "dev-secret-change-in-production",
@@ -34,6 +39,7 @@ app.use(session({
     secure: process.env.NODE_ENV === "production",
     httpOnly: true,
     maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
   }
 }));
 
