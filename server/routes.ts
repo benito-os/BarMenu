@@ -359,6 +359,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/orders/:id - Get single order by ID
+  app.get("/api/orders/:id", async (req, res) => {
+    try {
+      const params = validate(idParamsSchema, req.params, res, "Order id is required");
+      if (!params) return;
+
+      const order = await storage.getOrderById(params.id);
+      if (!order) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+
+      res.json(order);
+    } catch (error) {
+      console.error("Error fetching order:", error);
+      res.status(500).json({ error: "Failed to fetch order" });
+    }
+  });
+
   // PATCH /api/orders/:id - Update order status
   app.patch("/api/orders/:id", async (req, res) => {
     try {

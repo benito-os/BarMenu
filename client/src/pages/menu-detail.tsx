@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { addTrackedOrder } from "@/lib/orderCookies";
+import { OrderStatusBanner } from "@/components/OrderStatusBanner";
 import type { Menu, Drink } from "@shared/validation";
 import { Home, Wine, Sparkles, Glasses, Check, Flame, Snowflake, ThermometerSun } from "lucide-react";
 import { useState } from "react";
@@ -198,6 +199,9 @@ export default function MenuDetail() {
       )}
 
       <div className="max-w-6xl mx-auto px-6 py-12">
+        {/* Order Status Banner - Shows active orders inline */}
+        <OrderStatusBanner />
+        
         {isLoading ? (
           <div className="space-y-8">
             <div className="text-center space-y-4">
