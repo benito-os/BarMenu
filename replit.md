@@ -31,12 +31,20 @@ Preferred communication style: Simple, everyday language.
 ### System Design Choices
 - **UI/UX**: Emphasis on premium design, dynamic theming for menus (custom hero images, colors, typography), and clear visual feedback.
 - **Feature Specifications**:
-    - **Guest Ordering**: QR code-based ordering, optional guest name capture, three-state order workflow (requested → in_progress → served).
+    - **Guest Ordering**: QR code-based ordering with enhanced UX features:
+      - Optional guest name capture for personalized service
+      - Comments field for special requests (e.g., "extra ice", "no garnish")
+      - Mocktail request option (conditional, shown only when drink supports it)
+      - Cookie-based order tracking for persistent guest experience
+      - Inline order status display via OrderStatusBanner component
+      - Real-time status updates (auto-refresh every 5 seconds)
+      - Three-state order workflow (requested → in_progress → served)
+    - **Order Status Tracking**: Browser cookie-based tracking system (`barflores_orders`) stores order IDs, drink names, guest names, and timestamps. OrderStatusBanner displays active orders inline on menu pages, showing color-coded status badges, guest names, comments, and mocktail indicators. Auto-removes completed/cancelled orders. Graceful error handling with fallback UI for network issues.
     - **Dashboard**: Real-time order queue, drink analytics (popularity, "never made," "least ordered"), and admin functionalities.
     - **Admin Controls**: Create, edit, activate/deactivate, delete menus and drinks; drag-and-drop reordering for drinks; bulk operations (activate, deactivate, delete) for drinks.
     - **Dynamic Theming**: Menus can be customized with specific hero images, background colors, accent colors, and typography, which are applied to their public-facing pages.
     - **Drink Attributes**: Support for `temperature` (Hot, Cold, Room Temp, Not Specified), `isMocktail` (exclusively non-alcoholic), and `canBeMocktail` (can be made as a mocktail) with corresponding UI badges.
-- **Technical Implementations**: Frontend uses optimistic UI updates for smooth interactions. Backend enforces order workflow transitions and handles data validation. Query invalidation ensures UI synchronization after mutations.
+- **Technical Implementations**: Frontend uses optimistic UI updates for smooth interactions. Backend enforces order workflow transitions and handles data validation. Query invalidation ensures UI synchronization after mutations. Event-driven cookie updates trigger immediate order status display without page reload.
 - **Dashboard Layout Implementation**: Dashboard has been refactored from single-page conditional rendering to a multi-page routing structure for better performance, cleaner URLs, and optimal layouts. The architecture includes:
     - **Routing Structure**: 6 separate dashboard pages at `/dashboard/*` (Queue, Analytics, Menus, Drinks, QR Codes, Settings)
     - **Shared Components**: DashboardLayout wrapper provides consistent header, sidebar, and navigation across all pages
