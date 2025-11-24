@@ -51,13 +51,14 @@ export default function MenuDetail() {
       comments?: string; 
       asMocktail?: boolean;
     }) => {
-      return apiRequest("POST", "/api/orders", {
+      const response = await apiRequest("POST", "/api/orders", {
         drinkId,
         menuId: menu?.id,
         guestName: guestName || undefined,
         comments: comments || undefined,
         asMocktail: asMocktail || false,
       });
+      return response.json();
     },
     onSuccess: (data: any, { drinkId, guestName }) => {
       const drink = drinks?.find(d => d.id === drinkId);
