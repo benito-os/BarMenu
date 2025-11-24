@@ -52,6 +52,8 @@ export const drinkBulkUpdateSchema = z.object({
 export const orderCreateSchema = insertOrderSchema
   .extend({
     guestName: z.string().min(1).optional(),
+    comments: z.string().optional(),
+    asMocktail: z.boolean().optional(),
   })
   .strict();
 

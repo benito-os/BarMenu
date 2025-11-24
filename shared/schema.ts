@@ -58,6 +58,8 @@ export const orders = pgTable("orders", {
   drinkId: varchar("drink_id").notNull().references(() => drinks.id, { onDelete: 'cascade' }),
   menuId: varchar("menu_id").notNull().references(() => menus.id, { onDelete: 'cascade' }),
   guestName: text("guest_name"),
+  comments: text("comments"),
+  asMocktail: boolean("as_mocktail").notNull().default(false),
   status: text("status").notNull().default("requested"), // "requested" | "in_progress" | "served" | "cancelled"
   requestedAt: timestamp("requested_at").notNull().defaultNow(),
   completedAt: timestamp("completed_at"),
