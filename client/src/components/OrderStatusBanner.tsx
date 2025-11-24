@@ -19,10 +19,22 @@ interface Order {
 export function OrderStatusBanner() {
   const [trackedOrderIds, setTrackedOrderIds] = useState<string[]>([]);
 
-  // Load tracked orders from cookies on mount
+  // Load tracked orders from cookies on mount and when they change
   useEffect(() => {
-    const orders = getTrackedOrders();
-    setTrackedOrderIds(orders.map(o => o.orderId));
+    const loadOrders = () => {
+      const orders = getTrackedOrders();
+      setTrackedOrderIds(orders.map(o => o.orderId));
+    };
+
+    // Load on mount
+    loadOrders();
+
+    // Listen for order updates
+    window.addEventListener('ordersUpdated', loadOrders);
+
+    return () => {
+      window.removeEventListener('ordersUpdated', loadOrders);
+    };
   }, []);
 
   // Query to fetch order details
@@ -38,16 +50,21 @@ export function OrderStatusBanner() {
         try {
           const response = await fetch(`/api/orders/${orderId}`);
           if (!response.ok) {
-            // If order not found (404), remove it from tracked orders
+            // Only remove from tracking if order is truly not found (404)
             if (response.status === 404) {
               removeTrackedOrder(orderId);
               return null;
             }
-            throw new Error("Failed to fetch order");
+            // For other errors (500, network issues, etc.), keep the order tracked
+            // and return null so it doesn't show in the banner temporarily
+            // but will retry on next refetch
+            console.warn(`Temporary error fetching order ${orderId}, will retry:`, response.status);
+            return null;
           }
           return response.json();
         } catch (error) {
-          console.error(`Error fetching order ${orderId}:`, error);
+          // Network errors or other exceptions - keep the order tracked
+          console.error(`Network error fetching order ${orderId}, will retry:`, error);
           return null;
         }
       });
@@ -57,7 +74,7 @@ export function OrderStatusBanner() {
     },
   });
 
-  // Filter out completed/cancelled orders and update tracked list
+  // Filter out completed/cancelled orders
   const activeOrders = orders?.filter(order => 
     order.status !== "served" && order.status !== "cancelled"
   ) || [];
@@ -69,22 +86,19 @@ export function OrderStatusBanner() {
         order => order.status === "served" || order.status === "cancelled"
       );
       
+      // Remove completed orders from tracking
       servedOrCancelled.forEach(order => {
         removeTrackedOrder(order.id);
       });
-
-      // Update local state to reflect removed orders
-      const remainingIds = orders
-        .filter(order => order.status !== "served" && order.status !== "cancelled")
-        .map(order => order.id);
-      
-      if (remainingIds.length !== trackedOrderIds.length) {
-        setTrackedOrderIds(remainingIds);
-      }
     }
-  }, [orders, trackedOrderIds.length]);
+  }, [orders]);
 
-  if (activeOrders.length === 0) {
+  // Find orders that are tracked but couldn't be fetched (for error display)
+  const fetchedOrderIds = new Set(orders?.map(o => o.id) || []);
+  const failedToFetchIds = trackedOrderIds.filter(id => !fetchedOrderIds.has(id));
+
+  // Don't show banner if no active orders and no failed fetches
+  if (activeOrders.length === 0 && failedToFetchIds.length === 0) {
     return null;
   }
 
@@ -170,6 +184,34 @@ export function OrderStatusBanner() {
                     data-testid={`order-status-${order.id}`}
                   >
                     {statusInfo.label}
+                  </Badge>
+                </div>
+              );
+            })}
+
+            {/* Show orders that failed to fetch (network issues) */}
+            {failedToFetchIds.map((orderId) => {
+              const trackedOrder = getTrackedOrders().find(o => o.orderId === orderId);
+              return (
+                <div
+                  key={orderId}
+                  className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-950"
+                  data-testid={`order-item-loading-${orderId}`}
+                >
+                  <div className="flex items-center gap-3 flex-1">
+                    <Clock className="w-5 h-5 text-gray-400 animate-pulse" />
+                    <div className="flex-1">
+                      <p className="font-medium text-foreground">
+                        {trackedOrder?.drinkName || "Your Drink"}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Status temporarily unavailable, retrying...
+                      </p>
+                    </div>
+                  </div>
+
+                  <Badge variant="outline" className="text-gray-600 dark:text-gray-400">
+                    Loading
                   </Badge>
                 </div>
               );

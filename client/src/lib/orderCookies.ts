@@ -76,6 +76,9 @@ function saveTrackedOrders(orders: TrackedOrder[]): void {
   
   const encoded = encodeURIComponent(JSON.stringify(orders));
   document.cookie = `${ORDER_COOKIE_NAME}=${encoded}; path=/; max-age=${COOKIE_MAX_AGE}; samesite=lax`;
+  
+  // Dispatch custom event to notify components that orders have changed
+  window.dispatchEvent(new CustomEvent('ordersUpdated'));
 }
 
 /**
