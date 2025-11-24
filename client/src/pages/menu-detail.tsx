@@ -8,8 +8,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { addTrackedOrder } from "@/lib/orderCookies";
 import type { Menu, Drink } from "@shared/validation";
 import { Home, Wine, Sparkles, Glasses, Check, Flame, Snowflake, ThermometerSun } from "lucide-react";
 import { useState } from "react";
@@ -22,6 +25,8 @@ export default function MenuDetail() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedDrinkId, setSelectedDrinkId] = useState<string | null>(null);
   const [guestName, setGuestName] = useState("");
+  const [comments, setComments] = useState("");
+  const [asMocktail, setAsMocktail] = useState(false);
 
   const { data: menu, isLoading: menuLoading } = useQuery<Menu>({
     queryKey: ["/api/menus", slug],
@@ -34,15 +39,37 @@ export default function MenuDetail() {
   });
 
   const orderMutation = useMutation({
-    mutationFn: async ({ drinkId, guestName }: { drinkId: string; guestName?: string }) => {
+    mutationFn: async ({ 
+      drinkId, 
+      guestName, 
+      comments, 
+      asMocktail 
+    }: { 
+      drinkId: string; 
+      guestName?: string; 
+      comments?: string; 
+      asMocktail?: boolean;
+    }) => {
       return apiRequest("POST", "/api/orders", {
         drinkId,
         menuId: menu?.id,
         guestName: guestName || undefined,
+        comments: comments || undefined,
+        asMocktail: asMocktail || false,
       });
     },
-    onSuccess: (_, { drinkId }) => {
+    onSuccess: (data: any, { drinkId, guestName }) => {
       const drink = drinks?.find(d => d.id === drinkId);
+      
+      // Track order in cookies for status checking
+      if (data && data.id) {
+        addTrackedOrder({
+          orderId: data.id,
+          drinkName: drink?.name || "Unknown Drink",
+          guestName: guestName,
+          timestamp: Date.now(),
+        });
+      }
       
       // Update state in a batch to prevent race conditions
       setOrderedDrinks(prev => new Set(prev).add(drinkId));
@@ -51,6 +78,8 @@ export default function MenuDetail() {
       setTimeout(() => {
         setDialogOpen(false);
         setGuestName("");
+        setComments("");
+        setAsMocktail(false);
         setSelectedDrinkId(null);
         
         toast({
@@ -76,7 +105,12 @@ export default function MenuDetail() {
 
   const handleOrderSubmit = () => {
     if (selectedDrinkId) {
-      orderMutation.mutate({ drinkId: selectedDrinkId, guestName });
+      orderMutation.mutate({ 
+        drinkId: selectedDrinkId, 
+        guestName,
+        comments,
+        asMocktail,
+      });
     }
   };
 
@@ -340,27 +374,56 @@ export default function MenuDetail() {
 
       {/* Guest Name Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent data-testid="dialog-guest-name">
+        <DialogContent data-testid="dialog-guest-name" className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Who should we make this for?</DialogTitle>
+            <DialogTitle>Complete Your Order</DialogTitle>
             <DialogDescription>
-              Optional: Enter your name so we know who ordered this drink
+              Add your details and any special requests for this drink
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="guest-name">Your Name</Label>
+              <Label htmlFor="guest-name">Your Name (Optional)</Label>
               <Input
                 id="guest-name"
                 data-testid="input-guest-name"
                 placeholder="e.g., Alex"
                 value={guestName}
                 onChange={(e) => setGuestName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    handleOrderSubmit();
-                  }
-                }}
+              />
+            </div>
+
+            {/* Show mocktail checkbox only if drink can be made as mocktail */}
+            {selectedDrinkId && drinks?.find(d => d.id === selectedDrinkId)?.canBeMocktail && (
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="as-mocktail"
+                  data-testid="checkbox-as-mocktail"
+                  checked={asMocktail}
+                  onCheckedChange={(checked) => setAsMocktail(checked as boolean)}
+                />
+                <Label 
+                  htmlFor="as-mocktail" 
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4" />
+                    <span>Make this as a mocktail (non-alcoholic)</span>
+                  </div>
+                </Label>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="comments">Special Requests (Optional)</Label>
+              <Textarea
+                id="comments"
+                data-testid="textarea-comments"
+                placeholder="e.g., Extra ice, no garnish, make it sweeter..."
+                value={comments}
+                onChange={(e) => setComments(e.target.value)}
+                rows={3}
+                className="resize-none"
               />
             </div>
           </div>
@@ -370,6 +433,8 @@ export default function MenuDetail() {
               onClick={() => {
                 setDialogOpen(false);
                 setGuestName("");
+                setComments("");
+                setAsMocktail(false);
                 setSelectedDrinkId(null);
               }}
               data-testid="button-cancel-order"
