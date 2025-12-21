@@ -10,8 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Boxes, ClipboardList, Pencil, Sparkles, Trash2 } from "lucide-react";
+import { Boxes, ClipboardList, Pencil, ScanBarcode, Sparkles, Trash2 } from "lucide-react";
 import { useIngredients } from "@/hooks/useIngredients";
+import { BarcodeScanner } from "@/components/BarcodeScanner";
 
 export function InventorySection() {
   const { 
@@ -44,6 +45,7 @@ export function InventorySection() {
     parLevel: 0,
     isActive: true,
   });
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   const categories = useMemo(() => {
     const unique = new Set(ingredients.map(item => item.category).filter((c): c is string => Boolean(c)));
@@ -218,27 +220,37 @@ export function InventorySection() {
                 />
               </div>
             </div>
-            <Button
-              data-testid="button-add-ingredient"
-              onClick={() => {
-                if (!newIngredient.name.trim()) return;
-                createIngredient({
-                  ...newIngredient,
-                  category: newIngredient.category.trim() || null,
-                });
-                setNewIngredient({
-                  name: "",
-                  category: "",
-                  unit: "units",
-                  onHand: 0,
-                  parLevel: 0,
-                  isActive: true,
-                });
-              }}
-              disabled={createIngredientPending || !newIngredient.name.trim()}
-            >
-              {createIngredientPending ? "Adding..." : "Add Ingredient"}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                data-testid="button-add-ingredient"
+                onClick={() => {
+                  if (!newIngredient.name.trim()) return;
+                  createIngredient({
+                    ...newIngredient,
+                    category: newIngredient.category.trim() || null,
+                  });
+                  setNewIngredient({
+                    name: "",
+                    category: "",
+                    unit: "units",
+                    onHand: 0,
+                    parLevel: 0,
+                    isActive: true,
+                  });
+                }}
+                disabled={createIngredientPending || !newIngredient.name.trim()}
+              >
+                {createIngredientPending ? "Adding..." : "Add Ingredient"}
+              </Button>
+              <Button
+                variant="outline"
+                data-testid="button-scan-to-add"
+                onClick={() => setScannerOpen(true)}
+              >
+                <ScanBarcode className="h-4 w-4 mr-2" />
+                Scan to Add
+              </Button>
+            </div>
           </div>
 
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -485,6 +497,17 @@ export function InventorySection() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <BarcodeScanner
+        open={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onAddIngredient={(ingredient) => {
+          createIngredient({
+            ...ingredient,
+            isActive: true,
+          });
+        }}
+      />
     </>
   );
 }

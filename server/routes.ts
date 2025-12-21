@@ -509,6 +509,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/barcode/lookup - Look up product info from barcode
+  app.post("/api/barcode/lookup", async (req, res) => {
+    try {
+      const { barcode } = req.body;
+      
+      if (!barcode || typeof barcode !== "string") {
+        return res.status(400).json({ error: "Barcode is required" });
+      }
+
+      // Try Open Food Facts API first (free, no API key needed)
+      try {
+        const response = await fetch(
+          `https://world.openfoodfacts.org/api/v0/product/${encodeURIComponent(barcode)}.json`
+        );
+        const data = await response.json();
+        
+        if (data.status === 1 && data.product) {
+          const product = data.product;
+          return res.json({
+            barcode,
+            found: true,
+            name: product.product_name || product.generic_name || "",
+            brand: product.brands || "",
+            category: product.categories_tags?.[0]?.replace("en:", "") || "Spirits",
+          });
+        }
+      } catch {
+        // Silently fail and try next API
+      }
+
+      // Try UPC Database API as fallback (limited free tier)
+      try {
+        const response = await fetch(
+          `https://api.upcitemdb.com/prod/trial/lookup?upc=${encodeURIComponent(barcode)}`
+        );
+        const data = await response.json();
+        
+        if (data.items && data.items.length > 0) {
+          const item = data.items[0];
+          return res.json({
+            barcode,
+            found: true,
+            name: item.title || "",
+            brand: item.brand || "",
+            category: item.category || "Spirits",
+          });
+        }
+      } catch {
+        // Silently fail
+      }
+
+      // Product not found
+      res.json({
+        barcode,
+        found: false,
+        name: "",
+        brand: "",
+        category: "",
+      });
+    } catch (error) {
+      console.error("Error looking up barcode:", error);
+      res.status(500).json({ error: "Failed to lookup barcode" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
