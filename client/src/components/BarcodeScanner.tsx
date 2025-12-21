@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Camera, X, AlertCircle, Package } from "lucide-react";
+import { Loader2, Camera, X, AlertCircle, Package, VideoOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -29,13 +29,14 @@ interface BarcodeScannerProps {
   }) => void;
 }
 
-type ScanState = "scanning" | "loading" | "result" | "not_found";
+type ScanState = "scanning" | "loading" | "result" | "not_found" | "error";
 
 export function BarcodeScanner({ open, onClose, onAddIngredient }: BarcodeScannerProps) {
   const { toast } = useToast();
   const [scanState, setScanState] = useState<ScanState>("scanning");
   const [productInfo, setProductInfo] = useState<ProductInfo | null>(null);
   const [scannedBarcode, setScannedBarcode] = useState("");
+  const [cameraError, setCameraError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     category: "",
@@ -81,12 +82,39 @@ export function BarcodeScanner({ open, onClose, onAddIngredient }: BarcodeScanne
     }
   }, [scanState, lookupMutation]);
 
+  const handleCameraError = useCallback((error: unknown) => {
+    console.error("Camera error:", error);
+    let errorMessage = "Could not access camera.";
+    
+    if (error instanceof Error) {
+      if (error.name === "NotAllowedError" || error.message.includes("Permission")) {
+        errorMessage = "Camera permission denied. Please allow camera access in your browser settings and try again.";
+      } else if (error.name === "NotFoundError" || error.message.includes("not found")) {
+        errorMessage = "No camera found on this device.";
+      } else if (error.name === "NotReadableError" || error.message.includes("Could not start")) {
+        errorMessage = "Camera is in use by another application.";
+      } else if (error.name === "OverconstrainedError") {
+        errorMessage = "Camera does not meet requirements.";
+      }
+    }
+    
+    setCameraError(errorMessage);
+    setScanState("error");
+  }, []);
+
   // Scanner is paused when not open OR not in scanning state
   const shouldPause = !open || scanState !== "scanning";
 
   const { ref: zxingRef } = useZxing({
     onDecodeResult: handleDecode,
+    onError: handleCameraError,
     paused: shouldPause,
+    constraints: {
+      video: {
+        facingMode: "environment",
+      },
+      audio: false,
+    },
   });
 
   // Reset state when dialog opens
@@ -95,6 +123,7 @@ export function BarcodeScanner({ open, onClose, onAddIngredient }: BarcodeScanne
       setScanState("scanning");
       setProductInfo(null);
       setScannedBarcode("");
+      setCameraError(null);
       setFormData({
         name: "",
         category: "",
@@ -109,6 +138,7 @@ export function BarcodeScanner({ open, onClose, onAddIngredient }: BarcodeScanne
     setScanState("scanning");
     setProductInfo(null);
     setScannedBarcode("");
+    setCameraError(null);
     setFormData({
       name: "",
       category: "",
@@ -154,6 +184,7 @@ export function BarcodeScanner({ open, onClose, onAddIngredient }: BarcodeScanne
             {scanState === "loading" && "Looking up product..."}
             {scanState === "result" && "Product found! Review and add to inventory"}
             {scanState === "not_found" && "Barcode not found. Enter details manually"}
+            {scanState === "error" && "Camera access failed"}
           </DialogDescription>
         </DialogHeader>
 
@@ -163,10 +194,27 @@ export function BarcodeScanner({ open, onClose, onAddIngredient }: BarcodeScanne
               <video
                 ref={zxingRef as React.RefObject<HTMLVideoElement>}
                 className="h-full w-full object-cover"
+                autoPlay
+                playsInline
+                muted
                 data-testid="video-barcode-scanner"
               />
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="w-3/4 h-1/2 border-2 border-white/50 rounded-lg" />
+              </div>
+            </div>
+          )}
+
+          {scanState === "error" && (
+            <div className="flex flex-col items-center justify-center py-8 gap-4">
+              <div className="p-4 rounded-full bg-destructive/10">
+                <VideoOff className="h-8 w-8 text-destructive" />
+              </div>
+              <div className="text-center space-y-2">
+                <p className="font-medium">Camera Unavailable</p>
+                <p className="text-sm text-muted-foreground max-w-xs">
+                  {cameraError}
+                </p>
               </div>
             </div>
           )}
@@ -261,10 +309,16 @@ export function BarcodeScanner({ open, onClose, onAddIngredient }: BarcodeScanne
         </div>
 
         <DialogFooter className="flex-row gap-2 justify-end">
-          {scanState === "scanning" && (
+          {(scanState === "scanning" || scanState === "error") && (
             <Button variant="outline" onClick={onClose} data-testid="button-cancel-scan">
               <X className="h-4 w-4 mr-2" />
               Cancel
+            </Button>
+          )}
+          {scanState === "error" && (
+            <Button onClick={handleScanAgain} data-testid="button-retry-scan">
+              <Camera className="h-4 w-4 mr-2" />
+              Try Again
             </Button>
           )}
           {(scanState === "result" || scanState === "not_found") && (
