@@ -40,7 +40,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <SidebarProvider style={style as React.CSSProperties}>
-      <div className="flex w-full">
+      <div className="flex w-full min-h-svh flex-1">
         <AppSidebar 
                 activeSection={activeSection}
                 mainTab={mainTab}
@@ -48,7 +48,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 onTabChange={setMainTab}
                 onLogout={logout} 
               />
-        <div className="flex flex-col w-full">
+        <div className="flex flex-col flex-1 min-h-0">
           <header className="flex items-center justify-between p-4 border-b">
             <div className="flex items-center gap-4">
               <SidebarTrigger data-testid="button-sidebar-toggle" />
@@ -68,7 +68,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </Link>
           </header>
 
-          <main>
+          <main className="flex-1 overflow-y-auto">
             {children}
           </main>
         </div>

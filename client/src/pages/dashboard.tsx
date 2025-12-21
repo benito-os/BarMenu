@@ -868,16 +868,16 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="flex flex-col h-screen">
-      <Tabs defaultValue="queue" value={mainTab} onValueChange={setMainTab} className="flex-1 flex flex-col">
+    <div className="flex flex-col min-h-svh">
+      <Tabs defaultValue="queue" value={mainTab} onValueChange={setMainTab} className="flex-1 flex flex-col min-h-0">
         <TabsList className="w-full rounded-none border-b" data-testid="main-tabs">
           <TabsTrigger value="queue" data-testid="tab-queue">Live Queue</TabsTrigger>
           <TabsTrigger value="management" data-testid="tab-management">Management</TabsTrigger>
         </TabsList>
       
       {/* Live Queue Tab - Full Width, No Sidebar */}
-      <TabsContent value="queue" className="flex-1 flex flex-col h-full overflow-hidden m-0">
-        <div className="flex flex-col h-full">
+      <TabsContent value="queue" className="flex-1 flex flex-col min-h-0 overflow-hidden m-0">
+        <div className="flex flex-col flex-1 min-h-0">
           <header className="flex items-center justify-between p-4 border-b">
             <h1 className="font-serif text-2xl md:text-3xl font-bold text-foreground">
               Bar Flores Dashboard
@@ -894,8 +894,8 @@ export default function Dashboard() {
             </Link>
           </header>
 
-          <main className="flex-1 overflow-auto p-4">
-            <div className="w-full space-y-4">
+          <main className="flex-1 overflow-y-auto">
+            <div className="w-full space-y-4 p-4">
               {/* Queue Section Content */}
               {(
                 <>
@@ -1168,10 +1168,10 @@ export default function Dashboard() {
       </TabsContent>
       
       {/* Management Tab - With Sidebar */}
-      <TabsContent value="management" className="flex-1 flex flex-col h-full overflow-hidden m-0">
-        <div className="flex flex-1 h-full w-full overflow-hidden">
+      <TabsContent value="management" className="flex-1 flex flex-col min-h-0 overflow-hidden m-0">
+        <div className="flex flex-1 min-h-0 w-full overflow-hidden">
           <SidebarProvider style={style}>
-            <div className="flex h-full w-full">
+            <div className="flex w-full min-h-svh flex-1">
               <AppSidebar
                 activeSection={activeSection}
                 mainTab={mainTab}
@@ -1179,7 +1179,7 @@ export default function Dashboard() {
                 onTabChange={setMainTab}
                 onLogout={() => logoutMutation.mutate()}
               />
-              <div className="flex flex-col flex-1 overflow-hidden">
+              <div className="flex flex-col flex-1 min-h-0">
                 <header className="flex-shrink-0 flex items-center justify-between p-4 border-b">
                   <div className="flex items-center gap-4">
                     <SidebarTrigger data-testid="button-sidebar-toggle" />
@@ -1199,8 +1199,8 @@ export default function Dashboard() {
                   </Link>
                 </header>
 
-                <main className="flex-1 overflow-y-auto p-6">
-                <div className="space-y-6">
+                <main className="flex-1 overflow-y-auto">
+                <div className="space-y-6 p-6">
                   {/* Analytics Section */}
                   {activeSection === "analytics" && (
                 <>
