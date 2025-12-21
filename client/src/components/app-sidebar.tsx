@@ -1,5 +1,4 @@
-import { LayoutDashboard, BarChart3, Menu as MenuIcon, Wine, QrCode, Settings, LogOut, Boxes } from "lucide-react";
-import { Link, useLocation } from "wouter";
+import { LayoutDashboard, BarChart3, Menu as MenuIcon, Wine, QrCode, Settings, LogOut } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -36,12 +35,6 @@ const menuItems = [
     icon: Wine,
     section: "drinks",
     testId: "sidebar-drinks",
-  },
-  {
-    title: "Inventory",
-    icon: Boxes,
-    href: "/dashboard/inventory",
-    testId: "sidebar-inventory",
   },
   {
     title: "QR Codes",
