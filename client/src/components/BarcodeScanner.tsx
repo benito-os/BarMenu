@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useZxing } from "react-zxing";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -22,7 +22,7 @@ interface BarcodeScannerProps {
   onClose: () => void;
   onAddIngredient: (ingredient: {
     name: string;
-    category: string;
+    category: string | null;
     unit: string;
     onHand: number;
     parLevel: number;
@@ -81,12 +81,31 @@ export function BarcodeScanner({ open, onClose, onAddIngredient }: BarcodeScanne
     }
   }, [scanState, lookupMutation]);
 
-  const { ref } = useZxing({
+  // Scanner is paused when not open OR not in scanning state
+  const shouldPause = !open || scanState !== "scanning";
+
+  const { ref: zxingRef } = useZxing({
     onDecodeResult: handleDecode,
-    paused: scanState !== "scanning",
+    paused: shouldPause,
   });
 
-  const handleReset = () => {
+  // Reset state when dialog opens
+  useEffect(() => {
+    if (open) {
+      setScanState("scanning");
+      setProductInfo(null);
+      setScannedBarcode("");
+      setFormData({
+        name: "",
+        category: "",
+        unit: "bottles",
+        onHand: 1,
+        parLevel: 2,
+      });
+    }
+  }, [open]);
+
+  const handleScanAgain = () => {
     setScanState("scanning");
     setProductInfo(null);
     setScannedBarcode("");
@@ -97,11 +116,6 @@ export function BarcodeScanner({ open, onClose, onAddIngredient }: BarcodeScanne
       onHand: 1,
       parLevel: 2,
     });
-  };
-
-  const handleClose = () => {
-    handleReset();
-    onClose();
   };
 
   const handleAdd = () => {
@@ -115,7 +129,7 @@ export function BarcodeScanner({ open, onClose, onAddIngredient }: BarcodeScanne
     }
     onAddIngredient({
       name: formData.name,
-      category: formData.category || null as any,
+      category: formData.category.trim() || null,
       unit: formData.unit,
       onHand: formData.onHand,
       parLevel: formData.parLevel,
@@ -124,11 +138,11 @@ export function BarcodeScanner({ open, onClose, onAddIngredient }: BarcodeScanne
       title: "Ingredient added",
       description: `${formData.name} has been added to inventory.`,
     });
-    handleClose();
+    onClose();
   };
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -147,7 +161,7 @@ export function BarcodeScanner({ open, onClose, onAddIngredient }: BarcodeScanne
           {scanState === "scanning" && (
             <div className="relative aspect-video overflow-hidden rounded-lg bg-black">
               <video
-                ref={ref as React.RefObject<HTMLVideoElement>}
+                ref={zxingRef as React.RefObject<HTMLVideoElement>}
                 className="h-full w-full object-cover"
                 data-testid="video-barcode-scanner"
               />
@@ -248,14 +262,14 @@ export function BarcodeScanner({ open, onClose, onAddIngredient }: BarcodeScanne
 
         <DialogFooter className="flex-row gap-2 justify-end">
           {scanState === "scanning" && (
-            <Button variant="outline" onClick={handleClose} data-testid="button-cancel-scan">
+            <Button variant="outline" onClick={onClose} data-testid="button-cancel-scan">
               <X className="h-4 w-4 mr-2" />
               Cancel
             </Button>
           )}
           {(scanState === "result" || scanState === "not_found") && (
             <>
-              <Button variant="outline" onClick={handleReset} data-testid="button-scan-again">
+              <Button variant="outline" onClick={handleScanAgain} data-testid="button-scan-again">
                 <Camera className="h-4 w-4 mr-2" />
                 Scan Again
               </Button>
