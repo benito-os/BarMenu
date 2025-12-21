@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,16 +13,18 @@ export default function DashboardLogin() {
   const [password, setPassword] = useState("");
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const loginMutation = useMutation({
     mutationFn: async ({ username, password }: { username: string; password: string }) => {
       return apiRequest("POST", "/api/auth/login", { username, password });
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({
         title: "Login Successful",
         description: "Welcome to the dashboard",
       });
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/check"] });
       // Small delay to ensure session is established
       setTimeout(() => {
         setLocation("/dashboard");
