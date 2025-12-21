@@ -20,6 +20,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIngredients } from "@/hooks/useIngredients";
+import { InventorySection } from "@/components/InventorySection";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { OrderWithDrink, DrinkAnalytics, Menu, DrinkAvailability, InsertMenu } from "@shared/validation";
@@ -2910,6 +2911,13 @@ export default function Dashboard() {
               </Card>
             </div>
                 </>
+              )}
+
+              {/* Inventory Section */}
+              {activeSection === "inventory" && (
+                <div className="space-y-6">
+                  <InventorySection />
+                </div>
               )}
 
               {/* Settings Section */}

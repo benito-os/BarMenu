@@ -1,5 +1,4 @@
 import { LayoutDashboard, BarChart3, Menu as MenuIcon, Wine, QrCode, Settings, LogOut, Boxes } from "lucide-react";
-import { Link, useLocation } from "wouter";
 import {
   Sidebar,
   SidebarContent,
@@ -40,7 +39,7 @@ const menuItems = [
   {
     title: "Inventory",
     icon: Boxes,
-    href: "/dashboard/inventory",
+    section: "inventory",
     testId: "sidebar-inventory",
   },
   {

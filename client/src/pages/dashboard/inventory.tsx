@@ -54,7 +54,7 @@ export default function InventoryPage() {
   });
 
   const categories = useMemo(() => {
-    const unique = new Set(ingredients.map(item => item.category).filter(Boolean));
+    const unique = new Set(ingredients.map(item => item.category).filter((c): c is string => Boolean(c)));
     return ["all", ...Array.from(unique)];
   }, [ingredients]);
 
