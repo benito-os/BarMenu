@@ -4,6 +4,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,9 +19,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useIngredients } from "@/hooks/useIngredients";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import type { OrderWithDrink, DrinkAnalytics, Menu, Drink, InsertMenu } from "@shared/validation";
+import type { OrderWithDrink, DrinkAnalytics, Menu, DrinkAvailability, InsertMenu } from "@shared/validation";
 import { menuCreateSchema } from "@shared/validation";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { Clock, TrendingUp, AlertCircle, CheckCircle2, Home, LogOut, Settings, QrCode, Download, X, Plus } from "lucide-react";
@@ -57,9 +59,9 @@ export default function Dashboard() {
   const [filterMode, setFilterMode] = useState<"all" | "never-made" | "least-ordered">("all");
   const [selectedMenuId, setSelectedMenuId] = useState<string>("");
   const [selectedDrinks, setSelectedDrinks] = useState<Set<string>>(new Set());
-  const [localDrinks, setLocalDrinks] = useState<Drink[]>([]);
+  const [localDrinks, setLocalDrinks] = useState<DrinkAvailability[]>([]);
   const [sectionFilter, setSectionFilter] = useState<string>("all");
-  const [editingDrink, setEditingDrink] = useState<Drink | null>(null);
+  const [editingDrink, setEditingDrink] = useState<DrinkAvailability | null>(null);
   const [editingMenu, setEditingMenu] = useState<Menu | null>(null);
   const [newSectionInput, setNewSectionInput] = useState<string>("");
   const [selectedOrder, setSelectedOrder] = useState<OrderWithDrink | null>(null);
@@ -140,6 +142,21 @@ export default function Dashboard() {
     enabled: !!authStatus?.isAuthenticated, // Only fetch if authenticated
   });
 
+  const { data: availabilityAlerts } = useQuery<
+    Array<{
+      menuId: string;
+      menuName: string;
+      drinkId: string;
+      drinkName: string;
+      missingIngredients: string[];
+      isOutOfStock: boolean;
+    }>
+  >({
+    queryKey: ["/api/availability/active-menus"],
+    enabled: !!authStatus?.isAuthenticated,
+    refetchInterval: 15000,
+  });
+
   // Logout mutation
   const logoutMutation = useMutation({
     mutationFn: async () => {
@@ -189,6 +206,8 @@ export default function Dashboard() {
     queryKey: ["/api/menus"],
     enabled: !!authStatus?.isAuthenticated,
   });
+
+  const { ingredients, ingredientsLoading } = useIngredients();
 
   const defaultMenu = useMemo(() => {
     if (!menus || menus.length === 0) return null;
@@ -340,11 +359,13 @@ export default function Dashboard() {
     isStirred: false,
     isShaken: false,
     isActive: true,
+    isOutOfStock: false,
     sortOrder: 0,
+    ingredientIds: [] as string[],
   });
 
   // Fetch all drinks for selected menu (including inactive) for admin management
-  const { data: allDrinks, isLoading: allDrinksLoading } = useQuery<Drink[]>({
+  const { data: allDrinks, isLoading: allDrinksLoading } = useQuery<DrinkAvailability[]>({
     queryKey: ["/api/drinks/all", selectedMenuId],
     queryFn: async () => {
       if (!selectedMenuId) return [];
@@ -491,7 +512,9 @@ export default function Dashboard() {
         isStirred: false,
         isShaken: false,
         isActive: true,
+        isOutOfStock: false,
         sortOrder: nextSortOrder,
+        ingredientIds: [],
       }));
       toast({
         title: "Drink Created",
@@ -509,12 +532,12 @@ export default function Dashboard() {
 
   // Update drink mutation
   const updateDrinkMutation = useMutation({
-    mutationFn: async (drink: Drink) => {
+    mutationFn: async (drink: DrinkAvailability) => {
       // Only send allowed update fields
       const { id, menuId, name, section, description, recipe, style, temperature, 
-              isMocktail, canBeMocktail, isStirred, isShaken, baseSpirit, isActive, sortOrder } = drink;
+              isMocktail, canBeMocktail, isStirred, isShaken, baseSpirit, isActive, isOutOfStock, sortOrder, ingredientIds } = drink;
       const updateData = { menuId, name, section, description, recipe, style, temperature, 
-                          isMocktail, canBeMocktail, isStirred, isShaken, baseSpirit, isActive, sortOrder };
+                          isMocktail, canBeMocktail, isStirred, isShaken, baseSpirit, isActive, isOutOfStock, sortOrder, ingredientIds };
       return apiRequest("PATCH", `/api/drinks/${id}`, updateData);
     },
     onSuccess: () => {
@@ -593,7 +616,7 @@ export default function Dashboard() {
   }, [localDrinks, selectedMenu?.sections]);
 
   const sectionedDrinks = useMemo(() => {
-    const entries = new Map<string, Drink[]>();
+    const entries = new Map<string, DrinkAvailability[]>();
     sectionOrder.forEach(section => entries.set(section, []));
 
     localDrinks.forEach(drink => {
@@ -680,7 +703,7 @@ export default function Dashboard() {
   }, [filteredDrinks, sectionFilter, selectedMenuId]);
 
   // Sortable Drink Item Component (Card Grid View)
-  function SortableDrinkItem({ drink }: { drink: Drink }) {
+  function SortableDrinkItem({ drink }: { drink: DrinkAvailability }) {
     const {
       attributes,
       listeners,
@@ -714,6 +737,12 @@ export default function Dashboard() {
                 )}
                 {!drink.isActive && (
                   <Badge variant="outline" className="text-xs">Inactive</Badge>
+                )}
+                {drink.isOutOfStock && (
+                  <Badge variant="destructive" className="text-xs">Out of stock</Badge>
+                )}
+                {drink.missingIngredients.length > 0 && (
+                  <Badge variant="secondary" className="text-xs">Missing ingredients</Badge>
                 )}
               </div>
             </div>
@@ -869,6 +898,30 @@ export default function Dashboard() {
               {/* Queue Section Content */}
               {(
                 <>
+                  {availabilityAlerts && availabilityAlerts.length > 0 && (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>Drinks Unavailable on Active Menu</AlertTitle>
+                      <AlertDescription>
+                        <div className="space-y-2">
+                          {availabilityAlerts.map((alert) => (
+                            <div key={alert.drinkId} className="text-sm">
+                              <span className="font-semibold">{alert.menuName}</span>
+                              {" · "}
+                              <span>{alert.drinkName}</span>
+                              {alert.isOutOfStock && " (marked out of stock)"}
+                              {alert.missingIngredients.length > 0 && (
+                                <>
+                                  {" — Missing: "}
+                                  {alert.missingIngredients.join(", ")}
+                                </>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </AlertDescription>
+                    </Alert>
+                  )}
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-xl">Pending Orders</CardTitle>
@@ -2320,6 +2373,54 @@ export default function Dashboard() {
                             />
                             <Label htmlFor="edit-drink-active" className="text-sm">Active</Label>
                           </div>
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              id="edit-drink-out-of-stock"
+                              checked={editingDrink.isOutOfStock}
+                              onCheckedChange={(checked) => setEditingDrink({ ...editingDrink, isOutOfStock: checked })}
+                            />
+                            <Label htmlFor="edit-drink-out-of-stock" className="text-sm">Out of Stock</Label>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Ingredients</Label>
+                          <div className="rounded-md border p-3">
+                            {ingredientsLoading ? (
+                              <div className="space-y-2">
+                                {[1, 2, 3].map((row) => (
+                                  <Skeleton key={row} className="h-5 w-full" />
+                                ))}
+                              </div>
+                            ) : ingredients.length > 0 ? (
+                              <div className="max-h-48 overflow-y-auto space-y-2">
+                                {ingredients.map((ingredient) => (
+                                  <label key={ingredient.id} className="flex items-center gap-2 text-sm">
+                                    <Checkbox
+                                      checked={editingDrink.ingredientIds.includes(ingredient.id)}
+                                      onCheckedChange={(checked) => {
+                                        setEditingDrink((prev) => {
+                                          if (!prev) return prev;
+                                          return {
+                                            ...prev,
+                                            ingredientIds: checked
+                                              ? [...prev.ingredientIds, ingredient.id]
+                                              : prev.ingredientIds.filter((id) => id !== ingredient.id),
+                                          };
+                                        });
+                                      }}
+                                    />
+                                    <span>{ingredient.name}</span>
+                                    {ingredient.onHand <= 0 && (
+                                      <Badge variant="destructive" className="text-[10px]">Out</Badge>
+                                    )}
+                                  </label>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">Add ingredients in Inventory to assign them.</p>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </ScrollArea>
@@ -2547,6 +2648,16 @@ export default function Dashboard() {
                       />
                       <Label htmlFor="drink-active" className="text-sm">Active</Label>
                     </div>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id="drink-out-of-stock"
+                        checked={newDrink.isOutOfStock}
+                        onCheckedChange={(checked) => setNewDrink({ ...newDrink, isOutOfStock: checked })}
+                        disabled={createDrinkMutation.isPending}
+                        data-testid="switch-drink-out-of-stock"
+                      />
+                      <Label htmlFor="drink-out-of-stock" className="text-sm">Out of Stock</Label>
+                    </div>
                     <div className="space-y-2">
                       <Label htmlFor="drink-order" className="text-sm">Sort Order</Label>
                       <Input
@@ -2557,6 +2668,43 @@ export default function Dashboard() {
                         disabled={createDrinkMutation.isPending}
                         data-testid="input-drink-order"
                       />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Ingredients</Label>
+                    <div className="rounded-md border p-3">
+                      {ingredientsLoading ? (
+                        <div className="space-y-2">
+                          {[1, 2, 3].map((row) => (
+                            <Skeleton key={row} className="h-5 w-full" />
+                          ))}
+                        </div>
+                      ) : ingredients.length > 0 ? (
+                        <div className="max-h-48 overflow-y-auto space-y-2">
+                          {ingredients.map((ingredient) => (
+                            <label key={ingredient.id} className="flex items-center gap-2 text-sm">
+                              <Checkbox
+                                checked={newDrink.ingredientIds.includes(ingredient.id)}
+                                onCheckedChange={(checked) => {
+                                  setNewDrink((prev) => ({
+                                    ...prev,
+                                    ingredientIds: checked
+                                      ? [...prev.ingredientIds, ingredient.id]
+                                      : prev.ingredientIds.filter((id) => id !== ingredient.id),
+                                  }));
+                                }}
+                              />
+                              <span>{ingredient.name}</span>
+                              {ingredient.onHand <= 0 && (
+                                <Badge variant="destructive" className="text-[10px]">Out</Badge>
+                              )}
+                            </label>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Add ingredients in Inventory to assign them.</p>
+                      )}
                     </div>
                   </div>
 

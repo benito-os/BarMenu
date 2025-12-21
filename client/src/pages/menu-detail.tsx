@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { addTrackedOrder } from "@/lib/orderCookies";
 import { OrderStatusBanner } from "@/components/OrderStatusBanner";
-import type { Menu, Drink } from "@shared/validation";
+import type { Menu, DrinkAvailability } from "@shared/validation";
 import { Home, Wine, Sparkles, Glasses, Check, Flame, Snowflake, ThermometerSun } from "lucide-react";
 import { useState } from "react";
 
@@ -34,7 +34,7 @@ export default function MenuDetail() {
     enabled: !!slug,
   });
 
-  const { data: drinks, isLoading: drinksLoading } = useQuery<Drink[]>({
+  const { data: drinks, isLoading: drinksLoading } = useQuery<DrinkAvailability[]>({
     queryKey: [`/api/drinks?menuId=${menu?.id}`],
     enabled: !!menu?.id,
   });
@@ -123,7 +123,7 @@ export default function MenuDetail() {
     }
     acc[drink.section].push(drink);
     return acc;
-  }, {} as Record<string, Drink[]>) || {};
+  }, {} as Record<string, DrinkAvailability[]>) || {};
 
   const sections = Object.keys(drinksBySection).sort();
 
@@ -258,6 +258,7 @@ export default function MenuDetail() {
                     .sort((a, b) => a.sortOrder - b.sortOrder)
                     .map((drink) => {
                       const isOrdered = orderedDrinks.has(drink.id);
+                      const isUnavailable = !drink.isMakeable || drink.isOutOfStock;
                       
                       return (
                         <Card 
@@ -282,6 +283,16 @@ export default function MenuDetail() {
                             
                             {/* Badges row */}
                             <div className="flex flex-wrap gap-2 pt-3">
+                              {drink.isOutOfStock && (
+                                <Badge variant="destructive" className="text-xs">
+                                  Out of stock
+                                </Badge>
+                              )}
+                              {!drink.isOutOfStock && drink.missingIngredients.length > 0 && (
+                                <Badge variant="secondary" className="text-xs">
+                                  Missing ingredients
+                                </Badge>
+                              )}
                               {drink.isMocktail && (
                                 <Badge variant="outline" className="text-xs">
                                   <Sparkles className="w-3 h-3 mr-1" />
@@ -336,7 +347,7 @@ export default function MenuDetail() {
                             <Button
                               className="w-full"
                               onClick={() => handleOrderClick(drink.id)}
-                              disabled={orderMutation.isPending || isOrdered}
+                              disabled={orderMutation.isPending || isOrdered || isUnavailable}
                               data-testid={`button-order-${drink.id}`}
                             >
                               {isOrdered ? (
@@ -344,10 +355,17 @@ export default function MenuDetail() {
                                   <Check className="w-4 h-4 mr-2" />
                                   Ordered
                                 </>
+                              ) : isUnavailable ? (
+                                "Unavailable"
                               ) : (
                                 "Request This Drink"
                               )}
                             </Button>
+                            {drink.missingIngredients.length > 0 && (
+                              <p className="text-xs text-muted-foreground mt-2">
+                                Missing: {drink.missingIngredients.join(", ")}
+                              </p>
+                            )}
                           </CardContent>
                         </Card>
                       );
