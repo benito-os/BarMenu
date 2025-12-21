@@ -864,21 +864,21 @@ export default function Dashboard() {
             </Link>
           </header>
 
-          <main className="flex-1 overflow-auto p-6">
-            <div className="max-w-7xl mx-auto space-y-6">
+          <main className="flex-1 overflow-auto p-4">
+            <div className="w-full space-y-4">
               {/* Queue Section Content */}
               {(
                 <>
                   <Card>
-                    <CardHeader>
+                    <CardHeader className="py-4">
                       <CardTitle className="text-xl">Pending Orders</CardTitle>
                       <CardDescription>
                         Live view of drink requests - auto-refreshes every 5 seconds
                       </CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="p-0">
                       {queueLoading ? (
-                        <div className="space-y-4">
+                        <div className="space-y-4 p-4">
                           {[1, 2, 3].map(i => (
                             <Skeleton key={i} className="h-16 w-full" />
                           ))}
@@ -888,12 +888,12 @@ export default function Dashboard() {
                           <Table>
                             <TableHeader>
                               <TableRow>
-                                <TableHead>Time</TableHead>
-                                <TableHead>Guest</TableHead>
-                                <TableHead>Drink</TableHead>
-                                <TableHead>Instructions</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
+                                <TableHead className="w-20">Time</TableHead>
+                                <TableHead className="w-28">Guest</TableHead>
+                                <TableHead className="w-48">Drink</TableHead>
+                                <TableHead className="flex-1 min-w-[300px]">Instructions</TableHead>
+                                <TableHead className="w-28">Status</TableHead>
+                                <TableHead className="w-40 text-right">Actions</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -904,16 +904,16 @@ export default function Dashboard() {
                                   className="cursor-pointer hover-elevate"
                                   onClick={() => setSelectedOrder(order)}
                                 >
-                                  <TableCell className="font-medium">
+                                  <TableCell className="font-medium whitespace-nowrap">
                                     {formatTime(order.requestedAt.toString())}
                                   </TableCell>
                                   <TableCell className="text-muted-foreground">
                                     {order.guestName || "-"}
                                   </TableCell>
-                                  <TableCell className="font-serif">
+                                  <TableCell className="font-serif font-medium">
                                     {order.drinkName}
                                   </TableCell>
-                                  <TableCell className="text-sm">
+                                  <TableCell className="text-sm text-muted-foreground">
                                     {order.drinkRecipe || "-"}
                                   </TableCell>
                                   <TableCell>
