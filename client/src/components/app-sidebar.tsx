@@ -1,5 +1,4 @@
 import { LayoutDashboard, BarChart3, Menu as MenuIcon, Wine, QrCode, Settings, LogOut, Boxes } from "lucide-react";
-import { Link, useLocation } from "wouter";
 import {
   Sidebar,
   SidebarContent,
@@ -16,53 +15,71 @@ const menuItems = [
   {
     title: "Queue",
     icon: LayoutDashboard,
-    href: "/dashboard",
+    section: "queue",
     testId: "sidebar-queue",
   },
   {
     title: "Analytics",
     icon: BarChart3,
-    href: "/dashboard/analytics",
+    section: "analytics",
     testId: "sidebar-analytics",
   },
   {
     title: "Menus",
     icon: MenuIcon,
-    href: "/dashboard/menus",
+    section: "menus",
     testId: "sidebar-menus",
   },
   {
     title: "Drinks",
     icon: Wine,
-    href: "/dashboard/drinks",
+    section: "drinks",
     testId: "sidebar-drinks",
   },
   {
     title: "Inventory",
     icon: Boxes,
-    href: "/dashboard/inventory",
+    section: "inventory",
     testId: "sidebar-inventory",
   },
   {
     title: "QR Codes",
     icon: QrCode,
-    href: "/dashboard/qr-codes",
+    section: "qr-codes",
     testId: "sidebar-qr-codes",
   },
   {
     title: "Settings",
     icon: Settings,
-    href: "/dashboard/settings",
+    section: "settings",
     testId: "sidebar-settings",
   },
 ];
 
 interface AppSidebarProps {
+  activeSection: string;
+  mainTab: string;
+  onSectionChange: (section: string) => void;
+  onTabChange: (tab: string) => void;
   onLogout: () => void;
 }
 
-export function AppSidebar({ onLogout }: AppSidebarProps) {
-  const [location] = useLocation();
+export function AppSidebar({ activeSection, mainTab, onSectionChange, onTabChange, onLogout }: AppSidebarProps) {
+  const handleItemClick = (section: string) => {
+    if (section === "queue") {
+      onTabChange("queue");
+    } else {
+      onTabChange("management");
+      onSectionChange(section);
+    }
+  };
+
+  const isItemActive = (section: string) => {
+    if (section === "queue") {
+      return mainTab === "queue";
+    }
+    return mainTab === "management" && activeSection === section;
+  };
 
   return (
     <Sidebar>
@@ -74,16 +91,14 @@ export function AppSidebar({ onLogout }: AppSidebarProps) {
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
-                <SidebarMenuItem key={item.href}>
+                <SidebarMenuItem key={item.section}>
                   <SidebarMenuButton
-                    asChild
-                    isActive={location === item.href}
+                    isActive={isItemActive(item.section)}
+                    onClick={() => handleItemClick(item.section)}
                     data-testid={item.testId}
                   >
-                    <Link href={item.href}>
-                      <item.icon className="w-4 h-4" />
-                      <span>{item.title}</span>
-                    </Link>
+                    <item.icon className="w-4 h-4" />
+                    <span>{item.title}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}

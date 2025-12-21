@@ -20,6 +20,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIngredients } from "@/hooks/useIngredients";
+import { InventorySection } from "@/components/InventorySection";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { OrderWithDrink, DrinkAnalytics, Menu, DrinkAvailability, InsertMenu } from "@shared/validation";
@@ -867,16 +868,16 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="flex flex-col h-screen">
-      <Tabs defaultValue="queue" value={mainTab} onValueChange={setMainTab} className="flex-1 flex flex-col">
+    <div className="flex flex-col min-h-svh">
+      <Tabs defaultValue="queue" value={mainTab} onValueChange={setMainTab} className="flex-1 flex flex-col min-h-0">
         <TabsList className="w-full rounded-none border-b" data-testid="main-tabs">
           <TabsTrigger value="queue" data-testid="tab-queue">Live Queue</TabsTrigger>
           <TabsTrigger value="management" data-testid="tab-management">Management</TabsTrigger>
         </TabsList>
       
       {/* Live Queue Tab - Full Width, No Sidebar */}
-      <TabsContent value="queue" className="flex-1 flex flex-col h-full overflow-hidden m-0">
-        <div className="flex flex-col h-full">
+      <TabsContent value="queue" className="flex-1 flex flex-col min-h-0 overflow-hidden m-0">
+        <div className="flex flex-col flex-1 min-h-0">
           <header className="flex items-center justify-between p-4 border-b">
             <h1 className="font-serif text-2xl md:text-3xl font-bold text-foreground">
               Bar Flores Dashboard
@@ -893,8 +894,8 @@ export default function Dashboard() {
             </Link>
           </header>
 
-          <main className="flex-1 overflow-auto p-6">
-            <div className="max-w-7xl mx-auto space-y-6">
+          <main className="flex-1 overflow-y-auto">
+            <div className="w-full space-y-4 p-4">
               {/* Queue Section Content */}
               {(
                 <>
@@ -923,15 +924,15 @@ export default function Dashboard() {
                     </Alert>
                   )}
                   <Card>
-                    <CardHeader>
+                    <CardHeader className="py-4">
                       <CardTitle className="text-xl">Pending Orders</CardTitle>
                       <CardDescription>
                         Live view of drink requests - auto-refreshes every 5 seconds
                       </CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="p-0">
                       {queueLoading ? (
-                        <div className="space-y-4">
+                        <div className="space-y-4 p-4">
                           {[1, 2, 3].map(i => (
                             <Skeleton key={i} className="h-16 w-full" />
                           ))}
@@ -941,12 +942,12 @@ export default function Dashboard() {
                           <Table>
                             <TableHeader>
                               <TableRow>
-                                <TableHead>Time</TableHead>
-                                <TableHead>Guest</TableHead>
-                                <TableHead>Drink</TableHead>
-                                <TableHead>Instructions</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
+                                <TableHead className="w-20">Time</TableHead>
+                                <TableHead className="w-28">Guest</TableHead>
+                                <TableHead className="w-48">Drink</TableHead>
+                                <TableHead className="flex-1 min-w-[300px]">Instructions</TableHead>
+                                <TableHead className="w-28">Status</TableHead>
+                                <TableHead className="w-40 text-right">Actions</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -957,16 +958,16 @@ export default function Dashboard() {
                                   className="cursor-pointer hover-elevate"
                                   onClick={() => setSelectedOrder(order)}
                                 >
-                                  <TableCell className="font-medium">
+                                  <TableCell className="font-medium whitespace-nowrap">
                                     {formatTime(order.requestedAt.toString())}
                                   </TableCell>
                                   <TableCell className="text-muted-foreground">
                                     {order.guestName || "-"}
                                   </TableCell>
-                                  <TableCell className="font-serif">
+                                  <TableCell className="font-serif font-medium">
                                     {order.drinkName}
                                   </TableCell>
-                                  <TableCell className="text-sm">
+                                  <TableCell className="text-sm text-muted-foreground">
                                     {order.drinkRecipe || "-"}
                                   </TableCell>
                                   <TableCell>
@@ -1167,16 +1168,18 @@ export default function Dashboard() {
       </TabsContent>
       
       {/* Management Tab - With Sidebar */}
-      <TabsContent value="management" className="flex-1 flex flex-col h-full overflow-hidden m-0">
-        <div className="flex flex-1 h-full w-full overflow-hidden">
+      <TabsContent value="management" className="flex-1 flex flex-col min-h-0 overflow-hidden m-0">
+        <div className="flex flex-1 min-h-0 w-full overflow-hidden">
           <SidebarProvider style={style}>
-            <div className="flex h-full w-full">
+            <div className="flex w-full min-h-svh flex-1">
               <AppSidebar
                 activeSection={activeSection}
+                mainTab={mainTab}
                 onSectionChange={setActiveSection}
+                onTabChange={setMainTab}
                 onLogout={() => logoutMutation.mutate()}
               />
-              <div className="flex flex-col flex-1 overflow-hidden">
+              <div className="flex flex-col flex-1 min-h-0">
                 <header className="flex-shrink-0 flex items-center justify-between p-4 border-b">
                   <div className="flex items-center gap-4">
                     <SidebarTrigger data-testid="button-sidebar-toggle" />
@@ -1196,8 +1199,8 @@ export default function Dashboard() {
                   </Link>
                 </header>
 
-                <main className="flex-1 overflow-y-auto p-6">
-                <div className="max-w-7xl mx-auto space-y-6">
+                <main className="flex-1 overflow-y-auto">
+                <div className="space-y-6 p-6">
                   {/* Analytics Section */}
                   {activeSection === "analytics" && (
                 <>
@@ -1735,7 +1738,7 @@ export default function Dashboard() {
 
             {/* Edit Menu Dialog */}
             <Dialog open={!!editingMenu} onOpenChange={(open) => !open && setEditingMenu(null)}>
-              <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+              <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col min-h-0 overflow-hidden">
                 <DialogHeader>
                   <DialogTitle>Edit Menu</DialogTitle>
                   <DialogDescription>
@@ -2176,7 +2179,7 @@ export default function Dashboard() {
 
             {/* Edit Drink Dialog */}
             <Dialog open={!!editingDrink} onOpenChange={(open) => !open && setEditingDrink(null)}>
-              <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+              <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col min-h-0 overflow-hidden">
                 <DialogHeader>
                   <DialogTitle>Edit Drink</DialogTitle>
                   <DialogDescription>
@@ -2908,6 +2911,13 @@ export default function Dashboard() {
               </Card>
             </div>
                 </>
+              )}
+
+              {/* Inventory Section */}
+              {activeSection === "inventory" && (
+                <div className="space-y-6">
+                  <InventorySection />
+                </div>
               )}
 
               {/* Settings Section */}

@@ -42,6 +42,18 @@ Preferred communication style: Simple, everyday language.
     - **Order Status Tracking**: Browser cookie-based tracking system (`barflores_orders`) stores order IDs, drink names, guest names, and timestamps. OrderStatusBanner displays active orders inline on menu pages, showing color-coded status badges, guest names, comments, and mocktail indicators. Auto-removes completed/cancelled orders. Graceful error handling with fallback UI for network issues.
     - **Dashboard**: Real-time order queue, drink analytics (popularity, "never made," "least ordered"), and admin functionalities.
     - **Admin Controls**: Create, edit, activate/deactivate, delete menus and drinks; drag-and-drop reordering for drinks; bulk operations (activate, deactivate, delete) for drinks.
+    - **Inventory Management**: Full ingredient CRUD (create, read, update, delete) with stock level tracking:
+      - Add ingredients manually or via barcode scanner
+      - Edit all ingredient fields (name, category, unit, on hand, par level)
+      - Delete ingredients with cascading cleanup of drink associations
+      - Filter by category, status (healthy, low, out of stock)
+      - Summary cards showing total ingredients, low stock count, restock urgency
+    - **Barcode Scanning**: Camera-based barcode scanning for quick ingredient entry:
+      - Uses react-zxing library for camera access and barcode decoding
+      - POST /api/barcode/lookup queries Open Food Facts and UPCitemdb APIs
+      - Pre-fills ingredient form with product name, brand, category when found
+      - Fallback to manual entry when barcode not recognized
+      - Dialog resets properly on reopen for multiple scans
     - **Dynamic Theming**: Menus can be customized with specific hero images, background colors, accent colors, and typography, which are applied to their public-facing pages.
     - **Drink Attributes**: Support for `temperature` (Hot, Cold, Room Temp, Not Specified), `isMocktail` (exclusively non-alcoholic), and `canBeMocktail` (can be made as a mocktail) with corresponding UI badges.
 - **Technical Implementations**: Frontend uses optimistic UI updates for smooth interactions. Backend enforces order workflow transitions and handles data validation. Query invalidation ensures UI synchronization after mutations. Event-driven cookie updates trigger immediate order status display without page reload.
@@ -61,6 +73,7 @@ Preferred communication style: Simple, everyday language.
 - **Database & ORM**: @neondatabase/serverless, Drizzle ORM, drizzle-kit, ws.
 - **Carousel/Slider**: embla-carousel-react.
 - **QR Code Generation**: qrcode.react.
+- **Barcode Scanning**: react-zxing for camera-based barcode decoding.
 - **Drag-and-Drop**: @dnd-kit/core, @dnd-kit/sortable, @dnd-kit/utilities.
 - **Date Utilities**: date-fns.
 - **Build Tools**: Vite, esbuild, TypeScript, PostCSS with Autoprefixer.

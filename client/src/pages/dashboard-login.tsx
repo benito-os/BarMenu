@@ -19,13 +19,16 @@ export default function DashboardLogin() {
     mutationFn: async ({ username, password }: { username: string; password: string }) => {
       return apiRequest("POST", "/api/auth/login", { username, password });
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({
         title: "Login Successful",
         description: "Welcome to the dashboard",
       });
-      queryClient.setQueryData(["/api/auth/check"], { isAuthenticated: true });
-      setLocation("/dashboard");
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/check"] });
+      // Small delay to ensure session is established
+      setTimeout(() => {
+        setLocation("/dashboard");
+      }, 100);
     },
     onError: (error: any) => {
       toast({

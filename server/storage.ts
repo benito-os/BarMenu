@@ -53,6 +53,7 @@ export interface IStorage {
   getIngredients(): Promise<Ingredient[]>;
   createIngredient(ingredient: InsertIngredient): Promise<Ingredient>;
   updateIngredient(id: string, data: Partial<Ingredient>): Promise<Ingredient | undefined>;
+  deleteIngredient(id: string): Promise<void>;
 
   // Availability operations
   getDrinksWithAvailability(menuId: string, includeInactive?: boolean): Promise<(Drink & {
@@ -383,6 +384,13 @@ export class DatabaseStorage implements IStorage {
   async updateIngredient(id: string, data: Partial<Ingredient>): Promise<Ingredient | undefined> {
     const [ingredient] = await db.update(ingredients).set(data).where(eq(ingredients.id, id)).returning();
     return ingredient || undefined;
+  }
+
+  async deleteIngredient(id: string): Promise<void> {
+    // First delete drink-ingredient associations to avoid orphaned references
+    await db.delete(drinkIngredients).where(eq(drinkIngredients.ingredientId, id));
+    // Then delete the ingredient
+    await db.delete(ingredients).where(eq(ingredients.id, id));
   }
 
   async getDrinksWithAvailability(menuId: string, includeInactive = false): Promise<(Drink & {
