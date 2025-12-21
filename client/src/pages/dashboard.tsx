@@ -1738,7 +1738,7 @@ export default function Dashboard() {
 
             {/* Edit Menu Dialog */}
             <Dialog open={!!editingMenu} onOpenChange={(open) => !open && setEditingMenu(null)}>
-              <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+              <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col min-h-0 overflow-hidden">
                 <DialogHeader>
                   <DialogTitle>Edit Menu</DialogTitle>
                   <DialogDescription>
@@ -2179,7 +2179,7 @@ export default function Dashboard() {
 
             {/* Edit Drink Dialog */}
             <Dialog open={!!editingDrink} onOpenChange={(open) => !open && setEditingDrink(null)}>
-              <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+              <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col min-h-0 overflow-hidden">
                 <DialogHeader>
                   <DialogTitle>Edit Drink</DialogTitle>
                   <DialogDescription>
