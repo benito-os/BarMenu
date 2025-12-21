@@ -1120,7 +1120,9 @@ export default function Dashboard() {
             <div className="flex h-full w-full">
               <AppSidebar
                 activeSection={activeSection}
+                mainTab={mainTab}
                 onSectionChange={setActiveSection}
+                onTabChange={setMainTab}
                 onLogout={() => logoutMutation.mutate()}
               />
               <div className="flex flex-col flex-1 overflow-hidden">
