@@ -50,6 +50,26 @@ export function useIngredients() {
     },
   });
 
+  const deleteIngredientMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("DELETE", `/api/ingredients/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/ingredients"] });
+      toast({
+        title: "Ingredient Deleted",
+        description: "Ingredient has been removed from inventory",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete ingredient",
+        variant: "destructive",
+      });
+    },
+  });
+
   return {
     ingredients: ingredients || [],
     ingredientsLoading,
@@ -57,5 +77,7 @@ export function useIngredients() {
     createIngredientPending: createIngredientMutation.isPending,
     updateIngredient: updateIngredientMutation.mutate,
     updateIngredientPending: updateIngredientMutation.isPending,
+    deleteIngredient: deleteIngredientMutation.mutate,
+    deleteIngredientPending: deleteIngredientMutation.isPending,
   };
 }

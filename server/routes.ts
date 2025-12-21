@@ -367,6 +367,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // DELETE /api/ingredients/:id - Delete ingredient
+  app.delete("/api/ingredients/:id", async (req, res) => {
+    try {
+      const params = validate(idParamsSchema, req.params, res, "Invalid ingredient id");
+      if (!params) return;
+      await storage.deleteIngredient(params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting ingredient:", error);
+      res.status(500).json({ error: "Failed to delete ingredient" });
+    }
+  });
+
   // GET /api/availability/active-menus - Drinks unavailable due to stock
   app.get("/api/availability/active-menus", async (_req, res) => {
     try {
