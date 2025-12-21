@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useDrinks } from "@/hooks/useDrinks";
+import { useIngredients } from "@/hooks/useIngredients";
 import { useMenus } from "@/hooks/useMenus";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
-import type { Drink } from "@shared/validation";
+import type { DrinkAvailability } from "@shared/validation";
 import {
   DndContext,
   closestCenter,
@@ -37,9 +38,9 @@ import { GripVertical, Trash2, Pencil, CheckCircle2, AlertCircle } from "lucide-
 export default function DrinksPage() {
   const [selectedMenuId, setSelectedMenuId] = useState<string>("");
   const [selectedDrinks, setSelectedDrinks] = useState<Set<string>>(new Set());
-  const [localDrinks, setLocalDrinks] = useState<Drink[]>([]);
+  const [localDrinks, setLocalDrinks] = useState<DrinkAvailability[]>([]);
   const [sectionFilter, setSectionFilter] = useState<string>("all");
-  const [editingDrink, setEditingDrink] = useState<Drink | null>(null);
+  const [editingDrink, setEditingDrink] = useState<DrinkAvailability | null>(null);
   const [newDrink, setNewDrink] = useState({
     menuId: "",
     name: "",
@@ -54,10 +55,13 @@ export default function DrinksPage() {
     isStirred: false,
     isShaken: false,
     isActive: true,
+    isOutOfStock: false,
     sortOrder: 0,
+    ingredientIds: [] as string[],
   });
 
   const { menus, menusLoading, defaultMenu } = useMenus(true);
+  const { ingredients, ingredientsLoading } = useIngredients();
   const {
     drinks: allDrinks,
     drinksLoading: allDrinksLoading,
@@ -137,7 +141,7 @@ export default function DrinksPage() {
   }, [localDrinks, selectedMenu?.sections]);
 
   const sectionedDrinks = useMemo(() => {
-    const entries = new Map<string, Drink[]>();
+    const entries = new Map<string, DrinkAvailability[]>();
     sectionOrder.forEach(section => entries.set(section, []));
 
     localDrinks.forEach(drink => {
@@ -225,7 +229,7 @@ export default function DrinksPage() {
   }, [filteredDrinks, sectionFilter, selectedMenuId]);
 
   // Sortable Drink Item Component
-  function SortableDrinkItem({ drink }: { drink: Drink }) {
+  function SortableDrinkItem({ drink }: { drink: DrinkAvailability }) {
     const {
       attributes,
       listeners,
@@ -259,6 +263,12 @@ export default function DrinksPage() {
                 )}
                 {!drink.isActive && (
                   <Badge variant="outline" className="text-xs">Inactive</Badge>
+                )}
+                {drink.isOutOfStock && (
+                  <Badge variant="destructive" className="text-xs">Out of stock</Badge>
+                )}
+                {drink.missingIngredients.length > 0 && (
+                  <Badge variant="secondary" className="text-xs">Missing ingredients</Badge>
                 )}
               </div>
             </div>
@@ -363,7 +373,9 @@ export default function DrinksPage() {
         isStirred: false,
         isShaken: false,
         isActive: true,
+        isOutOfStock: false,
         sortOrder: getNextSortOrder(newDrink.menuId),
+        ingredientIds: [],
       });
     }
   };
@@ -573,6 +585,16 @@ export default function DrinksPage() {
                   />
                   <Label htmlFor="drink-active" className="text-sm">Active</Label>
                 </div>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="drink-out-of-stock"
+                    checked={newDrink.isOutOfStock}
+                    onCheckedChange={(checked) => setNewDrink({ ...newDrink, isOutOfStock: checked })}
+                    disabled={createDrinkPending}
+                    data-testid="switch-drink-out-of-stock"
+                  />
+                  <Label htmlFor="drink-out-of-stock" className="text-sm">Out of Stock</Label>
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="drink-order" className="text-sm">Sort Order</Label>
                   <Input
@@ -583,6 +605,43 @@ export default function DrinksPage() {
                     disabled={createDrinkPending}
                     data-testid="input-drink-order"
                   />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Ingredients</Label>
+                <div className="rounded-md border p-3">
+                  {ingredientsLoading ? (
+                    <div className="space-y-2">
+                      {[1, 2, 3].map((row) => (
+                        <Skeleton key={row} className="h-5 w-full" />
+                      ))}
+                    </div>
+                  ) : ingredients.length > 0 ? (
+                    <div className="max-h-48 overflow-y-auto space-y-2">
+                      {ingredients.map((ingredient) => (
+                        <label key={ingredient.id} className="flex items-center gap-2 text-sm">
+                          <Checkbox
+                            checked={newDrink.ingredientIds.includes(ingredient.id)}
+                            onCheckedChange={(checked) => {
+                              setNewDrink((prev) => ({
+                                ...prev,
+                                ingredientIds: checked
+                                  ? [...prev.ingredientIds, ingredient.id]
+                                  : prev.ingredientIds.filter((id) => id !== ingredient.id),
+                              }));
+                            }}
+                          />
+                          <span>{ingredient.name}</span>
+                          {ingredient.onHand <= 0 && (
+                            <Badge variant="destructive" className="text-[10px]">Out</Badge>
+                          )}
+                        </label>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Add ingredients in Inventory to assign them.</p>
+                  )}
                 </div>
               </div>
 
@@ -974,7 +1033,7 @@ export default function DrinksPage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                       <div className="flex items-center gap-2">
                         <Switch
                           id="edit-drink-mocktail"
@@ -1014,6 +1073,54 @@ export default function DrinksPage() {
                           onCheckedChange={(checked) => setEditingDrink({ ...editingDrink, isActive: checked })}
                         />
                         <Label htmlFor="edit-drink-active" className="text-sm">Active</Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          id="edit-drink-out-of-stock"
+                          checked={editingDrink.isOutOfStock}
+                          onCheckedChange={(checked) => setEditingDrink({ ...editingDrink, isOutOfStock: checked })}
+                        />
+                        <Label htmlFor="edit-drink-out-of-stock" className="text-sm">Out of Stock</Label>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Ingredients</Label>
+                      <div className="rounded-md border p-3">
+                        {ingredientsLoading ? (
+                          <div className="space-y-2">
+                            {[1, 2, 3].map((row) => (
+                              <Skeleton key={row} className="h-5 w-full" />
+                            ))}
+                          </div>
+                        ) : ingredients.length > 0 ? (
+                          <div className="max-h-48 overflow-y-auto space-y-2">
+                            {ingredients.map((ingredient) => (
+                              <label key={ingredient.id} className="flex items-center gap-2 text-sm">
+                                <Checkbox
+                                  checked={editingDrink.ingredientIds.includes(ingredient.id)}
+                                  onCheckedChange={(checked) => {
+                                    setEditingDrink((prev) => {
+                                      if (!prev) return prev;
+                                      return {
+                                        ...prev,
+                                        ingredientIds: checked
+                                          ? [...prev.ingredientIds, ingredient.id]
+                                          : prev.ingredientIds.filter((id) => id !== ingredient.id),
+                                      };
+                                    });
+                                  }}
+                                />
+                                <span>{ingredient.name}</span>
+                                {ingredient.onHand <= 0 && (
+                                  <Badge variant="destructive" className="text-[10px]">Out</Badge>
+                                )}
+                              </label>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">Add ingredients in Inventory to assign them.</p>
+                        )}
                       </div>
                     </div>
                   </div>

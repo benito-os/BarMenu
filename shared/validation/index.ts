@@ -2,7 +2,10 @@ import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import {
   drinks,
+  drinkIngredients,
+  ingredients,
   insertDrinkSchema,
+  insertIngredientSchema,
   insertMenuSchema,
   insertOrderSchema,
   menus,
@@ -11,6 +14,7 @@ import {
 
 export const menuSchema = createSelectSchema(menus);
 export const drinkSchema = createSelectSchema(drinks);
+export const ingredientSchema = createSelectSchema(ingredients);
 export const orderSchema = createSelectSchema(orders);
 
 export const menuCreateSchema = insertMenuSchema.strict();
@@ -21,12 +25,26 @@ export const menuUpdateSchema = menuCreateSchema
     message: "At least one menu field must be provided",
   });
 
-export const drinkCreateSchema = insertDrinkSchema.strict();
-export const drinkUpdateSchema = drinkCreateSchema
+const baseDrinkCreateSchema = insertDrinkSchema.strict();
+export const drinkCreateSchema = baseDrinkCreateSchema.extend({
+  ingredientIds: z.array(z.string().min(1)).optional(),
+});
+export const drinkUpdateSchema = baseDrinkCreateSchema
+  .partial()
+  .strict()
+  .extend({
+    ingredientIds: z.array(z.string().min(1)).optional(),
+  })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: "At least one drink field must be provided",
+  });
+
+export const ingredientCreateSchema = insertIngredientSchema.strict();
+export const ingredientUpdateSchema = ingredientCreateSchema
   .partial()
   .strict()
   .refine((data) => Object.keys(data).length > 0, {
-    message: "At least one drink field must be provided",
+    message: "At least one ingredient field must be provided",
   });
 
 export const drinkReorderSchema = z.object({
@@ -48,6 +66,8 @@ export const drinkBulkUpdateSchema = z.object({
   drinkIds: z.array(z.string().min(1)).nonempty("drinkIds is required"),
   isActive: z.boolean(),
 });
+
+export const drinkIngredientSchema = createSelectSchema(drinkIngredients);
 
 export const orderCreateSchema = insertOrderSchema
   .extend({
@@ -88,6 +108,12 @@ export const drinkAnalyticsSchema = z.object({
   isNeverMade: z.boolean(),
 });
 
+export const drinkAvailabilitySchema = drinkSchema.extend({
+  ingredientIds: z.array(z.string()),
+  missingIngredients: z.array(z.string()),
+  isMakeable: z.boolean(),
+});
+
 export const orderWithDrinkSchema = orderSchema
   .omit({
     guestName: true,
@@ -109,11 +135,14 @@ export const orderWithDrinkSchema = orderSchema
 
 export type Menu = z.infer<typeof menuSchema>;
 export type Drink = z.infer<typeof drinkSchema>;
+export type Ingredient = z.infer<typeof ingredientSchema>;
 export type Order = z.infer<typeof orderSchema>;
 export type InsertMenu = z.infer<typeof menuCreateSchema>;
 export type InsertDrink = z.infer<typeof drinkCreateSchema>;
+export type InsertIngredient = z.infer<typeof ingredientCreateSchema>;
 export type InsertOrder = z.infer<typeof orderCreateSchema>;
 export type DrinkReorderRequest = z.infer<typeof drinkReorderSchema>;
 export type DrinkBulkUpdateRequest = z.infer<typeof drinkBulkUpdateSchema>;
 export type OrderWithDrink = z.infer<typeof orderWithDrinkSchema>;
 export type DrinkAnalytics = z.infer<typeof drinkAnalyticsSchema>;
+export type DrinkAvailability = z.infer<typeof drinkAvailabilitySchema>;

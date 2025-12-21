@@ -1,12 +1,12 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Drink } from "@shared/validation";
+import type { DrinkAvailability } from "@shared/validation";
 
 export function useDrinks(menuId?: string, enabled = true) {
   const { toast } = useToast();
 
-  const { data: allDrinks, isLoading: allDrinksLoading } = useQuery<Drink[]>({
+  const { data: allDrinks, isLoading: allDrinksLoading } = useQuery<DrinkAvailability[]>({
     queryKey: ["/api/drinks/all", menuId],
     queryFn: async () => {
       if (!menuId) return [];
@@ -50,11 +50,11 @@ export function useDrinks(menuId?: string, enabled = true) {
   });
 
   const updateDrinkMutation = useMutation({
-    mutationFn: async (drink: Drink) => {
+    mutationFn: async (drink: DrinkAvailability) => {
       const { id, menuId: dMenuId, name, section, description, recipe, style, temperature, 
-              isMocktail, canBeMocktail, isStirred, isShaken, baseSpirit, isActive, sortOrder } = drink;
+              isMocktail, canBeMocktail, isStirred, isShaken, baseSpirit, isActive, isOutOfStock, sortOrder, ingredientIds } = drink;
       const updateData = { menuId: dMenuId, name, section, description, recipe, style, temperature, 
-                          isMocktail, canBeMocktail, isStirred, isShaken, baseSpirit, isActive, sortOrder };
+                          isMocktail, canBeMocktail, isStirred, isShaken, baseSpirit, isActive, isOutOfStock, sortOrder, ingredientIds };
       return apiRequest("PATCH", `/api/drinks/${id}`, updateData);
     },
     onSuccess: (_data, drink) => {

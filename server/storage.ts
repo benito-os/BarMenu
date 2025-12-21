@@ -8,8 +8,12 @@ import {
   type InsertOrder,
   type DrinkAnalytics,
   type OrderWithDrink,
+  type Ingredient,
+  type InsertIngredient,
   menus,
   drinks,
+  drinkIngredients,
+  ingredients,
   orders
 } from "@shared/schema";
 import { db } from "./db";
@@ -34,6 +38,7 @@ export interface IStorage {
   reorderDrinks(drinks: Array<{ id: string; sortOrder: number }>): Promise<void>;
   bulkDeleteDrinks(drinkIds: string[]): Promise<void>;
   bulkUpdateDrinks(drinkIds: string[], isActive: boolean): Promise<void>;
+  setDrinkIngredients(drinkId: string, ingredientIds: string[]): Promise<void>;
   
   // Order operations
   createOrder(order: InsertOrder): Promise<Order>;
@@ -43,6 +48,26 @@ export interface IStorage {
   
   // Analytics operations
   getDrinkAnalytics(menuId?: string): Promise<DrinkAnalytics[]>;
+
+  // Ingredient operations
+  getIngredients(): Promise<Ingredient[]>;
+  createIngredient(ingredient: InsertIngredient): Promise<Ingredient>;
+  updateIngredient(id: string, data: Partial<Ingredient>): Promise<Ingredient | undefined>;
+
+  // Availability operations
+  getDrinksWithAvailability(menuId: string, includeInactive?: boolean): Promise<(Drink & {
+    ingredientIds: string[];
+    missingIngredients: string[];
+    isMakeable: boolean;
+  })[]>;
+  getActiveMenuDrinkAlerts(): Promise<Array<{
+    menuId: string;
+    menuName: string;
+    drinkId: string;
+    drinkName: string;
+    missingIngredients: string[];
+    isOutOfStock: boolean;
+  }>>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -70,19 +95,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getDrinksByMenuId(menuId: string): Promise<Drink[]> {
-    return await db
-      .select()
-      .from(drinks)
-      .where(and(eq(drinks.menuId, menuId), eq(drinks.isActive, true)))
-      .orderBy(drinks.section, drinks.sortOrder);
+    const results = await this.getDrinksWithAvailability(menuId, false);
+    return results.map(({ ingredientIds: _ingredientIds, missingIngredients: _missingIngredients, isMakeable: _isMakeable, ...drink }) => drink);
   }
 
   async getAllDrinksByMenuId(menuId: string): Promise<Drink[]> {
-    return await db
-      .select()
-      .from(drinks)
-      .where(eq(drinks.menuId, menuId))
-      .orderBy(drinks.section, drinks.sortOrder);
+    const results = await this.getDrinksWithAvailability(menuId, true);
+    return results.map(({ ingredientIds: _ingredientIds, missingIngredients: _missingIngredients, isMakeable: _isMakeable, ...drink }) => drink);
   }
 
   async getDrinkById(id: string): Promise<Drink | undefined> {
@@ -173,10 +192,28 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
+  async setDrinkIngredients(drinkId: string, ingredientIds: string[]): Promise<void> {
+    await withTransaction("setDrinkIngredients", async (tx) => {
+      await tx.delete(drinkIngredients).where(eq(drinkIngredients.drinkId, drinkId));
+
+      if (ingredientIds.length === 0) {
+        return;
+      }
+
+      const uniqueIngredientIds = Array.from(new Set(ingredientIds));
+      const values = uniqueIngredientIds.map((ingredientId) => ({
+        drinkId,
+        ingredientId,
+      }));
+
+      await tx.insert(drinkIngredients).values(values);
+    });
+  }
+
   async createOrder(insertOrder: InsertOrder): Promise<Order> {
     return await withTransaction("createOrder", async (tx) => {
       const [targetDrink] = await tx
-        .select({ id: drinks.id, menuId: drinks.menuId, isActive: drinks.isActive })
+        .select({ id: drinks.id, menuId: drinks.menuId, isActive: drinks.isActive, isOutOfStock: drinks.isOutOfStock })
         .from(drinks)
         .where(eq(drinks.id, insertOrder.drinkId));
 
@@ -201,6 +238,41 @@ export class DatabaseStorage implements IStorage {
           status: 400,
           code: "DRINK_INACTIVE",
           context: { drinkId: insertOrder.drinkId },
+        });
+      }
+
+      if (targetDrink.isOutOfStock) {
+        throw new StorageError("Drink is out of stock", {
+          status: 400,
+          code: "DRINK_OUT_OF_STOCK",
+          context: { drinkId: insertOrder.drinkId },
+        });
+      }
+
+      const [availability] = await tx
+        .select({
+          missingIngredients: sql<string[]>`
+            COALESCE(
+              array_agg(DISTINCT ${ingredients.name})
+              FILTER (WHERE ${ingredients.id} IS NOT NULL AND (${ingredients.onHand} <= 0 OR ${ingredients.isActive} = false)),
+              ARRAY[]::text[]
+            )
+          `,
+        })
+        .from(drinks)
+        .leftJoin(drinkIngredients, eq(drinks.id, drinkIngredients.drinkId))
+        .leftJoin(ingredients, eq(drinkIngredients.ingredientId, ingredients.id))
+        .where(eq(drinks.id, insertOrder.drinkId))
+        .groupBy(drinks.id);
+
+      if (availability?.missingIngredients && availability.missingIngredients.length > 0) {
+        throw new StorageError("Drink ingredients are unavailable", {
+          status: 400,
+          code: "DRINK_INGREDIENTS_UNAVAILABLE",
+          context: {
+            drinkId: insertOrder.drinkId,
+            missingIngredients: availability.missingIngredients,
+          },
         });
       }
 
@@ -297,6 +369,129 @@ export class DatabaseStorage implements IStorage {
       ...result,
       isNeverMade: result.orderCount === 0,
     }));
+  }
+
+  async getIngredients(): Promise<Ingredient[]> {
+    return await db.select().from(ingredients).orderBy(ingredients.name);
+  }
+
+  async createIngredient(insertIngredient: InsertIngredient): Promise<Ingredient> {
+    const [ingredient] = await db.insert(ingredients).values(insertIngredient).returning();
+    return ingredient;
+  }
+
+  async updateIngredient(id: string, data: Partial<Ingredient>): Promise<Ingredient | undefined> {
+    const [ingredient] = await db.update(ingredients).set(data).where(eq(ingredients.id, id)).returning();
+    return ingredient || undefined;
+  }
+
+  async getDrinksWithAvailability(menuId: string, includeInactive = false): Promise<(Drink & {
+    ingredientIds: string[];
+    missingIngredients: string[];
+    isMakeable: boolean;
+  })[]> {
+    const results = await db
+      .select({
+        id: drinks.id,
+        menuId: drinks.menuId,
+        name: drinks.name,
+        section: drinks.section,
+        description: drinks.description,
+        recipe: drinks.recipe,
+        style: drinks.style,
+        temperature: drinks.temperature,
+        isMocktail: drinks.isMocktail,
+        canBeMocktail: drinks.canBeMocktail,
+        isStirred: drinks.isStirred,
+        isShaken: drinks.isShaken,
+        baseSpirit: drinks.baseSpirit,
+        isActive: drinks.isActive,
+        isOutOfStock: drinks.isOutOfStock,
+        sortOrder: drinks.sortOrder,
+        ingredientIds: sql<string[]>`
+          COALESCE(
+            array_agg(DISTINCT ${drinkIngredients.ingredientId})
+            FILTER (WHERE ${drinkIngredients.ingredientId} IS NOT NULL),
+            ARRAY[]::text[]
+          )
+        `,
+        missingIngredients: sql<string[]>`
+          COALESCE(
+            array_agg(DISTINCT ${ingredients.name})
+            FILTER (WHERE ${ingredients.id} IS NOT NULL AND (${ingredients.onHand} <= 0 OR ${ingredients.isActive} = false)),
+            ARRAY[]::text[]
+          )
+        `,
+      })
+      .from(drinks)
+      .leftJoin(drinkIngredients, eq(drinks.id, drinkIngredients.drinkId))
+      .leftJoin(ingredients, eq(drinkIngredients.ingredientId, ingredients.id))
+      .where(
+        includeInactive
+          ? eq(drinks.menuId, menuId)
+          : and(eq(drinks.menuId, menuId), eq(drinks.isActive, true)),
+      )
+      .groupBy(drinks.id)
+      .orderBy(drinks.section, drinks.sortOrder);
+
+    return results.map((drink) => ({
+      ...drink,
+      ingredientIds: drink.ingredientIds ?? [],
+      missingIngredients: drink.missingIngredients ?? [],
+      isMakeable: !drink.isOutOfStock && (drink.missingIngredients ?? []).length === 0,
+    }));
+  }
+
+  async getActiveMenuDrinkAlerts(): Promise<Array<{
+    menuId: string;
+    menuName: string;
+    drinkId: string;
+    drinkName: string;
+    missingIngredients: string[];
+    isOutOfStock: boolean;
+  }>> {
+    const activeMenus = await db
+      .select({ id: menus.id, name: menus.name })
+      .from(menus)
+      .where(eq(menus.isActive, true));
+
+    if (activeMenus.length === 0) {
+      return [];
+    }
+
+    const menuIds = activeMenus.map((menu) => menu.id);
+    const menuNameLookup = new Map(activeMenus.map((menu) => [menu.id, menu.name]));
+
+    const results = await db
+      .select({
+        menuId: drinks.menuId,
+        drinkId: drinks.id,
+        drinkName: drinks.name,
+        isOutOfStock: drinks.isOutOfStock,
+        missingIngredients: sql<string[]>`
+          COALESCE(
+            array_agg(DISTINCT ${ingredients.name})
+            FILTER (WHERE ${ingredients.id} IS NOT NULL AND (${ingredients.onHand} <= 0 OR ${ingredients.isActive} = false)),
+            ARRAY[]::text[]
+          )
+        `,
+      })
+      .from(drinks)
+      .leftJoin(drinkIngredients, eq(drinks.id, drinkIngredients.drinkId))
+      .leftJoin(ingredients, eq(drinkIngredients.ingredientId, ingredients.id))
+      .where(and(inArray(drinks.menuId, menuIds), eq(drinks.isActive, true)))
+      .groupBy(drinks.id);
+
+    return results
+      .filter((drink) => drink.isOutOfStock || (drink.missingIngredients ?? []).length > 0)
+      .map((drink) => ({
+        menuId: drink.menuId,
+        menuName: menuNameLookup.get(drink.menuId) ?? "Active Menu",
+        drinkId: drink.drinkId,
+        drinkName: drink.drinkName,
+        missingIngredients: drink.missingIngredients ?? [],
+        isOutOfStock: drink.isOutOfStock,
+      }));
   }
 }
 

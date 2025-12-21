@@ -42,6 +42,7 @@ export const drinks = pgTable("drinks", {
   isShaken: boolean("is_shaken").notNull().default(false),
   baseSpirit: text("base_spirit"), // e.g., "Bourbon", "Vodka", "Espresso"
   isActive: boolean("is_active").notNull().default(true),
+  isOutOfStock: boolean("is_out_of_stock").notNull().default(false),
   sortOrder: integer("sort_order").notNull().default(0),
 });
 
@@ -51,6 +52,33 @@ export const insertDrinkSchema = createInsertSchema(drinks).omit({
 
 export type InsertDrink = z.infer<typeof insertDrinkSchema>;
 export type Drink = typeof drinks.$inferSelect;
+
+// Ingredients table
+export const ingredients = pgTable("ingredients", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  category: text("category"),
+  unit: text("unit").notNull().default("units"),
+  onHand: integer("on_hand").notNull().default(0),
+  parLevel: integer("par_level").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertIngredientSchema = createInsertSchema(ingredients).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertIngredient = z.infer<typeof insertIngredientSchema>;
+export type Ingredient = typeof ingredients.$inferSelect;
+
+// Drink Ingredients table
+export const drinkIngredients = pgTable("drink_ingredients", {
+  drinkId: varchar("drink_id").notNull().references(() => drinks.id, { onDelete: "cascade" }),
+  ingredientId: varchar("ingredient_id").notNull().references(() => ingredients.id, { onDelete: "cascade" }),
+  amount: text("amount"),
+});
 
 // Orders table
 export const orders = pgTable("orders", {

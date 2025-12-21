@@ -11,6 +11,8 @@ import {
   drinkIdParamsSchema,
   drinkReorderSchema,
   drinkUpdateSchema,
+  ingredientCreateSchema,
+  ingredientUpdateSchema,
   menuCreateSchema,
   menuIdQuerySchema,
   menuSlugSchema,
@@ -181,7 +183,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const query = validate(menuIdQuerySchema, req.query, res, "menuId query parameter is required");
       if (!query) return;
 
-      const drinks = await storage.getDrinksByMenuId(query.menuId);
+      const drinks = await storage.getDrinksWithAvailability(query.menuId, false);
       res.json(drinks);
     } catch (error) {
       console.error("Error fetching drinks:", error);
@@ -195,7 +197,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const query = validate(menuIdQuerySchema, req.query, res, "menuId query parameter is required");
       if (!query) return;
 
-      const drinks = await storage.getAllDrinksByMenuId(query.menuId);
+      const drinks = await storage.getDrinksWithAvailability(query.menuId, true);
       res.json(drinks);
     } catch (error) {
       console.error("Error fetching all drinks:", error);
@@ -226,7 +228,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = validate(drinkCreateSchema, req.body, res, "Invalid drink data");
       if (!validatedData) return;
-      const drink = await storage.createDrink(validatedData);
+      const { ingredientIds = [], ...drinkData } = validatedData;
+      const drink = await storage.createDrink(drinkData);
+      await storage.setDrinkIngredients(drink.id, ingredientIds);
       res.status(201).json(drink);
     } catch (error) {
       console.error("Error creating drink:", error);
@@ -305,14 +309,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updateData = validate(drinkUpdateSchema, req.body, res, "Invalid drink update data");
       if (!updateData) return;
 
-      const drink = await storage.updateDrink(params.id, updateData);
+      const { ingredientIds, ...drinkUpdates } = updateData;
+      const drink = await storage.updateDrink(params.id, drinkUpdates);
       if (!drink) {
         return res.status(404).json({ error: "Drink not found" });
+      }
+      if (ingredientIds) {
+        await storage.setDrinkIngredients(params.id, ingredientIds);
       }
       res.json(drink);
     } catch (error) {
       console.error("Error updating drink:", error);
       res.status(500).json({ error: "Failed to update drink" });
+    }
+  });
+
+  // GET /api/ingredients - Get all ingredients
+  app.get("/api/ingredients", async (_req, res) => {
+    try {
+      const ingredients = await storage.getIngredients();
+      res.json(ingredients);
+    } catch (error) {
+      console.error("Error fetching ingredients:", error);
+      res.status(500).json({ error: "Failed to fetch ingredients" });
+    }
+  });
+
+  // POST /api/ingredients - Create new ingredient
+  app.post("/api/ingredients", async (req, res) => {
+    try {
+      const validatedData = validate(ingredientCreateSchema, req.body, res, "Invalid ingredient data");
+      if (!validatedData) return;
+      const ingredient = await storage.createIngredient(validatedData);
+      res.status(201).json(ingredient);
+    } catch (error) {
+      console.error("Error creating ingredient:", error);
+      res.status(500).json({ error: "Failed to create ingredient" });
+    }
+  });
+
+  // PATCH /api/ingredients/:id - Update ingredient
+  app.patch("/api/ingredients/:id", async (req, res) => {
+    try {
+      const params = validate(idParamsSchema, req.params, res, "Invalid ingredient id");
+      if (!params) return;
+      const updateData = validate(ingredientUpdateSchema, req.body, res, "Invalid ingredient update data");
+      if (!updateData) return;
+
+      const ingredient = await storage.updateIngredient(params.id, updateData);
+      if (!ingredient) {
+        return res.status(404).json({ error: "Ingredient not found" });
+      }
+      res.json(ingredient);
+    } catch (error) {
+      console.error("Error updating ingredient:", error);
+      res.status(500).json({ error: "Failed to update ingredient" });
+    }
+  });
+
+  // GET /api/availability/active-menus - Drinks unavailable due to stock
+  app.get("/api/availability/active-menus", async (_req, res) => {
+    try {
+      const alerts = await storage.getActiveMenuDrinkAlerts();
+      res.json(alerts);
+    } catch (error) {
+      console.error("Error fetching availability alerts:", error);
+      res.status(500).json({ error: "Failed to fetch availability alerts" });
     }
   });
 
@@ -451,4 +513,3 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     return null;
   };
-
