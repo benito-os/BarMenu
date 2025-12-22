@@ -311,6 +311,8 @@ export class DatabaseStorage implements IStorage {
         drinkId: orders.drinkId,
         menuId: orders.menuId,
         guestName: orders.guestName,
+        comments: orders.comments,
+        asMocktail: orders.asMocktail,
         status: orders.status,
         requestedAt: orders.requestedAt,
         completedAt: orders.completedAt,
@@ -325,6 +327,7 @@ export class DatabaseStorage implements IStorage {
         drinkCanBeMocktail: drinks.canBeMocktail,
         drinkIsStirred: drinks.isStirred,
         drinkIsShaken: drinks.isShaken,
+        drinkIsOutOfStock: drinks.isOutOfStock,
       })
       .from(orders)
       .innerJoin(drinks, eq(orders.drinkId, drinks.id))

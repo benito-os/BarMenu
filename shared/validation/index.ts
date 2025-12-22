@@ -131,6 +131,7 @@ export const orderWithDrinkSchema = orderSchema
     drinkCanBeMocktail: z.boolean(),
     drinkIsStirred: z.boolean(),
     drinkIsShaken: z.boolean(),
+    drinkIsOutOfStock: z.boolean(),
   });
 
 export type Menu = z.infer<typeof menuSchema>;

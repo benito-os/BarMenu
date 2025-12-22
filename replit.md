@@ -79,6 +79,9 @@ Preferred communication style: Simple, everyday language.
     - **Batch Order Operations**: Queue page supports checkbox selection with bulk "Start Preparing", "Mark Served", and "Clear Served" actions
     - **Waiting Time Indicators**: Order queue displays color-coded waiting time badges with configurable thresholds (default: gray <3min, yellow 3-5min, red 5+ min). Thresholds can be customized in Settings → Queue Settings.
     - **Quick 86 Action**: Drinks page has one-tap "86" button to mark drinks out-of-stock (shows "Restock" when already 86'd)
+    - **Queue 86 Toggle**: Order queue allows marking drinks out-of-stock directly from queue cards/rows with immediate visual highlighting
+    - **Mobile Queue Optimization**: Compact stacked card layout optimized for 375px screens with checkbox/status rows, smaller badges, and 2-column action grid
+    - **Out-of-Stock Highlighting**: Queue orders for 86'd drinks display destructive badge, highlighted row styling, and "alert the guest" helper text
 
 ## External Dependencies
 

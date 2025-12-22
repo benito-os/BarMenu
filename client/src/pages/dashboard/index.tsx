@@ -1,7 +1,10 @@
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useOrders } from "@/hooks/useOrders";
 import { useSettings } from "@/hooks/useSettings";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,10 +13,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Clock, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, MessageSquare, Leaf, Trash2, Play } from "lucide-react";
+import { Clock, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, MessageSquare, Leaf, Trash2, Play, Ban, RotateCcw } from "lucide-react";
 import type { OrderWithDrink } from "@shared/validation";
 
 export default function QueuePage() {
+  const { toast } = useToast();
   const { 
     queue, 
     queueLoading, 
@@ -30,6 +34,41 @@ export default function QueuePage() {
   const [selectedOrder, setSelectedOrder] = useState<OrderWithDrink | null>(null);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // 86 toggle mutation for marking drinks out of stock
+  const toggleStockMutation = useMutation({
+    mutationFn: async ({ drinkId, isOutOfStock }: { drinkId: string; isOutOfStock: boolean }) => {
+      return apiRequest("PATCH", `/api/drinks/${drinkId}`, { isOutOfStock });
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/orders/queue"] });
+      queryClient.invalidateQueries({ 
+        predicate: (query) => query.queryKey[0] === "/api/drinks/all"
+      });
+      
+      // Update selectedOrder state to reflect the change immediately in the drawer
+      if (selectedOrder && selectedOrder.drinkId === variables.drinkId) {
+        setSelectedOrder({
+          ...selectedOrder,
+          drinkIsOutOfStock: variables.isOutOfStock,
+        });
+      }
+      
+      toast({
+        title: variables.isOutOfStock ? "Drink 86'd" : "Drink Restocked",
+        description: variables.isOutOfStock 
+          ? "This drink is now marked as out of stock" 
+          : "This drink is now available again",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update drink stock status",
+        variant: "destructive",
+      });
+    },
+  });
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -156,145 +195,184 @@ export default function QueuePage() {
     queue.find(o => o.id === id)?.status === "in_progress"
   ).length;
 
-  // Mobile card component for each order
+  // Mobile card component for each order - optimized for small screens (375px+)
   const MobileOrderCard = ({ order }: { order: OrderWithDrink }) => {
     const isExpanded = expandedOrderId === order.id;
     const isSelected = selectedIds.has(order.id);
     const waitingBadge = getWaitingBadge(order.requestedAt.toString(), order.status);
+    const isOutOfStock = order.drinkIsOutOfStock;
     
     return (
       <div 
-        className={`border rounded-lg mb-2 overflow-hidden ${isSelected ? "ring-2 ring-primary" : ""}`}
+        className={`border rounded-lg mb-2 overflow-hidden ${isSelected ? "ring-2 ring-primary" : ""} ${isOutOfStock ? "border-destructive/50 bg-destructive/5" : ""}`}
         data-testid={`mobile-order-${order.id}`}
       >
-        <div className="flex items-center">
-          <div 
-            className="p-3 flex items-center justify-center"
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleSelect(order.id);
-            }}
-          >
-            <Checkbox 
-              checked={isSelected}
-              data-testid={`mobile-checkbox-${order.id}`}
-            />
-          </div>
-          <Collapsible
-            open={isExpanded}
-            onOpenChange={() => toggleExpand(order.id)}
-            className="flex-1"
-          >
-            <CollapsibleTrigger className="w-full">
-              <div className="flex items-center justify-between p-3 pl-0 hover-elevate">
-                <div className="flex-1 min-w-0 text-left">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-serif font-medium truncate">{order.drinkName}</span>
-                    {order.asMocktail && (
-                      <Badge variant="outline" className="text-xs shrink-0">
-                        <Leaf className="w-3 h-3 mr-1" />
-                        Mocktail
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                    <span>{order.guestName || "Guest"}</span>
-                    <span>•</span>
-                    <span>{formatTime(order.requestedAt.toString())}</span>
-                    {order.comments && (
-                      <>
-                        <span>•</span>
-                        <MessageSquare className="w-3 h-3" />
-                      </>
-                    )}
-                  </div>
+        <Collapsible
+          open={isExpanded}
+          onOpenChange={() => toggleExpand(order.id)}
+        >
+          <CollapsibleTrigger className="w-full">
+            <div className="p-2.5 hover-elevate">
+              {/* Row 1: Checkbox + Drink name + expand icon */}
+              <div className="flex items-center gap-2">
+                <div 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleSelect(order.id);
+                  }}
+                  className="shrink-0"
+                >
+                  <Checkbox 
+                    checked={isSelected}
+                    data-testid={`mobile-checkbox-${order.id}`}
+                  />
                 </div>
-                <div className="flex items-center gap-2 shrink-0 ml-2">
-                  {waitingBadge}
-                  {getStatusBadge(order.status)}
-                  {isExpanded ? (
-                    <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                  )}
-                </div>
+                <span className="font-serif font-medium text-sm truncate flex-1 text-left">
+                  {order.drinkName}
+                </span>
+                {isExpanded ? (
+                  <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+                )}
               </div>
-            </CollapsibleTrigger>
-            
-            <CollapsibleContent>
-              <div className="px-3 pb-3 pt-1 border-t bg-muted/30 space-y-3">
-                {order.comments && (
-                  <div className="text-sm">
-                    <span className="font-medium">Notes: </span>
-                    <span className="text-muted-foreground">{order.comments}</span>
-                  </div>
+              
+              {/* Row 2: Guest + Time + Comment indicator */}
+              <div className="flex items-center gap-1.5 mt-1 ml-6 text-xs text-muted-foreground">
+                <span className="truncate max-w-[80px]">{order.guestName || "Guest"}</span>
+                <span>•</span>
+                <span className="shrink-0">{formatTime(order.requestedAt.toString())}</span>
+                {order.comments && <MessageSquare className="w-3 h-3 shrink-0" />}
+              </div>
+              
+              {/* Row 3: Badges */}
+              <div className="flex items-center gap-1.5 mt-1.5 ml-6 flex-wrap">
+                {isOutOfStock && (
+                  <Badge variant="destructive" className="text-[10px] px-1.5 py-0" data-testid={`badge-86-${order.id}`}>
+                    <Ban className="w-2.5 h-2.5 mr-0.5" />
+                    86'd
+                  </Badge>
                 )}
-                
-                {order.drinkRecipe && (
-                  <div className="text-sm">
-                    <span className="font-medium">Recipe: </span>
-                    <span className="text-muted-foreground line-clamp-2">{order.drinkRecipe}</span>
-                  </div>
+                {waitingBadge}
+                {getStatusBadge(order.status)}
+                {order.asMocktail && (
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                    <Leaf className="w-2.5 h-2.5 mr-0.5" />
+                    Mocktail
+                  </Badge>
                 )}
-                
-                <div className="flex flex-wrap gap-2 text-xs">
-                  {order.drinkBaseSpirit && (
-                    <Badge variant="outline">{order.drinkBaseSpirit}</Badge>
-                  )}
-                  {order.drinkTemperature && order.drinkTemperature !== "Not Specified" && (
-                    <Badge variant="outline">{order.drinkTemperature}</Badge>
-                  )}
-                  {order.drinkIsStirred && <Badge variant="outline">Stirred</Badge>}
-                  {order.drinkIsShaken && <Badge variant="outline">Shaken</Badge>}
+              </div>
+            </div>
+          </CollapsibleTrigger>
+          
+          <CollapsibleContent>
+            <div className="px-2.5 pb-2.5 pt-1.5 border-t bg-muted/30 space-y-2">
+              {/* Out of stock warning */}
+              {isOutOfStock && (
+                <div className="text-xs text-destructive bg-destructive/10 rounded px-2 py-1.5">
+                  This drink is out of stock — alert the guest
                 </div>
-                
-                <div className="flex gap-2 pt-2">
-                  {order.status === "requested" && (
-                    <Button
-                      size="sm"
-                      className="flex-1"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        markInProgress(order.id);
-                      }}
-                      disabled={inProgressPending}
-                      data-testid={`mobile-button-in-progress-${order.id}`}
-                    >
-                      <Clock className="w-4 h-4 mr-2" />
-                      Start
-                    </Button>
-                  )}
-                  {order.status === "in_progress" && (
-                    <Button
-                      size="sm"
-                      className="flex-1"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        markServed(order.id);
-                      }}
-                      disabled={servedPending}
-                      data-testid={`mobile-button-serve-${order.id}`}
-                    >
-                      <CheckCircle2 className="w-4 h-4 mr-2" />
-                      Served
-                    </Button>
-                  )}
+              )}
+              
+              {order.comments && (
+                <div className="text-xs">
+                  <span className="font-medium">Notes: </span>
+                  <span className="text-muted-foreground">{order.comments}</span>
+                </div>
+              )}
+              
+              {order.drinkRecipe && order.drinkRecipe !== "-" && (
+                <div className="text-xs">
+                  <span className="font-medium">Recipe: </span>
+                  <span className="text-muted-foreground line-clamp-2">{order.drinkRecipe}</span>
+                </div>
+              )}
+              
+              <div className="flex flex-wrap gap-1 text-xs">
+                {order.drinkBaseSpirit && (
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">{order.drinkBaseSpirit}</Badge>
+                )}
+                {order.drinkTemperature && order.drinkTemperature !== "Not Specified" && (
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">{order.drinkTemperature}</Badge>
+                )}
+                {order.drinkIsStirred && <Badge variant="outline" className="text-[10px] px-1.5 py-0">Stirred</Badge>}
+                {order.drinkIsShaken && <Badge variant="outline" className="text-[10px] px-1.5 py-0">Shaken</Badge>}
+              </div>
+              
+              {/* Action buttons - stacked for very small screens */}
+              <div className="grid grid-cols-2 gap-1.5 pt-1">
+                {order.status === "requested" && (
                   <Button
                     size="sm"
-                    variant="outline"
+                    className="h-8 text-xs"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setSelectedOrder(order);
+                      markInProgress(order.id);
                     }}
-                    data-testid={`mobile-button-details-${order.id}`}
+                    disabled={inProgressPending}
+                    data-testid={`mobile-button-in-progress-${order.id}`}
                   >
-                    Full Details
+                    <Play className="w-3 h-3 mr-1" />
+                    Start
                   </Button>
-                </div>
+                )}
+                {order.status === "in_progress" && (
+                  <Button
+                    size="sm"
+                    className="h-8 text-xs"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      markServed(order.id);
+                    }}
+                    disabled={servedPending}
+                    data-testid={`mobile-button-serve-${order.id}`}
+                  >
+                    <CheckCircle2 className="w-3 h-3 mr-1" />
+                    Served
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedOrder(order);
+                  }}
+                  data-testid={`mobile-button-details-${order.id}`}
+                >
+                  Details
+                </Button>
+                <Button
+                  size="sm"
+                  variant={isOutOfStock ? "secondary" : "outline"}
+                  className="h-8 text-xs"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleStockMutation.mutate({ 
+                      drinkId: order.drinkId, 
+                      isOutOfStock: !isOutOfStock 
+                    });
+                  }}
+                  disabled={toggleStockMutation.isPending}
+                  data-testid={`mobile-button-86-${order.id}`}
+                >
+                  {isOutOfStock ? (
+                    <>
+                      <RotateCcw className="w-3 h-3 mr-1" />
+                      Restock
+                    </>
+                  ) : (
+                    <>
+                      <Ban className="w-3 h-3 mr-1" />
+                      86 Drink
+                    </>
+                  )}
+                </Button>
               </div>
-            </CollapsibleContent>
-          </Collapsible>
-        </div>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
     );
   };
@@ -405,7 +483,7 @@ export default function QueuePage() {
                         <TableRow 
                           key={order.id}
                           data-testid={`row-order-${order.id}`}
-                          className={`cursor-pointer hover-elevate ${selectedIds.has(order.id) ? "bg-muted/50" : ""}`}
+                          className={`cursor-pointer hover-elevate ${selectedIds.has(order.id) ? "bg-muted/50" : ""} ${order.drinkIsOutOfStock ? "bg-destructive/5 border-l-2 border-l-destructive" : ""}`}
                           onClick={() => setSelectedOrder(order)}
                         >
                           <TableCell onClick={(e) => e.stopPropagation()}>
@@ -427,6 +505,12 @@ export default function QueuePage() {
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <span className="font-serif">{order.drinkName}</span>
+                              {order.drinkIsOutOfStock && (
+                                <Badge variant="destructive" className="text-xs">
+                                  <Ban className="w-3 h-3 mr-1" />
+                                  86'd
+                                </Badge>
+                              )}
                               {order.asMocktail && (
                                 <Badge variant="outline" className="text-xs">
                                   <Leaf className="w-3 h-3 mr-1" />
@@ -447,34 +531,56 @@ export default function QueuePage() {
                             {getStatusBadge(order.status)}
                           </TableCell>
                           <TableCell className="text-right">
-                            {order.status === "requested" && (
+                            <div className="flex items-center justify-end gap-2">
+                              {order.status === "requested" && (
+                                <Button
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    markInProgress(order.id);
+                                  }}
+                                  disabled={inProgressPending}
+                                  data-testid={`button-in-progress-${order.id}`}
+                                >
+                                  <Clock className="w-4 h-4 mr-2" />
+                                  Start
+                                </Button>
+                              )}
+                              {order.status === "in_progress" && (
+                                <Button
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    markServed(order.id);
+                                  }}
+                                  disabled={servedPending}
+                                  data-testid={`button-serve-${order.id}`}
+                                >
+                                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                                  Served
+                                </Button>
+                              )}
                               <Button
-                                size="sm"
+                                size="icon"
+                                variant={order.drinkIsOutOfStock ? "secondary" : "outline"}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  markInProgress(order.id);
+                                  toggleStockMutation.mutate({ 
+                                    drinkId: order.drinkId, 
+                                    isOutOfStock: !order.drinkIsOutOfStock 
+                                  });
                                 }}
-                                disabled={inProgressPending}
-                                data-testid={`button-in-progress-${order.id}`}
+                                disabled={toggleStockMutation.isPending}
+                                data-testid={`button-86-${order.id}`}
+                                title={order.drinkIsOutOfStock ? "Restock drink" : "86 this drink"}
                               >
-                                <Clock className="w-4 h-4 mr-2" />
-                                Start
+                                {order.drinkIsOutOfStock ? (
+                                  <RotateCcw className="w-4 h-4" />
+                                ) : (
+                                  <Ban className="w-4 h-4" />
+                                )}
                               </Button>
-                            )}
-                            {order.status === "in_progress" && (
-                              <Button
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  markServed(order.id);
-                                }}
-                                disabled={servedPending}
-                                data-testid={`button-serve-${order.id}`}
-                              >
-                                <CheckCircle2 className="w-4 h-4 mr-2" />
-                                Served
-                              </Button>
-                            )}
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -508,8 +614,22 @@ export default function QueuePage() {
                 </SheetHeader>
 
                 <div className="mt-6 space-y-6">
+                  {/* Out of Stock Alert */}
+                  {selectedOrder.drinkIsOutOfStock && (
+                    <div className="text-sm text-destructive bg-destructive/10 rounded-md px-3 py-2 flex items-center gap-2">
+                      <Ban className="w-4 h-4 shrink-0" />
+                      <span>This drink is out of stock — alert the guest</span>
+                    </div>
+                  )}
+
                   {/* Waiting Time & Status */}
                   <div className="flex items-center gap-3 flex-wrap">
+                    {selectedOrder.drinkIsOutOfStock && (
+                      <Badge variant="destructive">
+                        <Ban className="w-3 h-3 mr-1" />
+                        86'd
+                      </Badge>
+                    )}
                     {getWaitingBadge(selectedOrder.requestedAt.toString(), selectedOrder.status)}
                     {getStatusBadge(selectedOrder.status)}
                     {selectedOrder.asMocktail && (
@@ -627,6 +747,30 @@ export default function QueuePage() {
                         Mark as Served
                       </Button>
                     )}
+                    <Button
+                      variant={selectedOrder.drinkIsOutOfStock ? "secondary" : "outline"}
+                      className="w-full"
+                      onClick={() => {
+                        toggleStockMutation.mutate({ 
+                          drinkId: selectedOrder.drinkId, 
+                          isOutOfStock: !selectedOrder.drinkIsOutOfStock 
+                        });
+                      }}
+                      disabled={toggleStockMutation.isPending}
+                      data-testid="sheet-button-86"
+                    >
+                      {selectedOrder.drinkIsOutOfStock ? (
+                        <>
+                          <RotateCcw className="w-4 h-4 mr-2" />
+                          Restock Drink
+                        </>
+                      ) : (
+                        <>
+                          <Ban className="w-4 h-4 mr-2" />
+                          86 This Drink
+                        </>
+                      )}
+                    </Button>
                     <Button
                       variant="outline"
                       className="w-full"
