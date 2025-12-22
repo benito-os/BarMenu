@@ -103,6 +103,22 @@ export const insertOrderSchema = createInsertSchema(orders).omit({
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
 export type Order = typeof orders.$inferSelect;
 
+// Settings table (singleton - only one row)
+export const settings = pgTable("settings", {
+  id: varchar("id").primaryKey().default("default"),
+  waitingWarningMinutes: integer("waiting_warning_minutes").notNull().default(3),
+  waitingUrgentMinutes: integer("waiting_urgent_minutes").notNull().default(5),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertSettingsSchema = createInsertSchema(settings).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export type InsertSettings = z.infer<typeof insertSettingsSchema>;
+export type Settings = typeof settings.$inferSelect;
+
 // Analytics types
 export type DrinkAnalytics = {
   id: string;

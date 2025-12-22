@@ -77,7 +77,7 @@ Preferred communication style: Simple, everyday language.
       - Inventory page: Card-based layout on mobile (hidden on desktop, table on desktop)
       - Responsive breakpoint at md: (768px) switches between mobile card view and desktop table view
     - **Batch Order Operations**: Queue page supports checkbox selection with bulk "Start Preparing", "Mark Served", and "Clear Served" actions
-    - **Waiting Time Indicators**: Order queue displays color-coded waiting time badges (gray <3min, yellow 3-5min, red 5+ min)
+    - **Waiting Time Indicators**: Order queue displays color-coded waiting time badges with configurable thresholds (default: gray <3min, yellow 3-5min, red 5+ min). Thresholds can be customized in Settings → Queue Settings.
     - **Quick 86 Action**: Drinks page has one-tap "86" button to mark drinks out-of-stock (shows "Restock" when already 86'd)
     - **Active Menu Toggle**: Queue page header includes dropdown to quickly switch active menu
 

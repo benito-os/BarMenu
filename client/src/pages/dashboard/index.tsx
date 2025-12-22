@@ -2,6 +2,7 @@ import { useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useOrders } from "@/hooks/useOrders";
 import { useMenus } from "@/hooks/useMenus";
+import { useSettings } from "@/hooks/useSettings";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ export default function QueuePage() {
     clearServedPending
   } = useOrders(true);
   const { menus, menusLoading, toggleMenu } = useMenus(true);
+  const { settings } = useSettings();
   const [selectedOrder, setSelectedOrder] = useState<OrderWithDrink | null>(null);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -62,8 +64,10 @@ export default function QueuePage() {
     if (status === "served") return null;
     
     const { minutes, display } = getWaitingTime(dateString);
+    const urgentThreshold = settings.waitingUrgentMinutes;
+    const warningThreshold = settings.waitingWarningMinutes;
     
-    if (minutes >= 5) {
+    if (minutes >= urgentThreshold) {
       return (
         <Badge variant="destructive" className="text-xs font-mono" data-testid="badge-wait-urgent">
           <Clock className="w-3 h-3 mr-1" />
@@ -71,7 +75,7 @@ export default function QueuePage() {
         </Badge>
       );
     }
-    if (minutes >= 3) {
+    if (minutes >= warningThreshold) {
       return (
         <Badge className="bg-yellow-500 hover:bg-yellow-600 text-xs font-mono" data-testid="badge-wait-warning">
           <Clock className="w-3 h-3 mr-1" />

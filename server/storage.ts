@@ -10,11 +10,14 @@ import {
   type OrderWithDrink,
   type Ingredient,
   type InsertIngredient,
+  type Settings,
+  type InsertSettings,
   menus,
   drinks,
   drinkIngredients,
   ingredients,
-  orders
+  orders,
+  settings
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, sql, inArray } from "drizzle-orm";
@@ -71,6 +74,10 @@ export interface IStorage {
     missingIngredients: string[];
     isOutOfStock: boolean;
   }>>;
+
+  // Settings operations
+  getSettings(): Promise<Settings>;
+  updateSettings(data: Partial<InsertSettings>): Promise<Settings>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -530,6 +537,31 @@ export class DatabaseStorage implements IStorage {
         missingIngredients: drink.missingIngredients ?? [],
         isOutOfStock: drink.isOutOfStock,
       }));
+  }
+
+  async getSettings(): Promise<Settings> {
+    const [existing] = await db.select().from(settings).where(eq(settings.id, "default"));
+    if (existing) {
+      return existing;
+    }
+    // Create default settings if they don't exist
+    const [created] = await db.insert(settings).values({
+      id: "default",
+      waitingWarningMinutes: 3,
+      waitingUrgentMinutes: 5,
+    }).returning();
+    return created;
+  }
+
+  async updateSettings(data: Partial<InsertSettings>): Promise<Settings> {
+    // Ensure settings row exists first
+    await this.getSettings();
+    const [updated] = await db
+      .update(settings)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(settings.id, "default"))
+      .returning();
+    return updated;
   }
 }
 

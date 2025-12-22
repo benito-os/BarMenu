@@ -540,6 +540,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============ SETTINGS ENDPOINTS ============
+
+  // GET /api/settings - Get application settings
+  app.get("/api/settings", async (_req, res) => {
+    try {
+      const settings = await storage.getSettings();
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching settings:", error);
+      res.status(500).json({ error: "Failed to fetch settings" });
+    }
+  });
+
+  // PATCH /api/settings - Update application settings
+  app.patch("/api/settings", async (req, res) => {
+    try {
+      const { waitingWarningMinutes, waitingUrgentMinutes } = req.body;
+      const updates: Record<string, number> = {};
+      
+      if (typeof waitingWarningMinutes === "number" && waitingWarningMinutes >= 1) {
+        updates.waitingWarningMinutes = waitingWarningMinutes;
+      }
+      if (typeof waitingUrgentMinutes === "number" && waitingUrgentMinutes >= 1) {
+        updates.waitingUrgentMinutes = waitingUrgentMinutes;
+      }
+      
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: "No valid settings to update" });
+      }
+      
+      const settings = await storage.updateSettings(updates);
+      res.json(settings);
+    } catch (error) {
+      console.error("Error updating settings:", error);
+      res.status(500).json({ error: "Failed to update settings" });
+    }
+  });
+
   // ============ EXPORT ENDPOINTS ============
   
   // Helper to escape CSV field values
