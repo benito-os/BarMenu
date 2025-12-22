@@ -509,6 +509,393 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============ EXPORT ENDPOINTS ============
+  
+  // Helper to escape CSV field values
+  const escapeCSV = (value: unknown): string => {
+    if (value === null || value === undefined) return "";
+    const str = String(value);
+    if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
+  // Helper to convert array to CSV row
+  const toCSVRow = (values: unknown[]): string => {
+    return values.map(escapeCSV).join(",");
+  };
+
+  // GET /api/export/menus - Export all menus as CSV
+  app.get("/api/export/menus", async (req, res) => {
+    try {
+      const menus = await storage.getAllMenus();
+      const headers = ["id", "slug (REQUIRED)", "name (REQUIRED)", "description", "isActive", "heroImageUrl", "backgroundColor", "accentColor", "typography", "sections", "createdAt"];
+      const rows = menus.map(m => [
+        m.id, m.slug, m.name, m.description || "", m.isActive ? "true" : "false",
+        m.heroImageUrl || "", m.backgroundColor || "", m.accentColor || "",
+        m.typography || "", (m.sections || []).join("|"), m.createdAt
+      ]);
+      
+      const csv = [toCSVRow(headers), ...rows.map(toCSVRow)].join("\n");
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", "attachment; filename=menus_export.csv");
+      res.send(csv);
+    } catch (error) {
+      console.error("Error exporting menus:", error);
+      res.status(500).json({ error: "Failed to export menus" });
+    }
+  });
+
+  // GET /api/export/drinks - Export all drinks as CSV
+  app.get("/api/export/drinks", async (req, res) => {
+    try {
+      const menus = await storage.getAllMenus();
+      const allDrinks: any[] = [];
+      for (const menu of menus) {
+        const drinks = await storage.getDrinksWithAvailability(menu.id, true);
+        allDrinks.push(...drinks);
+      }
+      
+      const headers = [
+        "id", "menuId (REQUIRED)", "name (REQUIRED)", "section (REQUIRED)", "description", "recipe", "style",
+        "temperature", "isMocktail", "canBeMocktail", "isStirred", "isShaken",
+        "baseSpirit", "isActive", "isOutOfStock", "sortOrder"
+      ];
+      const rows = allDrinks.map(d => [
+        d.id, d.menuId, d.name, d.section, d.description || "", d.recipe || "", d.style || "",
+        d.temperature || "", d.isMocktail ? "true" : "false", d.canBeMocktail ? "true" : "false",
+        d.isStirred ? "true" : "false", d.isShaken ? "true" : "false",
+        d.baseSpirit || "", d.isActive ? "true" : "false", d.isOutOfStock ? "true" : "false", d.sortOrder
+      ]);
+      
+      const csv = [toCSVRow(headers), ...rows.map(toCSVRow)].join("\n");
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", "attachment; filename=drinks_export.csv");
+      res.send(csv);
+    } catch (error) {
+      console.error("Error exporting drinks:", error);
+      res.status(500).json({ error: "Failed to export drinks" });
+    }
+  });
+
+  // GET /api/export/ingredients - Export all ingredients as CSV
+  app.get("/api/export/ingredients", async (req, res) => {
+    try {
+      const ingredients = await storage.getIngredients();
+      const headers = ["id", "name (REQUIRED)", "category", "unit (REQUIRED)", "onHand", "parLevel", "isActive", "createdAt"];
+      const rows = ingredients.map(i => [
+        i.id, i.name, i.category || "", i.unit, i.onHand, i.parLevel,
+        i.isActive ? "true" : "false", i.createdAt
+      ]);
+      
+      const csv = [toCSVRow(headers), ...rows.map(toCSVRow)].join("\n");
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", "attachment; filename=ingredients_export.csv");
+      res.send(csv);
+    } catch (error) {
+      console.error("Error exporting ingredients:", error);
+      res.status(500).json({ error: "Failed to export ingredients" });
+    }
+  });
+
+  // GET /api/export/orders - Export all orders as CSV
+  app.get("/api/export/orders", async (req, res) => {
+    try {
+      const orders = await storage.getOrderQueue();
+      const headers = [
+        "id", "drinkId (REQUIRED)", "menuId (REQUIRED)", "guestName", "comments",
+        "asMocktail", "status", "requestedAt", "completedAt", "drinkName"
+      ];
+      const rows = orders.map(o => [
+        o.id, o.drinkId, o.menuId, o.guestName || "", o.comments || "",
+        o.asMocktail ? "true" : "false", o.status, o.requestedAt, o.completedAt || "", o.drinkName
+      ]);
+      
+      const csv = [toCSVRow(headers), ...rows.map(toCSVRow)].join("\n");
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", "attachment; filename=orders_export.csv");
+      res.send(csv);
+    } catch (error) {
+      console.error("Error exporting orders:", error);
+      res.status(500).json({ error: "Failed to export orders" });
+    }
+  });
+
+  // ============ TEMPLATE ENDPOINTS ============
+  
+  // GET /api/templates/menus - Get empty CSV template for menus
+  app.get("/api/templates/menus", async (req, res) => {
+    const headers = ["slug (REQUIRED)", "name (REQUIRED)", "description", "isActive", "heroImageUrl", "backgroundColor", "accentColor", "typography", "sections"];
+    const exampleRow = ["summer-2024", "Summer Menu", "Our summer cocktail selection", "true", "", "#ffffff", "#ff6600", "Playfair Display", "Classic|Signature|Mocktails"];
+    
+    const csv = [toCSVRow(headers), toCSVRow(exampleRow)].join("\n");
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", "attachment; filename=menus_template.csv");
+    res.send(csv);
+  });
+
+  // GET /api/templates/drinks - Get empty CSV template for drinks
+  app.get("/api/templates/drinks", async (req, res) => {
+    const headers = [
+      "menuId (REQUIRED)", "name (REQUIRED)", "section (REQUIRED)", "description", "recipe", "style",
+      "temperature", "isMocktail", "canBeMocktail", "isStirred", "isShaken",
+      "baseSpirit", "isActive", "isOutOfStock", "sortOrder"
+    ];
+    const exampleRow = [
+      "menu-uuid-here", "Old Fashioned", "Classic", "A timeless bourbon cocktail", "2oz bourbon, 1/4oz simple, bitters",
+      "Strong & Boozy", "cold", "false", "false", "true", "false", "Bourbon", "true", "false", "1"
+    ];
+    
+    const csv = [toCSVRow(headers), toCSVRow(exampleRow)].join("\n");
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", "attachment; filename=drinks_template.csv");
+    res.send(csv);
+  });
+
+  // GET /api/templates/ingredients - Get empty CSV template for ingredients
+  app.get("/api/templates/ingredients", async (req, res) => {
+    const headers = ["name (REQUIRED)", "category", "unit (REQUIRED)", "onHand", "parLevel", "isActive"];
+    const exampleRow = ["Buffalo Trace Bourbon", "Spirits", "bottles", "5", "3", "true"];
+    
+    const csv = [toCSVRow(headers), toCSVRow(exampleRow)].join("\n");
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", "attachment; filename=ingredients_template.csv");
+    res.send(csv);
+  });
+
+  // GET /api/templates/orders - Get empty CSV template for orders
+  app.get("/api/templates/orders", async (req, res) => {
+    const headers = ["drinkId (REQUIRED)", "menuId (REQUIRED)", "guestName", "comments", "asMocktail"];
+    const exampleRow = ["drink-uuid-here", "menu-uuid-here", "John", "Extra ice please", "false"];
+    
+    const csv = [toCSVRow(headers), toCSVRow(exampleRow)].join("\n");
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", "attachment; filename=orders_template.csv");
+    res.send(csv);
+  });
+
+  // ============ IMPORT ENDPOINTS ============
+  
+  // Helper to parse CSV
+  const parseCSV = (csvText: string): { headers: string[]; rows: string[][] } => {
+    const lines = csvText.split(/\r?\n/).filter(line => line.trim());
+    if (lines.length === 0) return { headers: [], rows: [] };
+    
+    const parseRow = (line: string): string[] => {
+      const result: string[] = [];
+      let current = "";
+      let inQuotes = false;
+      
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (char === '"') {
+          if (inQuotes && line[i + 1] === '"') {
+            current += '"';
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (char === "," && !inQuotes) {
+          result.push(current.trim());
+          current = "";
+        } else {
+          current += char;
+        }
+      }
+      result.push(current.trim());
+      return result;
+    };
+    
+    const headers = parseRow(lines[0]).map(h => h.replace(" (REQUIRED)", "").trim());
+    const rows = lines.slice(1).map(parseRow);
+    return { headers, rows };
+  };
+
+  // Helper to convert row to object based on headers
+  const rowToObject = (headers: string[], row: string[]): Record<string, string> => {
+    const obj: Record<string, string> = {};
+    headers.forEach((header, index) => {
+      obj[header] = row[index] || "";
+    });
+    return obj;
+  };
+
+  // POST /api/import/menus - Import menus from CSV
+  app.post("/api/import/menus", async (req, res) => {
+    try {
+      const { csv } = req.body;
+      if (!csv || typeof csv !== "string") {
+        return res.status(400).json({ error: "CSV data is required" });
+      }
+
+      const { headers, rows } = parseCSV(csv);
+      const imported: any[] = [];
+      const errors: string[] = [];
+
+      for (let i = 0; i < rows.length; i++) {
+        const obj = rowToObject(headers, rows[i]);
+        try {
+          if (!obj.slug || !obj.name) {
+            errors.push(`Row ${i + 2}: slug and name are required`);
+            continue;
+          }
+
+          const menu = await storage.createMenu({
+            slug: obj.slug,
+            name: obj.name,
+            description: obj.description || null,
+            isActive: obj.isActive === "true",
+            heroImageUrl: obj.heroImageUrl || null,
+            backgroundColor: obj.backgroundColor || null,
+            accentColor: obj.accentColor || null,
+            typography: obj.typography || null,
+            sections: obj.sections ? obj.sections.split("|").filter(Boolean) : [],
+          });
+          imported.push(menu);
+        } catch (err: any) {
+          errors.push(`Row ${i + 2}: ${err.message || "Unknown error"}`);
+        }
+      }
+
+      res.json({ imported: imported.length, errors });
+    } catch (error) {
+      console.error("Error importing menus:", error);
+      res.status(500).json({ error: "Failed to import menus" });
+    }
+  });
+
+  // POST /api/import/drinks - Import drinks from CSV
+  app.post("/api/import/drinks", async (req, res) => {
+    try {
+      const { csv } = req.body;
+      if (!csv || typeof csv !== "string") {
+        return res.status(400).json({ error: "CSV data is required" });
+      }
+
+      const { headers, rows } = parseCSV(csv);
+      const imported: any[] = [];
+      const errors: string[] = [];
+
+      for (let i = 0; i < rows.length; i++) {
+        const obj = rowToObject(headers, rows[i]);
+        try {
+          if (!obj.menuId || !obj.name || !obj.section) {
+            errors.push(`Row ${i + 2}: menuId, name, and section are required`);
+            continue;
+          }
+
+          const drink = await storage.createDrink({
+            menuId: obj.menuId,
+            name: obj.name,
+            section: obj.section,
+            description: obj.description || null,
+            recipe: obj.recipe || null,
+            style: obj.style || null,
+            temperature: obj.temperature || null,
+            isMocktail: obj.isMocktail === "true",
+            canBeMocktail: obj.canBeMocktail === "true",
+            isStirred: obj.isStirred === "true",
+            isShaken: obj.isShaken === "true",
+            baseSpirit: obj.baseSpirit || null,
+            isActive: obj.isActive !== "false",
+            isOutOfStock: obj.isOutOfStock === "true",
+            sortOrder: parseInt(obj.sortOrder) || 0,
+          });
+          imported.push(drink);
+        } catch (err: any) {
+          errors.push(`Row ${i + 2}: ${err.message || "Unknown error"}`);
+        }
+      }
+
+      res.json({ imported: imported.length, errors });
+    } catch (error) {
+      console.error("Error importing drinks:", error);
+      res.status(500).json({ error: "Failed to import drinks" });
+    }
+  });
+
+  // POST /api/import/ingredients - Import ingredients from CSV
+  app.post("/api/import/ingredients", async (req, res) => {
+    try {
+      const { csv } = req.body;
+      if (!csv || typeof csv !== "string") {
+        return res.status(400).json({ error: "CSV data is required" });
+      }
+
+      const { headers, rows } = parseCSV(csv);
+      const imported: any[] = [];
+      const errors: string[] = [];
+
+      for (let i = 0; i < rows.length; i++) {
+        const obj = rowToObject(headers, rows[i]);
+        try {
+          if (!obj.name || !obj.unit) {
+            errors.push(`Row ${i + 2}: name and unit are required`);
+            continue;
+          }
+
+          const ingredient = await storage.createIngredient({
+            name: obj.name,
+            category: obj.category || null,
+            unit: obj.unit,
+            onHand: parseInt(obj.onHand) || 0,
+            parLevel: parseInt(obj.parLevel) || 0,
+            isActive: obj.isActive !== "false",
+          });
+          imported.push(ingredient);
+        } catch (err: any) {
+          errors.push(`Row ${i + 2}: ${err.message || "Unknown error"}`);
+        }
+      }
+
+      res.json({ imported: imported.length, errors });
+    } catch (error) {
+      console.error("Error importing ingredients:", error);
+      res.status(500).json({ error: "Failed to import ingredients" });
+    }
+  });
+
+  // POST /api/import/orders - Import orders from CSV
+  app.post("/api/import/orders", async (req, res) => {
+    try {
+      const { csv } = req.body;
+      if (!csv || typeof csv !== "string") {
+        return res.status(400).json({ error: "CSV data is required" });
+      }
+
+      const { headers, rows } = parseCSV(csv);
+      const imported: any[] = [];
+      const errors: string[] = [];
+
+      for (let i = 0; i < rows.length; i++) {
+        const obj = rowToObject(headers, rows[i]);
+        try {
+          if (!obj.drinkId || !obj.menuId) {
+            errors.push(`Row ${i + 2}: drinkId and menuId are required`);
+            continue;
+          }
+
+          const order = await storage.createOrder({
+            drinkId: obj.drinkId,
+            menuId: obj.menuId,
+            guestName: obj.guestName || null,
+            comments: obj.comments || null,
+            asMocktail: obj.asMocktail === "true",
+          });
+          imported.push(order);
+        } catch (err: any) {
+          errors.push(`Row ${i + 2}: ${err.message || "Unknown error"}`);
+        }
+      }
+
+      res.json({ imported: imported.length, errors });
+    } catch (error) {
+      console.error("Error importing orders:", error);
+      res.status(500).json({ error: "Failed to import orders" });
+    }
+  });
+
   // POST /api/barcode/lookup - Look up product info from barcode
   app.post("/api/barcode/lookup", async (req, res) => {
     try {

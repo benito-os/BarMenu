@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useLocation, Link } from "wouter";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
@@ -13,8 +13,6 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { authStatus, authLoading, logout } = useDashboardAuth();
   const [, setLocation] = useLocation();
-  const [activeSection, setActiveSection] = useState("inventory");
-  const [mainTab, setMainTab] = useState("management");
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -41,13 +39,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <SidebarProvider style={style as React.CSSProperties}>
       <div className="flex w-full min-h-svh flex-1">
-        <AppSidebar 
-                activeSection={activeSection}
-                mainTab={mainTab}
-                onSectionChange={setActiveSection}
-                onTabChange={setMainTab}
-                onLogout={logout} 
-              />
+        <AppSidebar onLogout={logout} />
         <div className="flex flex-col flex-1 min-h-0">
           <header className="flex items-center justify-between p-4 border-b">
             <div className="flex items-center gap-4">

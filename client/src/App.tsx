@@ -14,6 +14,7 @@ import DrinksPage from "@/pages/dashboard/drinks";
 import InventoryPage from "@/pages/dashboard/inventory";
 import QRCodesPage from "@/pages/dashboard/qr-codes";
 import SettingsPage from "@/pages/dashboard/settings";
+import ImportExportPage from "@/pages/dashboard/import-export";
 
 function Router() {
   return (
@@ -28,6 +29,7 @@ function Router() {
       <Route path="/dashboard/qr-codes" component={QRCodesPage} />
       <Route path="/dashboard/qr" component={QRCodesPage} />
       <Route path="/dashboard/settings" component={SettingsPage} />
+      <Route path="/dashboard/import-export" component={ImportExportPage} />
       <Route path="/dashboard" component={Dashboard} />
       <Route component={NotFound} />
     </Switch>

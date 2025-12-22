@@ -49,11 +49,19 @@ Preferred communication style: Simple, everyday language.
       - Filter by category, status (healthy, low, out of stock)
       - Summary cards showing total ingredients, low stock count, restock urgency
     - **Barcode Scanning**: Camera-based barcode scanning for quick ingredient entry:
-      - Uses react-zxing library for camera access and barcode decoding
+      - Uses @zxing/browser library with capture button approach for reliable scanning
       - POST /api/barcode/lookup queries Open Food Facts and UPCitemdb APIs
       - Pre-fills ingredient form with product name, brand, category when found
       - Fallback to manual entry when barcode not recognized
-      - Dialog resets properly on reopen for multiple scans
+      - Canvas-based snapshot decoding for better mobile compatibility
+    - **Import/Export System**: CSV-based data portability for all database tables:
+      - Export endpoints: GET /api/export/{menus|drinks|ingredients|orders}
+      - Template endpoints: GET /api/templates/{menus|drinks|ingredients|orders}
+      - Import endpoints: POST /api/import/{menus|drinks|ingredients|orders}
+      - CSV headers clearly mark required vs optional fields with "(REQUIRED)" suffix
+      - Dashboard page at /dashboard/import-export with tabbed interface
+      - Templates include example rows for guidance
+      - Import validation with per-row error reporting
     - **Dynamic Theming**: Menus can be customized with specific hero images, background colors, accent colors, and typography, which are applied to their public-facing pages.
     - **Drink Attributes**: Support for `temperature` (Hot, Cold, Room Temp, Not Specified), `isMocktail` (exclusively non-alcoholic), and `canBeMocktail` (can be made as a mocktail) with corresponding UI badges.
 - **Technical Implementations**: Frontend uses optimistic UI updates for smooth interactions. Backend enforces order workflow transitions and handles data validation. Query invalidation ensures UI synchronization after mutations. Event-driven cookie updates trigger immediate order status display without page reload.

@@ -1,4 +1,5 @@
-import { LayoutDashboard, BarChart3, Menu as MenuIcon, Wine, QrCode, Settings, LogOut, Boxes } from "lucide-react";
+import { LayoutDashboard, BarChart3, Menu as MenuIcon, Wine, QrCode, Settings, LogOut, Boxes, FileDown } from "lucide-react";
+import { Link, useLocation } from "wouter";
 import {
   Sidebar,
   SidebarContent,
@@ -15,70 +16,69 @@ const menuItems = [
   {
     title: "Queue",
     icon: LayoutDashboard,
-    section: "queue",
+    path: "/dashboard",
     testId: "sidebar-queue",
   },
   {
     title: "Analytics",
     icon: BarChart3,
-    section: "analytics",
+    path: "/dashboard/analytics",
     testId: "sidebar-analytics",
   },
   {
     title: "Menus",
     icon: MenuIcon,
-    section: "menus",
+    path: "/dashboard/menus",
     testId: "sidebar-menus",
   },
   {
     title: "Drinks",
     icon: Wine,
-    section: "drinks",
+    path: "/dashboard/drinks",
     testId: "sidebar-drinks",
   },
   {
     title: "Inventory",
     icon: Boxes,
-    section: "inventory",
+    path: "/dashboard/inventory",
     testId: "sidebar-inventory",
   },
   {
     title: "QR Codes",
     icon: QrCode,
-    section: "qr-codes",
+    path: "/dashboard/qr-codes",
     testId: "sidebar-qr-codes",
+  },
+  {
+    title: "Import/Export",
+    icon: FileDown,
+    path: "/dashboard/import-export",
+    testId: "sidebar-import-export",
   },
   {
     title: "Settings",
     icon: Settings,
-    section: "settings",
+    path: "/dashboard/settings",
     testId: "sidebar-settings",
   },
 ];
 
 interface AppSidebarProps {
-  activeSection: string;
-  mainTab: string;
-  onSectionChange: (section: string) => void;
-  onTabChange: (tab: string) => void;
+  activeSection?: string;
+  mainTab?: string;
+  onSectionChange?: (section: string) => void;
+  onTabChange?: (tab: string) => void;
   onLogout: () => void;
 }
 
-export function AppSidebar({ activeSection, mainTab, onSectionChange, onTabChange, onLogout }: AppSidebarProps) {
-  const handleItemClick = (section: string) => {
-    if (section === "queue") {
-      onTabChange("queue");
-    } else {
-      onTabChange("management");
-      onSectionChange(section);
-    }
-  };
+export function AppSidebar({ onLogout }: AppSidebarProps) {
+  const [location] = useLocation();
 
-  const isItemActive = (section: string) => {
-    if (section === "queue") {
-      return mainTab === "queue";
+  const isItemActive = (path: string) => {
+    if (path === "/dashboard") {
+      return location === "/dashboard";
     }
-    return mainTab === "management" && activeSection === section;
+    return location.startsWith(path);
   };
 
   return (
@@ -91,15 +91,16 @@ export function AppSidebar({ activeSection, mainTab, onSectionChange, onTabChang
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
-                <SidebarMenuItem key={item.section}>
-                  <SidebarMenuButton
-                    isActive={isItemActive(item.section)}
-                    onClick={() => handleItemClick(item.section)}
-                    data-testid={item.testId}
-                  >
-                    <item.icon className="w-4 h-4" />
-                    <span>{item.title}</span>
-                  </SidebarMenuButton>
+                <SidebarMenuItem key={item.path}>
+                  <Link href={item.path}>
+                    <SidebarMenuButton
+                      isActive={isItemActive(item.path)}
+                      data-testid={item.testId}
+                    >
+                      <item.icon className="w-4 h-4" />
+                      <span>{item.title}</span>
+                    </SidebarMenuButton>
+                  </Link>
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
