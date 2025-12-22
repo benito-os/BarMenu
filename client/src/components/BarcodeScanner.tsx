@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect } from "react";
-import { useZxing } from "react-zxing";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { BrowserMultiFormatReader } from "@zxing/browser";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -45,6 +45,11 @@ export function BarcodeScanner({ open, onClose, onAddIngredient }: BarcodeScanne
     parLevel: 2,
   });
 
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const readerRef = useRef<BrowserMultiFormatReader | null>(null);
+  const controlsRef = useRef<{ stop: () => void } | null>(null);
+
   const lookupMutation = useMutation({
     mutationFn: async (barcode: string) => {
       const response = await apiRequest("POST", "/api/barcode/lookup", { barcode });
@@ -73,49 +78,117 @@ export function BarcodeScanner({ open, onClose, onAddIngredient }: BarcodeScanne
     },
   });
 
-  const handleDecode = useCallback((result: { getText: () => string }) => {
-    const barcode = result.getText();
-    if (barcode && scanState === "scanning") {
-      setScannedBarcode(barcode);
-      setScanState("loading");
-      lookupMutation.mutate(barcode);
+  const stopCamera = useCallback(() => {
+    if (controlsRef.current) {
+      controlsRef.current.stop();
+      controlsRef.current = null;
     }
-  }, [scanState, lookupMutation]);
-
-  const handleCameraError = useCallback((error: unknown) => {
-    console.error("Camera error:", error);
-    let errorMessage = "Could not access camera.";
-    
-    if (error instanceof Error) {
-      if (error.name === "NotAllowedError" || error.message.includes("Permission")) {
-        errorMessage = "Camera permission denied. Please allow camera access in your browser settings and try again.";
-      } else if (error.name === "NotFoundError" || error.message.includes("not found")) {
-        errorMessage = "No camera found on this device.";
-      } else if (error.name === "NotReadableError" || error.message.includes("Could not start")) {
-        errorMessage = "Camera is in use by another application.";
-      } else if (error.name === "OverconstrainedError") {
-        errorMessage = "Camera does not meet requirements.";
-      }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
     }
-    
-    setCameraError(errorMessage);
-    setScanState("error");
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
   }, []);
 
-  // Scanner is paused when not open OR not in scanning state
-  const shouldPause = !open || scanState !== "scanning";
+  const startCamera = useCallback(async () => {
+    try {
+      // Request camera access directly
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
+      });
 
-  const { ref: zxingRef } = useZxing({
-    onDecodeResult: handleDecode,
-    onError: handleCameraError,
-    paused: shouldPause,
-    constraints: {
-      video: {
-        facingMode: "environment",
-      },
-      audio: false,
-    },
-  });
+      streamRef.current = stream;
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        
+        // Wait for video to be ready
+        await new Promise<void>((resolve, reject) => {
+          if (!videoRef.current) {
+            reject(new Error("Video element not found"));
+            return;
+          }
+          videoRef.current.onloadedmetadata = () => {
+            videoRef.current?.play()
+              .then(() => resolve())
+              .catch(reject);
+          };
+          videoRef.current.onerror = () => reject(new Error("Video error"));
+        });
+
+        // Start barcode detection
+        if (!readerRef.current) {
+          readerRef.current = new BrowserMultiFormatReader();
+        }
+
+        const controls = await readerRef.current.decodeFromVideoElement(
+          videoRef.current,
+          (result, error) => {
+            if (result && scanState === "scanning") {
+              const barcode = result.getText();
+              if (barcode) {
+                stopCamera();
+                setScannedBarcode(barcode);
+                setScanState("loading");
+                lookupMutation.mutate(barcode);
+              }
+            }
+            // Silently ignore decode errors (no barcode in frame)
+          }
+        );
+        
+        controlsRef.current = controls;
+      }
+    } catch (error) {
+      console.error("Camera error:", error);
+      let errorMessage = "Could not access camera.";
+      
+      if (error instanceof Error) {
+        if (error.name === "NotAllowedError" || error.message.includes("Permission")) {
+          errorMessage = "Camera permission denied. Please allow camera access in your browser settings and try again.";
+        } else if (error.name === "NotFoundError" || error.message.includes("not found")) {
+          errorMessage = "No camera found on this device.";
+        } else if (error.name === "NotReadableError" || error.message.includes("Could not start")) {
+          errorMessage = "Camera is in use by another application.";
+        } else if (error.name === "OverconstrainedError") {
+          errorMessage = "Camera does not meet requirements.";
+        } else if (error.name === "AbortError") {
+          errorMessage = "Camera access was interrupted.";
+        }
+      }
+      
+      setCameraError(errorMessage);
+      setScanState("error");
+    }
+  }, [scanState, lookupMutation, stopCamera]);
+
+  // Start camera when dialog opens and we're in scanning state
+  useEffect(() => {
+    if (open && scanState === "scanning") {
+      // Small delay to ensure video element is mounted
+      const timer = setTimeout(() => {
+        startCamera();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [open, scanState, startCamera]);
+
+  // Cleanup on close
+  useEffect(() => {
+    if (!open) {
+      stopCamera();
+    }
+    return () => {
+      stopCamera();
+    };
+  }, [open, stopCamera]);
 
   // Reset state when dialog opens
   useEffect(() => {
@@ -135,6 +208,7 @@ export function BarcodeScanner({ open, onClose, onAddIngredient }: BarcodeScanne
   }, [open]);
 
   const handleScanAgain = () => {
+    stopCamera();
     setScanState("scanning");
     setProductInfo(null);
     setScannedBarcode("");
@@ -171,8 +245,13 @@ export function BarcodeScanner({ open, onClose, onAddIngredient }: BarcodeScanne
     onClose();
   };
 
+  const handleClose = () => {
+    stopCamera();
+    onClose();
+  };
+
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -192,7 +271,7 @@ export function BarcodeScanner({ open, onClose, onAddIngredient }: BarcodeScanne
           {scanState === "scanning" && (
             <div className="relative aspect-video overflow-hidden rounded-lg bg-black">
               <video
-                ref={zxingRef as React.RefObject<HTMLVideoElement>}
+                ref={videoRef}
                 className="h-full w-full object-cover"
                 autoPlay
                 playsInline
@@ -310,7 +389,7 @@ export function BarcodeScanner({ open, onClose, onAddIngredient }: BarcodeScanne
 
         <DialogFooter className="flex-row gap-2 justify-end">
           {(scanState === "scanning" || scanState === "error") && (
-            <Button variant="outline" onClick={onClose} data-testid="button-cancel-scan">
+            <Button variant="outline" onClick={handleClose} data-testid="button-cancel-scan">
               <X className="h-4 w-4 mr-2" />
               Cancel
             </Button>
