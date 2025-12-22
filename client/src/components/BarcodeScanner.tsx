@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Camera, X, AlertCircle, Package, VideoOff } from "lucide-react";
+import { Loader2, Camera, X, AlertCircle, Package, VideoOff, Focus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -29,7 +29,7 @@ interface BarcodeScannerProps {
   }) => void;
 }
 
-type ScanState = "scanning" | "loading" | "result" | "not_found" | "error";
+type ScanState = "scanning" | "capturing" | "loading" | "result" | "not_found" | "no_barcode" | "error";
 
 export function BarcodeScanner({ open, onClose, onAddIngredient }: BarcodeScannerProps) {
   const { toast } = useToast();
@@ -46,9 +46,9 @@ export function BarcodeScanner({ open, onClose, onAddIngredient }: BarcodeScanne
   });
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
-  const controlsRef = useRef<{ stop: () => void } | null>(null);
 
   const lookupMutation = useMutation({
     mutationFn: async (barcode: string) => {
@@ -79,10 +79,6 @@ export function BarcodeScanner({ open, onClose, onAddIngredient }: BarcodeScanne
   });
 
   const stopCamera = useCallback(() => {
-    if (controlsRef.current) {
-      controlsRef.current.stop();
-      controlsRef.current = null;
-    }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
@@ -94,7 +90,6 @@ export function BarcodeScanner({ open, onClose, onAddIngredient }: BarcodeScanne
 
   const startCamera = useCallback(async () => {
     try {
-      // Request camera access directly
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: { ideal: "environment" },
@@ -109,7 +104,6 @@ export function BarcodeScanner({ open, onClose, onAddIngredient }: BarcodeScanne
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         
-        // Wait for video to be ready
         await new Promise<void>((resolve, reject) => {
           if (!videoRef.current) {
             reject(new Error("Video element not found"));
@@ -123,28 +117,9 @@ export function BarcodeScanner({ open, onClose, onAddIngredient }: BarcodeScanne
           videoRef.current.onerror = () => reject(new Error("Video error"));
         });
 
-        // Start barcode detection
         if (!readerRef.current) {
           readerRef.current = new BrowserMultiFormatReader();
         }
-
-        const controls = await readerRef.current.decodeFromVideoElement(
-          videoRef.current,
-          (result, error) => {
-            if (result && scanState === "scanning") {
-              const barcode = result.getText();
-              if (barcode) {
-                stopCamera();
-                setScannedBarcode(barcode);
-                setScanState("loading");
-                lookupMutation.mutate(barcode);
-              }
-            }
-            // Silently ignore decode errors (no barcode in frame)
-          }
-        );
-        
-        controlsRef.current = controls;
       }
     } catch (error) {
       console.error("Camera error:", error);
@@ -167,12 +142,48 @@ export function BarcodeScanner({ open, onClose, onAddIngredient }: BarcodeScanne
       setCameraError(errorMessage);
       setScanState("error");
     }
-  }, [scanState, lookupMutation, stopCamera]);
+  }, []);
 
-  // Start camera when dialog opens and we're in scanning state
+  const handleCapture = useCallback(async () => {
+    if (!videoRef.current || !canvasRef.current || !readerRef.current) {
+      return;
+    }
+
+    setScanState("capturing");
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+
+    if (!ctx) {
+      setScanState("scanning");
+      return;
+    }
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    try {
+      const result = await readerRef.current.decodeFromCanvas(canvas);
+      const barcode = result.getText();
+      
+      if (barcode) {
+        stopCamera();
+        setScannedBarcode(barcode);
+        setScanState("loading");
+        lookupMutation.mutate(barcode);
+      } else {
+        setScanState("no_barcode");
+      }
+    } catch (error) {
+      console.log("No barcode detected in frame");
+      setScanState("no_barcode");
+    }
+  }, [stopCamera, lookupMutation]);
+
   useEffect(() => {
     if (open && scanState === "scanning") {
-      // Small delay to ensure video element is mounted
       const timer = setTimeout(() => {
         startCamera();
       }, 100);
@@ -180,7 +191,6 @@ export function BarcodeScanner({ open, onClose, onAddIngredient }: BarcodeScanne
     }
   }, [open, scanState, startCamera]);
 
-  // Cleanup on close
   useEffect(() => {
     if (!open) {
       stopCamera();
@@ -190,7 +200,6 @@ export function BarcodeScanner({ open, onClose, onAddIngredient }: BarcodeScanne
     };
   }, [open, stopCamera]);
 
-  // Reset state when dialog opens
   useEffect(() => {
     if (open) {
       setScanState("scanning");
@@ -220,6 +229,10 @@ export function BarcodeScanner({ open, onClose, onAddIngredient }: BarcodeScanne
       onHand: 1,
       parLevel: 2,
     });
+  };
+
+  const handleTryAgain = () => {
+    setScanState("scanning");
   };
 
   const handleAdd = () => {
@@ -259,16 +272,18 @@ export function BarcodeScanner({ open, onClose, onAddIngredient }: BarcodeScanne
             Scan Barcode
           </DialogTitle>
           <DialogDescription>
-            {scanState === "scanning" && "Point your camera at a product barcode"}
+            {scanState === "scanning" && "Position the barcode in the frame, then tap Capture"}
+            {scanState === "capturing" && "Scanning..."}
             {scanState === "loading" && "Looking up product..."}
             {scanState === "result" && "Product found! Review and add to inventory"}
             {scanState === "not_found" && "Barcode not found. Enter details manually"}
+            {scanState === "no_barcode" && "No barcode detected. Try again"}
             {scanState === "error" && "Camera access failed"}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          {scanState === "scanning" && (
+          {(scanState === "scanning" || scanState === "capturing" || scanState === "no_barcode") && (
             <div className="relative aspect-video overflow-hidden rounded-lg bg-black">
               <video
                 ref={videoRef}
@@ -279,10 +294,21 @@ export function BarcodeScanner({ open, onClose, onAddIngredient }: BarcodeScanne
                 data-testid="video-barcode-scanner"
               />
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="w-3/4 h-1/2 border-2 border-white/50 rounded-lg" />
+                <div className="w-3/4 h-1/2 border-2 border-white/50 rounded-lg flex items-center justify-center">
+                  {scanState === "capturing" && (
+                    <Loader2 className="h-8 w-8 animate-spin text-white" />
+                  )}
+                </div>
               </div>
+              {scanState === "no_barcode" && (
+                <div className="absolute bottom-2 left-2 right-2 bg-destructive/90 text-destructive-foreground text-sm p-2 rounded text-center">
+                  No barcode found. Position the barcode clearly and try again.
+                </div>
+              )}
             </div>
           )}
+
+          <canvas ref={canvasRef} className="hidden" />
 
           {scanState === "error" && (
             <div className="flex flex-col items-center justify-center py-8 gap-4">
@@ -388,10 +414,16 @@ export function BarcodeScanner({ open, onClose, onAddIngredient }: BarcodeScanne
         </div>
 
         <DialogFooter className="flex-row gap-2 justify-end">
-          {(scanState === "scanning" || scanState === "error") && (
+          {(scanState === "scanning" || scanState === "capturing" || scanState === "no_barcode" || scanState === "error") && (
             <Button variant="outline" onClick={handleClose} data-testid="button-cancel-scan">
               <X className="h-4 w-4 mr-2" />
               Cancel
+            </Button>
+          )}
+          {(scanState === "scanning" || scanState === "no_barcode") && (
+            <Button onClick={handleCapture} data-testid="button-capture-barcode">
+              <Focus className="h-4 w-4 mr-2" />
+              Capture
             </Button>
           )}
           {scanState === "error" && (
