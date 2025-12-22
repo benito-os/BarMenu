@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useOrders } from "@/hooks/useOrders";
-import { useMenus } from "@/hooks/useMenus";
 import { useSettings } from "@/hooks/useSettings";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,8 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Clock, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, MessageSquare, Leaf, Trash2, Play, Menu } from "lucide-react";
+import { Clock, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, MessageSquare, Leaf, Trash2, Play } from "lucide-react";
 import type { OrderWithDrink } from "@shared/validation";
 
 export default function QueuePage() {
@@ -28,13 +26,10 @@ export default function QueuePage() {
     clearServed,
     clearServedPending
   } = useOrders(true);
-  const { menus, menusLoading, toggleMenu } = useMenus(true);
   const { settings } = useSettings();
   const [selectedOrder, setSelectedOrder] = useState<OrderWithDrink | null>(null);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  
-  const activeMenu = menus.find(m => m.isActive);
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -310,46 +305,11 @@ export default function QueuePage() {
         <Card>
           <CardHeader>
             <div className="flex flex-col gap-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                  <CardTitle className="text-2xl">Live Order Queue</CardTitle>
-                  <CardDescription>
-                    Live view of drink requests - auto-refreshes every 5 seconds
-                  </CardDescription>
-                </div>
-                
-                {/* Active Menu Selector */}
-                <div className="flex items-center gap-2">
-                  <Menu className="w-4 h-4 text-muted-foreground" />
-                  <Select
-                    value={activeMenu?.id || ""}
-                    onValueChange={(menuId) => {
-                      if (menuId !== activeMenu?.id) {
-                        toggleMenu({ id: menuId, isActive: true });
-                      }
-                    }}
-                    disabled={menusLoading}
-                  >
-                    <SelectTrigger 
-                      className="w-[200px]" 
-                      data-testid="select-active-menu"
-                    >
-                      <SelectValue placeholder="Select active menu" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {menus.map((menu) => (
-                        <SelectItem key={menu.id} value={menu.id}>
-                          <div className="flex items-center gap-2">
-                            {menu.name}
-                            {menu.isActive && (
-                              <Badge variant="secondary" className="text-xs">Active</Badge>
-                            )}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div>
+                <CardTitle className="text-2xl">Live Order Queue</CardTitle>
+                <CardDescription>
+                  Live view of drink requests - auto-refreshes every 5 seconds
+                </CardDescription>
               </div>
               
               {/* Bulk Actions */}
