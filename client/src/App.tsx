@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import MenuDetail from "@/pages/menu-detail";
-import Dashboard from "@/pages/dashboard";
+import QueuePage from "@/pages/dashboard/index";
 import DashboardLogin from "@/pages/dashboard-login";
 import AnalyticsPage from "@/pages/dashboard/analytics";
 import MenusPage from "@/pages/dashboard/menus";
@@ -30,7 +30,7 @@ function Router() {
       <Route path="/dashboard/qr" component={QRCodesPage} />
       <Route path="/dashboard/settings" component={SettingsPage} />
       <Route path="/dashboard/import-export" component={ImportExportPage} />
-      <Route path="/dashboard" component={Dashboard} />
+      <Route path="/dashboard" component={QueuePage} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -39,6 +39,35 @@ export function useOrders(enabled = true) {
     },
   });
 
+  const batchUpdateMutation = useMutation({
+    mutationFn: async ({ orderIds, status }: { orderIds: string[]; status: string }) => {
+      return apiRequest("POST", "/api/orders/batch", { orderIds, status });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/orders/queue"] });
+      if (variables.status === "served") {
+        queryClient.invalidateQueries({ queryKey: ["/api/analytics"] });
+      }
+      toast({
+        title: "Orders Updated",
+        description: `${variables.orderIds.length} orders marked as ${variables.status === "in_progress" ? "in progress" : "served"}`,
+      });
+    },
+  });
+
+  const clearServedMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("DELETE", "/api/orders/served");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/orders/queue"] });
+      toast({
+        title: "Queue Cleared",
+        description: "All served orders have been removed",
+      });
+    },
+  });
+
   return {
     queue: queue || [],
     queueLoading,
@@ -46,5 +75,9 @@ export function useOrders(enabled = true) {
     markServed: serveMutation.mutate,
     inProgressPending: inProgressMutation.isPending,
     servedPending: serveMutation.isPending,
+    batchUpdate: batchUpdateMutation.mutate,
+    batchUpdatePending: batchUpdateMutation.isPending,
+    clearServed: clearServedMutation.mutate,
+    clearServedPending: clearServedMutation.isPending,
   };
 }

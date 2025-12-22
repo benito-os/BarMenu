@@ -495,6 +495,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/orders/batch - Batch update order statuses
+  app.post("/api/orders/batch", async (req, res) => {
+    try {
+      const { orderIds, status } = req.body;
+      
+      if (!orderIds || !Array.isArray(orderIds) || orderIds.length === 0) {
+        return res.status(400).json({ error: "orderIds array is required" });
+      }
+      if (!status || !["in_progress", "served"].includes(status)) {
+        return res.status(400).json({ error: "Valid status (in_progress or served) is required" });
+      }
+
+      const count = await storage.batchUpdateOrderStatus(orderIds, status);
+      res.json({ updated: count });
+    } catch (error) {
+      console.error("Error batch updating orders:", error);
+      res.status(500).json({ error: "Failed to batch update orders" });
+    }
+  });
+
+  // DELETE /api/orders/served - Clear all served orders
+  app.delete("/api/orders/served", async (req, res) => {
+    try {
+      const count = await storage.deleteServedOrders();
+      res.json({ deleted: count });
+    } catch (error) {
+      console.error("Error clearing served orders:", error);
+      res.status(500).json({ error: "Failed to clear served orders" });
+    }
+  });
+
   // GET /api/analytics - Get drink analytics
   app.get("/api/analytics", async (req, res) => {
     try {

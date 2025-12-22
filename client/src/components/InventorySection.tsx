@@ -288,110 +288,201 @@ export function InventorySection() {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            {ingredientsLoading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((row) => (
-                  <Skeleton key={row} className="h-12 w-full" />
-                ))}
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Ingredient</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead className="text-right">On Hand</TableHead>
-                    <TableHead className="text-right">Par Level</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredItems.map((item) => {
+          {ingredientsLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((row) => (
+                <Skeleton key={row} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : (
+            <>
+              {/* Mobile view - card layout */}
+              <div className="md:hidden space-y-2" data-testid="inventory-mobile-view">
+                {filteredItems.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    {ingredients.length === 0 
+                      ? "No ingredients yet. Add your first ingredient above."
+                      : "No ingredients match your filters."}
+                  </div>
+                ) : (
+                  filteredItems.map((item) => {
                     const isLow = item.onHand > 0 && item.onHand <= item.parLevel;
                     const isOut = item.onHand <= 0;
                     return (
-                      <TableRow key={item.id} data-testid={`row-ingredient-${item.id}`}>
-                        <TableCell className="font-medium">{item.name}</TableCell>
-                        <TableCell className="text-muted-foreground">{item.category || "-"}</TableCell>
-                        <TableCell className="text-right">
-                          {item.onHand} {item.unit}
-                        </TableCell>
-                        <TableCell className="text-right text-muted-foreground">
-                          {item.parLevel} {item.unit}
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              isOut
-                                ? "destructive"
-                                : isLow
-                                  ? "secondary"
-                                  : "default"
-                            }
-                          >
-                            {isOut ? "Out of stock" : isLow ? "Low stock" : "Healthy"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleEditOpen(item.id)}
-                              data-testid={`button-edit-ingredient-${item.id}`}
-                            >
-                              <Pencil className="h-3 w-3 mr-1" />
-                              Edit
-                            </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  data-testid={`button-delete-ingredient-${item.id}`}
-                                  disabled={deleteIngredientPending}
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete Ingredient</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Are you sure you want to delete "{item.name}"? This action cannot be undone.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => handleDelete(item.id)}
-                                    data-testid="button-confirm-delete-ingredient"
-                                  >
-                                    Delete
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                      <div 
+                        key={item.id} 
+                        className="border rounded-lg p-3"
+                        data-testid={`mobile-ingredient-${item.id}`}
+                      >
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <div>
+                            <div className="font-medium">{item.name}</div>
+                            {item.category && (
+                              <div className="text-sm text-muted-foreground">{item.category}</div>
+                            )}
                           </div>
+                          <Badge
+                            variant={isOut ? "destructive" : isLow ? "secondary" : "default"}
+                          >
+                            {isOut ? "Out" : isLow ? "Low" : "OK"}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center justify-between text-sm mb-3">
+                          <div>
+                            <span className="text-muted-foreground">On Hand: </span>
+                            <span className="font-medium">{item.onHand} {item.unit}</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Par: </span>
+                            <span>{item.parLevel} {item.unit}</span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1"
+                            onClick={() => handleEditOpen(item.id)}
+                            data-testid={`mobile-button-edit-ingredient-${item.id}`}
+                          >
+                            <Pencil className="h-3 w-3 mr-1" />
+                            Edit
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                size="icon"
+                                variant="outline"
+                                data-testid={`mobile-button-delete-ingredient-${item.id}`}
+                                disabled={deleteIngredientPending}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Ingredient</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete "{item.name}"? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDelete(item.id)}
+                                  data-testid="button-confirm-delete-ingredient-mobile"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Desktop view - table layout */}
+              <div className="hidden md:block overflow-x-auto" data-testid="inventory-desktop-view">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Ingredient</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead className="text-right">On Hand</TableHead>
+                      <TableHead className="text-right">Par Level</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredItems.map((item) => {
+                      const isLow = item.onHand > 0 && item.onHand <= item.parLevel;
+                      const isOut = item.onHand <= 0;
+                      return (
+                        <TableRow key={item.id} data-testid={`row-ingredient-${item.id}`}>
+                          <TableCell className="font-medium">{item.name}</TableCell>
+                          <TableCell className="text-muted-foreground">{item.category || "-"}</TableCell>
+                          <TableCell className="text-right">
+                            {item.onHand} {item.unit}
+                          </TableCell>
+                          <TableCell className="text-right text-muted-foreground">
+                            {item.parLevel} {item.unit}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                isOut
+                                  ? "destructive"
+                                  : isLow
+                                    ? "secondary"
+                                    : "default"
+                              }
+                            >
+                              {isOut ? "Out of stock" : isLow ? "Low stock" : "Healthy"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleEditOpen(item.id)}
+                                data-testid={`button-edit-ingredient-${item.id}`}
+                              >
+                                <Pencil className="h-3 w-3 mr-1" />
+                                Edit
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    data-testid={`button-delete-ingredient-${item.id}`}
+                                    disabled={deleteIngredientPending}
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Ingredient</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to delete "{item.name}"? This action cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => handleDelete(item.id)}
+                                      data-testid="button-confirm-delete-ingredient"
+                                    >
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                    {filteredItems.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-muted-foreground">
+                          {ingredients.length === 0 
+                            ? "No ingredients yet. Add your first ingredient above."
+                            : "No ingredients match your filters."}
                         </TableCell>
                       </TableRow>
-                    );
-                  })}
-                  {filteredItems.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground">
-                        {ingredients.length === 0 
-                          ? "No ingredients yet. Add your first ingredient above."
-                          : "No ingredients match your filters."}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            )}
-          </div>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 

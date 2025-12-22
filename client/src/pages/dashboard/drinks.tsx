@@ -33,7 +33,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Trash2, Pencil, CheckCircle2, AlertCircle } from "lucide-react";
+import { GripVertical, Trash2, Pencil, CheckCircle2, AlertCircle, Ban, Undo2 } from "lucide-react";
 
 export default function DrinksPage() {
   const [selectedMenuId, setSelectedMenuId] = useState<string>("");
@@ -338,6 +338,28 @@ export default function DrinksPage() {
             >
               <Trash2 className="w-3 h-3 mr-1" />
               Delete
+            </Button>
+            <Button
+              variant={drink.isOutOfStock ? "default" : "outline"}
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                updateDrink({ ...drink, isOutOfStock: !drink.isOutOfStock });
+              }}
+              disabled={updateDrinkPending}
+              data-testid={`button-86-drink-${drink.id}`}
+            >
+              {drink.isOutOfStock ? (
+                <>
+                  <Undo2 className="w-3 h-3 mr-1" />
+                  Restock
+                </>
+              ) : (
+                <>
+                  <Ban className="w-3 h-3 mr-1" />
+                  86
+                </>
+              )}
             </Button>
             <div className="flex-1" />
             <div

@@ -66,12 +66,20 @@ Preferred communication style: Simple, everyday language.
     - **Drink Attributes**: Support for `temperature` (Hot, Cold, Room Temp, Not Specified), `isMocktail` (exclusively non-alcoholic), and `canBeMocktail` (can be made as a mocktail) with corresponding UI badges.
 - **Technical Implementations**: Frontend uses optimistic UI updates for smooth interactions. Backend enforces order workflow transitions and handles data validation. Query invalidation ensures UI synchronization after mutations. Event-driven cookie updates trigger immediate order status display without page reload.
 - **Dashboard Layout Implementation**: Dashboard has been refactored from single-page conditional rendering to a multi-page routing structure for better performance, cleaner URLs, and optimal layouts. The architecture includes:
-    - **Routing Structure**: 6 separate dashboard pages at `/dashboard/*` (Queue, Analytics, Menus, Drinks, QR Codes, Settings)
+    - **Routing Structure**: 7 separate dashboard pages at `/dashboard/*` (Queue, Analytics, Menus, Drinks, Inventory, QR Codes, Settings, Import/Export)
     - **Shared Components**: DashboardLayout wrapper provides consistent header, sidebar, and navigation across all pages
-    - **Reusable Hooks**: Extracted shared logic into custom hooks (useOrders, useMenus, useDrinks, useAnalytics, useDashboardAuth) for better code organization
+    - **Reusable Hooks**: Extracted shared logic into custom hooks (useOrders, useMenus, useDrinks, useIngredients, useAnalytics, useDashboardAuth) for better code organization
     - **Navigation**: AppSidebar uses wouter Link components for client-side routing with automatic active state management
     - **Authentication**: DashboardLayout protects all routes with session-based auth, redirecting to `/dashboard-login` when unauthenticated
     - **Layout Pattern**: SidebarProvider at root level, pages manage their own scrolling and height constraints for flexible content
+    - **Mobile Optimizations**: 
+      - Queue page: Collapsible card layout on mobile with inline expansion for order details and actions
+      - Inventory page: Card-based layout on mobile (hidden on desktop, table on desktop)
+      - Responsive breakpoint at md: (768px) switches between mobile card view and desktop table view
+    - **Batch Order Operations**: Queue page supports checkbox selection with bulk "Start Preparing", "Mark Served", and "Clear Served" actions
+    - **Waiting Time Indicators**: Order queue displays color-coded waiting time badges (gray <3min, yellow 3-5min, red 5+ min)
+    - **Quick 86 Action**: Drinks page has one-tap "86" button to mark drinks out-of-stock (shows "Restock" when already 86'd)
+    - **Active Menu Toggle**: Queue page header includes dropdown to quickly switch active menu
 
 ## External Dependencies
 

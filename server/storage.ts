@@ -45,6 +45,8 @@ export interface IStorage {
   getOrderById(id: string): Promise<Order | undefined>;
   getOrderQueue(): Promise<OrderWithDrink[]>;
   updateOrderStatus(id: string, status: string, completedAt?: Date): Promise<Order | undefined>;
+  batchUpdateOrderStatus(orderIds: string[], status: string): Promise<number>;
+  deleteServedOrders(): Promise<number>;
   
   // Analytics operations
   getDrinkAnalytics(menuId?: string): Promise<DrinkAnalytics[]>;
@@ -347,6 +349,34 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return order || undefined;
+  }
+
+  async batchUpdateOrderStatus(orderIds: string[], status: string): Promise<number> {
+    if (orderIds.length === 0) return 0;
+    
+    const updateData: any = { status };
+    if (status === "served") {
+      updateData.completedAt = new Date();
+    }
+    
+    const result = await db
+      .update(orders)
+      .set(updateData)
+      .where(inArray(orders.id, orderIds));
+    
+    return orderIds.length;
+  }
+
+  async deleteServedOrders(): Promise<number> {
+    const servedOrders = await db
+      .select({ id: orders.id })
+      .from(orders)
+      .where(eq(orders.status, "served"));
+    
+    if (servedOrders.length === 0) return 0;
+    
+    await db.delete(orders).where(eq(orders.status, "served"));
+    return servedOrders.length;
   }
 
   async getDrinkAnalytics(menuId?: string): Promise<DrinkAnalytics[]> {
