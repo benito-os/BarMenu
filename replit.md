@@ -82,6 +82,7 @@ Preferred communication style: Simple, everyday language.
     - **Queue 86 Toggle**: Order queue allows marking drinks out-of-stock directly from queue cards/rows with immediate visual highlighting
     - **Mobile Queue Optimization**: Compact stacked card layout optimized for 375px screens with checkbox/status rows, smaller badges, and 2-column action grid
     - **Out-of-Stock Highlighting**: Queue orders for 86'd drinks display destructive badge, highlighted row styling, and "alert the guest" helper text
+    - **Mobile Inventory Optimization**: Compact card layout with collapsible "Add Ingredient" form, inline +/- stock adjustment buttons, and status-colored borders for low/out items
 
 ## External Dependencies
 

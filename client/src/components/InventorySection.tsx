@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Boxes, ClipboardList, Pencil, ScanBarcode, Sparkles, Trash2 } from "lucide-react";
+import { Boxes, ChevronDown, ClipboardList, Minus, Pencil, Plus, ScanBarcode, Sparkles, Trash2 } from "lucide-react";
 import { useIngredients } from "@/hooks/useIngredients";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 
@@ -46,6 +47,7 @@ export function InventorySection() {
     isActive: true,
   });
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [addFormOpen, setAddFormOpen] = useState(false);
 
   const categories = useMemo(() => {
     const unique = new Set(ingredients.map(item => item.category).filter((c): c is string => Boolean(c)));
@@ -166,7 +168,8 @@ export function InventorySection() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="rounded-lg border p-4 space-y-3">
+          {/* Desktop: Always visible form */}
+          <div className="hidden md:block rounded-lg border p-4 space-y-3">
             <h3 className="text-sm font-semibold">Add Ingredient</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               <div className="space-y-1">
@@ -253,6 +256,115 @@ export function InventorySection() {
             </div>
           </div>
 
+          {/* Mobile: Collapsible form */}
+          <Collapsible open={addFormOpen} onOpenChange={setAddFormOpen} className="md:hidden">
+            <CollapsibleTrigger asChild>
+              <Button 
+                variant="outline" 
+                className="w-full justify-between"
+                data-testid="button-toggle-add-form"
+              >
+                <span className="flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Add Ingredient
+                </span>
+                <ChevronDown className={`h-4 w-4 transition-transform ${addFormOpen ? "rotate-180" : ""}`} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-3">
+              <div className="rounded-lg border p-3 space-y-3">
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="mobile-ingredient-name" className="text-xs">Name</Label>
+                    <Input
+                      id="mobile-ingredient-name"
+                      data-testid="mobile-input-ingredient-name"
+                      value={newIngredient.name}
+                      onChange={(event) => setNewIngredient(prev => ({ ...prev, name: event.target.value }))}
+                      placeholder="Fresh Lime Juice"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label htmlFor="mobile-ingredient-category" className="text-xs">Category</Label>
+                      <Input
+                        id="mobile-ingredient-category"
+                        data-testid="mobile-input-ingredient-category"
+                        value={newIngredient.category}
+                        onChange={(event) => setNewIngredient(prev => ({ ...prev, category: event.target.value }))}
+                        placeholder="Mixers"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="mobile-ingredient-unit" className="text-xs">Unit</Label>
+                      <Input
+                        id="mobile-ingredient-unit"
+                        data-testid="mobile-input-ingredient-unit"
+                        value={newIngredient.unit}
+                        onChange={(event) => setNewIngredient(prev => ({ ...prev, unit: event.target.value }))}
+                        placeholder="qt"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label htmlFor="mobile-ingredient-par" className="text-xs">Par Level</Label>
+                      <Input
+                        id="mobile-ingredient-par"
+                        data-testid="mobile-input-ingredient-par"
+                        type="number"
+                        value={newIngredient.parLevel}
+                        onChange={(event) => setNewIngredient(prev => ({ ...prev, parLevel: Number(event.target.value) }))}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="mobile-ingredient-on-hand" className="text-xs">On Hand</Label>
+                      <Input
+                        id="mobile-ingredient-on-hand"
+                        data-testid="mobile-input-ingredient-on-hand"
+                        type="number"
+                        value={newIngredient.onHand}
+                        onChange={(event) => setNewIngredient(prev => ({ ...prev, onHand: Number(event.target.value) }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    data-testid="mobile-button-add-ingredient"
+                    onClick={() => {
+                      if (!newIngredient.name.trim()) return;
+                      createIngredient({
+                        ...newIngredient,
+                        category: newIngredient.category.trim() || null,
+                      });
+                      setNewIngredient({
+                        name: "",
+                        category: "",
+                        unit: "units",
+                        onHand: 0,
+                        parLevel: 0,
+                        isActive: true,
+                      });
+                      setAddFormOpen(false);
+                    }}
+                    disabled={createIngredientPending || !newIngredient.name.trim()}
+                  >
+                    {createIngredientPending ? "Adding..." : "Add"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    data-testid="mobile-button-scan-to-add"
+                    onClick={() => setScannerOpen(true)}
+                  >
+                    <ScanBarcode className="h-4 w-4 mr-1" />
+                    Scan
+                  </Button>
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <Input
               placeholder="Search ingredients"
@@ -296,12 +408,12 @@ export function InventorySection() {
             </div>
           ) : (
             <>
-              {/* Mobile view - card layout */}
+              {/* Mobile view - compact card layout */}
               <div className="md:hidden space-y-2" data-testid="inventory-mobile-view">
                 {filteredItems.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
+                  <div className="text-center py-8 text-muted-foreground text-sm">
                     {ingredients.length === 0 
-                      ? "No ingredients yet. Add your first ingredient above."
+                      ? "No ingredients yet. Tap \"Add Ingredient\" above."
                       : "No ingredients match your filters."}
                   </div>
                 ) : (
@@ -311,72 +423,112 @@ export function InventorySection() {
                     return (
                       <div 
                         key={item.id} 
-                        className="border rounded-lg p-3"
+                        className={`border rounded-lg p-2 ${isOut ? "border-destructive/50 bg-destructive/5" : isLow ? "border-yellow-500/50 bg-yellow-500/5" : ""}`}
                         data-testid={`mobile-ingredient-${item.id}`}
                       >
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                          <div>
-                            <div className="font-medium">{item.name}</div>
-                            {item.category && (
-                              <div className="text-sm text-muted-foreground">{item.category}</div>
-                            )}
+                        {/* Row 1: Name + Status Badge */}
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <div className="flex-1 min-w-0">
+                            <span className="font-medium text-sm truncate block">{item.name}</span>
                           </div>
                           <Badge
                             variant={isOut ? "destructive" : isLow ? "secondary" : "default"}
+                            className="text-[10px] px-1.5 py-0 h-5 shrink-0"
                           >
                             {isOut ? "Out" : isLow ? "Low" : "OK"}
                           </Badge>
                         </div>
-                        <div className="flex items-center justify-between text-sm mb-3">
-                          <div>
-                            <span className="text-muted-foreground">On Hand: </span>
-                            <span className="font-medium">{item.onHand} {item.unit}</span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Par: </span>
-                            <span>{item.parLevel} {item.unit}</span>
-                          </div>
+
+                        {/* Row 2: Category + Stock info */}
+                        <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+                          <span className="truncate">{item.category || "Uncategorized"}</span>
+                          <span>Par: {item.parLevel} {item.unit}</span>
                         </div>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="flex-1"
-                            onClick={() => handleEditOpen(item.id)}
-                            data-testid={`mobile-button-edit-ingredient-${item.id}`}
-                          >
-                            <Pencil className="h-3 w-3 mr-1" />
-                            Edit
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                size="icon"
-                                variant="outline"
-                                data-testid={`mobile-button-delete-ingredient-${item.id}`}
-                                disabled={deleteIngredientPending}
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete Ingredient</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to delete "{item.name}"? This action cannot be undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => handleDelete(item.id)}
-                                  data-testid="button-confirm-delete-ingredient-mobile"
+
+                        {/* Row 3: Quick stock controls + actions */}
+                        <div className="flex items-center justify-between gap-2">
+                          {/* Quick stock adjustment */}
+                          <div className="flex items-center gap-1">
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              className="h-8 w-8"
+                              onClick={() => {
+                                updateIngredient({
+                                  id: item.id,
+                                  onHand: Math.max(0, item.onHand - 1),
+                                });
+                              }}
+                              disabled={updateIngredientPending || item.onHand <= 0}
+                              data-testid={`mobile-button-decrement-${item.id}`}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <div 
+                              className="min-w-[3.5rem] text-center font-medium text-sm px-1"
+                              data-testid={`mobile-stock-count-${item.id}`}
+                            >
+                              {item.onHand} {item.unit}
+                            </div>
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              className="h-8 w-8"
+                              onClick={() => {
+                                updateIngredient({
+                                  id: item.id,
+                                  onHand: item.onHand + 1,
+                                });
+                              }}
+                              disabled={updateIngredientPending}
+                              data-testid={`mobile-button-increment-${item.id}`}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+
+                          {/* Edit + Delete actions */}
+                          <div className="flex items-center gap-1">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8"
+                              onClick={() => handleEditOpen(item.id)}
+                              data-testid={`mobile-button-edit-ingredient-${item.id}`}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-8 w-8"
+                                  data-testid={`mobile-button-delete-ingredient-${item.id}`}
+                                  disabled={deleteIngredientPending}
                                 >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Ingredient</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete "{item.name}"? This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleDelete(item.id)}
+                                    data-testid="button-confirm-delete-ingredient-mobile"
+                                  >
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
                         </div>
                       </div>
                     );
