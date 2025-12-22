@@ -265,8 +265,8 @@ export function BarcodeScanner({ open, onClose, onAddIngredient }: BarcodeScanne
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-md max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Camera className="h-5 w-5" />
             Scan Barcode
@@ -282,9 +282,9 @@ export function BarcodeScanner({ open, onClose, onAddIngredient }: BarcodeScanne
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 flex-1 overflow-y-auto min-h-0">
           {(scanState === "scanning" || scanState === "capturing" || scanState === "no_barcode") && (
-            <div className="relative aspect-video overflow-hidden rounded-lg bg-black">
+            <div className="relative aspect-[4/3] sm:aspect-video overflow-hidden rounded-lg bg-black">
               <video
                 ref={videoRef}
                 className="h-full w-full object-cover"
@@ -413,7 +413,7 @@ export function BarcodeScanner({ open, onClose, onAddIngredient }: BarcodeScanne
           )}
         </div>
 
-        <DialogFooter className="flex-row gap-2 justify-end">
+        <DialogFooter className="flex-row gap-2 justify-end flex-shrink-0">
           {(scanState === "scanning" || scanState === "capturing" || scanState === "no_barcode" || scanState === "error") && (
             <Button variant="outline" onClick={handleClose} data-testid="button-cancel-scan">
               <X className="h-4 w-4 mr-2" />
