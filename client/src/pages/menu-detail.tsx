@@ -125,7 +125,15 @@ export default function MenuDetail() {
     return acc;
   }, {} as Record<string, DrinkAvailability[]>) || {};
 
-  const sections = Object.keys(drinksBySection).sort();
+  // Use menu.sections order if available, then append any additional sections from drinks
+  // This preserves admin-defined order while still showing any new sections that have drinks
+  const allDrinkSections = Object.keys(drinksBySection);
+  const sections = menu?.sections && menu.sections.length > 0
+    ? [
+        ...menu.sections.filter(section => drinksBySection[section]), // Admin-ordered sections with drinks
+        ...allDrinkSections.filter(section => !menu.sections.includes(section)).sort() // Additional sections not in menu.sections
+      ]
+    : allDrinkSections.sort();
 
   const isLoading = menuLoading || drinksLoading;
 

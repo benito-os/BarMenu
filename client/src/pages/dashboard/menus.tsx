@@ -596,8 +596,8 @@ export default function MenusPage() {
 
         {/* Edit Menu Dialog */}
         <Dialog open={!!editingMenu} onOpenChange={(open) => !open && setEditingMenu(null)}>
-          <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
-            <DialogHeader>
+          <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+            <DialogHeader className="flex-shrink-0">
               <DialogTitle>Edit Menu</DialogTitle>
               <DialogDescription>
                 Update menu information and theming
@@ -609,9 +609,9 @@ export default function MenusPage() {
                   e.preventDefault();
                   updateMenu(editingMenu);
                 }}
-                className="flex flex-col flex-1 min-h-0"
+                className="flex flex-col flex-1 min-h-0 overflow-hidden"
               >
-                <ScrollArea className="flex-1 pr-4">
+                <ScrollArea className="flex-1 min-h-0 pr-4">
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
@@ -796,7 +796,7 @@ export default function MenusPage() {
                   </div>
                 </ScrollArea>
 
-                <div className="flex justify-end gap-2 pt-4 border-t mt-4">
+                <div className="flex justify-end gap-2 pt-4 border-t mt-4 flex-shrink-0">
                   <Button
                     type="button"
                     variant="outline"
