@@ -600,10 +600,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/export/menus", async (req, res) => {
     try {
       const menus = await storage.getAllMenus();
-      const headers = ["id", "slug (REQUIRED)", "name (REQUIRED)", "description", "isActive", "heroImageUrl", "backgroundColor", "accentColor", "typography", "sections", "createdAt"];
+      const headers = ["id", "slug (REQUIRED)", "name (REQUIRED)", "description", "isActive", "heroImageUrl", "backgroundColor", "accentColor", "sectionHeaderColor", "menuTitleColor", "typography", "sections", "createdAt"];
       const rows = menus.map(m => [
         m.id, m.slug, m.name, m.description || "", m.isActive ? "true" : "false",
         m.heroImageUrl || "", m.backgroundColor || "", m.accentColor || "",
+        m.sectionHeaderColor || "", m.menuTitleColor || "",
         m.typography || "", (m.sections || []).join("|"), m.createdAt
       ]);
       
@@ -696,8 +697,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // GET /api/templates/menus - Get empty CSV template for menus
   app.get("/api/templates/menus", async (req, res) => {
-    const headers = ["slug (REQUIRED)", "name (REQUIRED)", "description", "isActive", "heroImageUrl", "backgroundColor", "accentColor", "typography", "sections"];
-    const exampleRow = ["summer-2024", "Summer Menu", "Our summer cocktail selection", "true", "", "#ffffff", "#ff6600", "Playfair Display", "Classic|Signature|Mocktails"];
+    const headers = ["slug (REQUIRED)", "name (REQUIRED)", "description", "isActive", "heroImageUrl", "backgroundColor", "accentColor", "sectionHeaderColor", "menuTitleColor", "typography", "sections"];
+    const exampleRow = ["summer-2024", "Summer Menu", "Our summer cocktail selection", "true", "", "#f5f5f5", "#c9a227", "#333333", "#1a1a1a", "Playfair Display", "Classic|Signature|Mocktails"];
     
     const csv = [toCSVRow(headers), toCSVRow(exampleRow)].join("\n");
     res.setHeader("Content-Type", "text/csv");
@@ -819,6 +820,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             heroImageUrl: obj.heroImageUrl || null,
             backgroundColor: obj.backgroundColor || null,
             accentColor: obj.accentColor || null,
+            sectionHeaderColor: obj.sectionHeaderColor || null,
+            menuTitleColor: obj.menuTitleColor || null,
             typography: obj.typography || null,
             sections: obj.sections ? obj.sections.split("|").filter(Boolean) : [],
           });
