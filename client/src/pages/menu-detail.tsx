@@ -15,8 +15,9 @@ import { apiRequest } from "@/lib/queryClient";
 import { addTrackedOrder } from "@/lib/orderCookies";
 import { OrderStatusBanner } from "@/components/OrderStatusBanner";
 import type { Menu, DrinkAvailability } from "@shared/validation";
-import { Home, Wine, Sparkles, Glasses, Check, Flame, Snowflake, ThermometerSun } from "lucide-react";
+import { Home, Wine, Sparkles, Glasses, Check, Flame, Snowflake, ThermometerSun, Share2, QrCode } from "lucide-react";
 import { useState } from "react";
+import { BrandedQRCode } from "@/components/BrandedQRCode";
 
 export default function MenuDetail() {
   const [, params] = useRoute("/menu/:slug");
@@ -28,6 +29,7 @@ export default function MenuDetail() {
   const [guestName, setGuestName] = useState("");
   const [comments, setComments] = useState("");
   const [asMocktail, setAsMocktail] = useState(false);
+  const [qrDialogOpen, setQrDialogOpen] = useState(false);
 
   const { data: menu, isLoading: menuLoading } = useQuery<Menu>({
     queryKey: ["/api/menus", slug],
@@ -173,12 +175,21 @@ export default function MenuDetail() {
             </Link>
             {menu && (
               <h1 
-                className="text-xl md:text-2xl font-bold text-foreground truncate"
+                className="text-xl md:text-2xl font-bold text-foreground truncate flex-1 text-center"
                 style={{ color: menuTitleColor }}
               >
                 {menu.name}
               </h1>
             )}
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => setQrDialogOpen(true)}
+              data-testid="button-share-menu"
+            >
+              <Share2 className="w-4 h-4 mr-2" />
+              Share
+            </Button>
           </div>
         </div>
       </header>
@@ -480,6 +491,36 @@ export default function MenuDetail() {
               {orderMutation.isPending ? "Placing Order..." : "Place Order"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Share QR Code Dialog */}
+      <Dialog open={qrDialogOpen} onOpenChange={setQrDialogOpen}>
+        <DialogContent data-testid="dialog-share-qr" className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <QrCode className="w-5 h-5" />
+              Share {menu?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Scan to view this menu or share the link with friends
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {menu && (
+              <BrandedQRCode
+                url={window.location.href}
+                menuName={menu.name}
+                slug={menu.slug}
+                size={200}
+                fgColor={menu.accentColor || "#1a1a1a"}
+                bgColor="#ffffff"
+                showActions={true}
+                showDownload={true}
+                showShare={true}
+              />
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

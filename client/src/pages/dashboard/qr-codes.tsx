@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useMenus } from "@/hooks/useMenus";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,93 +8,57 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
-import { QRCodeSVG } from "qrcode.react";
-import { Download } from "lucide-react";
+import { BrandedQRCode } from "@/components/BrandedQRCode";
+import { Copy, Palette } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function QRCodesPage() {
   const { menus, menusLoading, defaultMenu } = useMenus();
   const { toast } = useToast();
-  const qrRef = useRef<HTMLDivElement>(null);
 
-  // QR Code customization state
   const [selectedMenuId, setSelectedMenuId] = useState<string>("HOME");
   const [qrSize, setQrSize] = useState<number>(256);
-  const [qrFgColor, setQrFgColor] = useState<string>("#000000");
+  const [qrFgColor, setQrFgColor] = useState<string>("#1a1a1a");
   const [qrBgColor, setQrBgColor] = useState<string>("#ffffff");
-  const [qrLevel, setQrLevel] = useState<"L" | "M" | "Q" | "H">("H");
-  const [qrIncludeMargin, setQrIncludeMargin] = useState<boolean>(true);
+  const [useMenuColors, setUseMenuColors] = useState<boolean>(true);
 
-  // Get base URL for QR codes
   const baseUrl = window.location.origin;
 
-  // Set default menu when menus load
   useEffect(() => {
     if (selectedMenuId === "HOME" && defaultMenu) {
       setSelectedMenuId(defaultMenu.id);
     }
   }, [defaultMenu, selectedMenuId]);
 
-  // Get selected menu
   const selectedMenu = menus.find(menu => menu.id === selectedMenuId);
 
-  // Generate QR code URL
+  useEffect(() => {
+    if (useMenuColors && selectedMenu) {
+      if (selectedMenu.accentColor) {
+        setQrFgColor(selectedMenu.accentColor);
+      } else {
+        setQrFgColor("#1a1a1a");
+      }
+      if (selectedMenu.backgroundColor) {
+        setQrBgColor(selectedMenu.backgroundColor);
+      } else {
+        setQrBgColor("#ffffff");
+      }
+    }
+  }, [selectedMenu, useMenuColors]);
+
   const qrCodeUrl = selectedMenu ? `${baseUrl}/menu/${selectedMenu.slug}` : baseUrl;
 
-  // Download QR code as PNG
-  const downloadQRCode = () => {
-    if (!qrRef.current) return;
-
-    const svg = qrRef.current.querySelector("svg");
-    if (!svg) return;
-
+  const copyUrl = async () => {
     try {
-      // Create a canvas element
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-
-      // Set canvas size
-      canvas.width = qrSize;
-      canvas.height = qrSize;
-
-      // Convert SVG to image
-      const svgData = new XMLSerializer().serializeToString(svg);
-      const img = new Image();
-      const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
-      const url = URL.createObjectURL(svgBlob);
-
-      img.onload = () => {
-        ctx.drawImage(img, 0, 0);
-        URL.revokeObjectURL(url);
-
-        // Convert canvas to PNG and download
-        canvas.toBlob((blob) => {
-          if (!blob) return;
-          
-          const downloadUrl = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = downloadUrl;
-          link.download = selectedMenu 
-            ? `qr-code-${selectedMenu.slug}.png`
-            : "qr-code-home.png";
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(downloadUrl);
-
-          toast({
-            title: "QR Code Downloaded",
-            description: "Your QR code has been saved as a PNG file",
-          });
-        });
-      };
-
-      img.src = url;
+      await navigator.clipboard.writeText(qrCodeUrl);
+      toast({
+        title: "Link Copied",
+        description: "Menu URL copied to clipboard",
+      });
     } catch (error) {
       toast({
-        title: "Download Failed",
-        description: "Failed to download QR code. Please try again.",
+        title: "Copy Failed",
         variant: "destructive",
       });
     }
@@ -122,15 +86,14 @@ export default function QRCodesPage() {
       <div className="p-4 md:p-6 max-w-full">
         <div className="mb-6">
           <h2 className="text-2xl font-bold mb-2" data-testid="text-page-title">
-            QR Code Generator
+            Branded QR Codes
           </h2>
           <p className="text-muted-foreground" data-testid="text-page-description">
-            Generate QR codes for your menus that guests can scan to view drinks
+            Generate branded QR codes with your Bar Flores logo for guests to scan
           </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* QR Code Preview */}
           <Card>
             <CardHeader>
               <CardTitle className="text-xl">QR Code Preview</CardTitle>
@@ -142,7 +105,6 @@ export default function QRCodesPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {/* Menu Selector */}
                 <div className="space-y-2">
                   <Label htmlFor="menu-select">Select Menu</Label>
                   <Select 
@@ -169,68 +131,78 @@ export default function QRCodesPage() {
                   </Select>
                 </div>
 
-                {/* QR Code Display */}
                 <div className="flex flex-col items-center gap-4 py-6">
-                  <div 
-                    ref={qrRef}
-                    className="bg-white p-6 rounded-lg border" 
-                    style={{ backgroundColor: qrBgColor }}
-                    data-testid="container-qr-preview"
-                  >
-                    <QRCodeSVG
-                      value={qrCodeUrl}
-                      size={qrSize}
-                      level={qrLevel}
-                      includeMargin={qrIncludeMargin}
-                      fgColor={qrFgColor}
-                      bgColor={qrBgColor}
-                    />
-                  </div>
+                  <BrandedQRCode
+                    url={qrCodeUrl}
+                    menuName={selectedMenu?.name || "Bar Flores"}
+                    slug={selectedMenu?.slug || "home"}
+                    size={qrSize}
+                    fgColor={qrFgColor}
+                    bgColor={qrBgColor}
+                    showActions={true}
+                    showDownload={true}
+                    showShare={true}
+                  />
 
-                  {/* URL Display */}
                   <div className="w-full space-y-2">
                     <Label className="text-sm font-medium">QR Code URL</Label>
-                    <p className="text-sm text-muted-foreground break-all font-mono bg-muted p-3 rounded-md" data-testid="text-qr-url">
-                      {qrCodeUrl}
-                    </p>
+                    <div className="flex gap-2">
+                      <p className="flex-1 text-sm text-muted-foreground break-all font-mono bg-muted p-3 rounded-md" data-testid="text-qr-url">
+                        {qrCodeUrl}
+                      </p>
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        onClick={copyUrl}
+                        data-testid="button-copy-url"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                    </div>
                     <p className="text-xs text-muted-foreground" data-testid="text-qr-instructions">
                       {selectedMenu 
                         ? `Guests will be taken directly to the ${selectedMenu.name} menu`
                         : "Guests will see all active menus on the home page"}
                     </p>
                   </div>
-
-                  {/* Download Button */}
-                  <Button 
-                    onClick={downloadQRCode}
-                    className="w-full"
-                    data-testid="button-download-qr"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Download QR Code
-                  </Button>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* QR Code Customization */}
           <Card>
             <CardHeader>
               <CardTitle className="text-xl">Customization</CardTitle>
               <CardDescription>
-                Customize the appearance of your QR code
+                Customize the appearance of your branded QR code
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Size Slider */}
+              <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                <Palette className="w-5 h-5 text-muted-foreground" />
+                <div className="flex-1">
+                  <Label htmlFor="use-menu-colors" className="text-sm font-medium">
+                    Use Menu Theme Colors
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Automatically match QR code colors to your menu's accent and background colors
+                  </p>
+                </div>
+                <Switch
+                  id="use-menu-colors"
+                  checked={useMenuColors}
+                  onCheckedChange={setUseMenuColors}
+                  data-testid="switch-use-menu-colors"
+                />
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="qr-size">Size: {qrSize}px</Label>
                 <div className="flex items-center gap-4">
                   <Input
                     id="qr-size"
                     type="range"
-                    min="100"
+                    min="150"
                     max="400"
                     step="16"
                     value={qrSize}
@@ -244,7 +216,6 @@ export default function QRCodesPage() {
                 </div>
               </div>
 
-              {/* Color Pickers */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="qr-fg-color">Foreground Color</Label>
@@ -253,16 +224,22 @@ export default function QRCodesPage() {
                       id="qr-fg-color"
                       type="color"
                       value={qrFgColor}
-                      onChange={(e) => setQrFgColor(e.target.value)}
+                      onChange={(e) => {
+                        setQrFgColor(e.target.value);
+                        setUseMenuColors(false);
+                      }}
                       className="h-10 w-20"
                       data-testid="input-qr-fg-color"
                     />
                     <Input
                       type="text"
                       value={qrFgColor}
-                      onChange={(e) => setQrFgColor(e.target.value)}
+                      onChange={(e) => {
+                        setQrFgColor(e.target.value);
+                        setUseMenuColors(false);
+                      }}
                       placeholder="#000000"
-                      className="flex-1 font-mono"
+                      className="flex-1 font-mono text-sm"
                       data-testid="input-qr-fg-color-text"
                     />
                   </div>
@@ -275,68 +252,38 @@ export default function QRCodesPage() {
                       id="qr-bg-color"
                       type="color"
                       value={qrBgColor}
-                      onChange={(e) => setQrBgColor(e.target.value)}
+                      onChange={(e) => {
+                        setQrBgColor(e.target.value);
+                        setUseMenuColors(false);
+                      }}
                       className="h-10 w-20"
                       data-testid="input-qr-bg-color"
                     />
                     <Input
                       type="text"
                       value={qrBgColor}
-                      onChange={(e) => setQrBgColor(e.target.value)}
+                      onChange={(e) => {
+                        setQrBgColor(e.target.value);
+                        setUseMenuColors(false);
+                      }}
                       placeholder="#ffffff"
-                      className="flex-1 font-mono"
+                      className="flex-1 font-mono text-sm"
                       data-testid="input-qr-bg-color-text"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Error Correction Level */}
-              <div className="space-y-2">
-                <Label htmlFor="qr-level">Error Correction Level</Label>
-                <Select 
-                  value={qrLevel} 
-                  onValueChange={(value: "L" | "M" | "Q" | "H") => setQrLevel(value)}
-                >
-                  <SelectTrigger id="qr-level" data-testid="select-qr-level">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="L" data-testid="select-level-l">Low (7% recovery)</SelectItem>
-                    <SelectItem value="M" data-testid="select-level-m">Medium (15% recovery)</SelectItem>
-                    <SelectItem value="Q" data-testid="select-level-q">Quartile (25% recovery)</SelectItem>
-                    <SelectItem value="H" data-testid="select-level-h">High (30% recovery)</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground" data-testid="text-level-description">
-                  Higher levels allow the QR code to be read even if partially damaged or obscured
-                </p>
-              </div>
-
-              {/* Include Margin */}
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="qr-margin"
-                  checked={qrIncludeMargin}
-                  onCheckedChange={setQrIncludeMargin}
-                  data-testid="switch-qr-margin"
-                />
-                <Label htmlFor="qr-margin" className="text-sm">
-                  Include quiet zone margin
-                </Label>
-              </div>
-
-              {/* Quick Presets */}
               <div className="border-t pt-4">
-                <h3 className="text-sm font-semibold mb-2">Quick Presets</h3>
+                <h3 className="text-sm font-semibold mb-3">Quick Presets</h3>
                 <div className="flex flex-wrap gap-2">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      setQrFgColor("#000000");
+                      setQrFgColor("#1a1a1a");
                       setQrBgColor("#ffffff");
-                      setQrSize(256);
+                      setUseMenuColors(false);
                     }}
                     data-testid="button-preset-classic"
                   >
@@ -346,39 +293,58 @@ export default function QRCodesPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      setQrFgColor("#1a1a1a");
-                      setQrBgColor("#f5f5f5");
-                      setQrSize(256);
+                      setQrFgColor("#78350f");
+                      setQrBgColor("#fef3c7");
+                      setUseMenuColors(false);
                     }}
-                    data-testid="button-preset-elegant"
+                    data-testid="button-preset-warm"
                   >
-                    Elegant
+                    Warm Gold
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      setQrFgColor("#8b5cf6");
+                      setQrFgColor("#1e3a5f");
+                      setQrBgColor("#f0f9ff");
+                      setUseMenuColors(false);
+                    }}
+                    data-testid="button-preset-navy"
+                  >
+                    Navy
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setQrFgColor("#7c3aed");
                       setQrBgColor("#faf5ff");
-                      setQrSize(300);
+                      setUseMenuColors(false);
                     }}
                     data-testid="button-preset-purple"
                   >
                     Purple
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setQrFgColor("#ef4444");
-                      setQrBgColor("#fef2f2");
-                      setQrSize(300);
-                    }}
-                    data-testid="button-preset-red"
-                  >
-                    Red
-                  </Button>
+                  {selectedMenu?.accentColor && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setUseMenuColors(true)}
+                      data-testid="button-preset-menu"
+                    >
+                      Menu Theme
+                    </Button>
+                  )}
                 </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h3 className="text-sm font-semibold mb-2">About Branded QR Codes</h3>
+                <p className="text-xs text-muted-foreground">
+                  Your QR codes feature the Bar Flores "BF" logo in the center with rounded 
+                  corner styling and dot patterns. The high error correction level ensures 
+                  the code remains scannable even with the logo overlay.
+                </p>
               </div>
             </CardContent>
           </Card>
