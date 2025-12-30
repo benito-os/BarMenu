@@ -63,6 +63,7 @@ Preferred communication style: Simple, everyday language.
       - Templates include example rows for guidance
       - Import validation with per-row error reporting
     - **Dynamic Theming**: Menus can be customized with specific hero images, background colors, accent colors, and typography, which are applied to their public-facing pages.
+    - **Hero Image Upload**: Admin can upload hero images directly via drag-and-drop or file picker, or use external image URLs. Uploads are stored in Replit object storage and require dashboard authentication.
     - **Drink Attributes**: Support for `temperature` (Hot, Cold, Room Temp, Not Specified), `isMocktail` (exclusively non-alcoholic), and `canBeMocktail` (can be made as a mocktail) with corresponding UI badges.
 - **Technical Implementations**: Frontend uses optimistic UI updates for smooth interactions. Backend enforces order workflow transitions and handles data validation. Query invalidation ensures UI synchronization after mutations. Event-driven cookie updates trigger immediate order status display without page reload.
 - **Dashboard Layout Implementation**: Dashboard has been refactored from single-page conditional rendering to a multi-page routing structure for better performance, cleaner URLs, and optimal layouts. The architecture includes:

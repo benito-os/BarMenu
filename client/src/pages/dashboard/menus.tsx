@@ -35,6 +35,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Trash2, Pencil, QrCode, Plus, X } from "lucide-react";
+import { ImageUploader } from "@/components/ImageUploader";
 
 export default function MenusPage() {
   const [editingMenu, setEditingMenu] = useState<Menu | null>(null);
@@ -343,13 +344,12 @@ export default function MenusPage() {
                         name="heroImageUrl"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Hero Image URL</FormLabel>
+                            <FormLabel>Hero Image</FormLabel>
                             <FormControl>
-                              <Input
-                                placeholder="https://example.com/image.jpg"
-                                {...field}
+                              <ImageUploader
                                 value={field.value || ""}
-                                disabled={createMenuPending}
+                                onChange={field.onChange}
+                                placeholder="https://example.com/image.jpg"
                               />
                             </FormControl>
                             <FormMessage />
@@ -616,11 +616,10 @@ export default function MenusPage() {
                       <h3 className="text-sm font-semibold mb-4">Theme Customization (Optional)</h3>
                       <div className="space-y-4">
                         <div className="space-y-2">
-                          <Label htmlFor="edit-menu-hero">Hero Image URL</Label>
-                          <Input
-                            id="edit-menu-hero"
+                          <Label>Hero Image</Label>
+                          <ImageUploader
                             value={editingMenu.heroImageUrl || ""}
-                            onChange={(e) => setEditingMenu({ ...editingMenu, heroImageUrl: e.target.value })}
+                            onChange={(url) => setEditingMenu({ ...editingMenu, heroImageUrl: url })}
                             placeholder="https://example.com/image.jpg"
                           />
                         </div>
