@@ -13,6 +13,8 @@ export const menus = pgTable("menus", {
   heroImageUrl: text("hero_image_url"),
   backgroundColor: text("background_color"),
   accentColor: text("accent_color"),
+  sectionHeaderColor: text("section_header_color"),
+  menuTitleColor: text("menu_title_color"),
   typography: text("typography"),
   sections: text("sections").array().notNull().default(sql`ARRAY[]::text[]`),
   createdAt: timestamp("created_at").notNull().defaultNow(),

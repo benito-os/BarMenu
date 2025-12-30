@@ -144,14 +144,8 @@ export default function MenuDetail() {
   } : {};
 
   const accentColor = menu?.accentColor || undefined;
-  
-  // Determine if we need light text (dark background)
-  const needsLightText = menu?.backgroundColor && 
-    (menu.backgroundColor.toLowerCase().includes('#4a2e0f') || 
-     menu.backgroundColor.toLowerCase().includes('#000') ||
-     menu.backgroundColor.toLowerCase().includes('rgb(74, 46, 15)'));
-  
-  const sectionHeaderColor = needsLightText ? '#f5e6d3' : undefined;
+  const sectionHeaderColor = menu?.sectionHeaderColor || undefined;
+  const menuTitleColor = menu?.menuTitleColor || undefined;
 
   return (
     <div className="min-h-screen bg-background" style={themingStyle}>
@@ -170,7 +164,10 @@ export default function MenuDetail() {
               </Button>
             </Link>
             {menu && (
-              <h1 className="text-xl md:text-2xl font-bold text-foreground truncate">
+              <h1 
+                className="text-xl md:text-2xl font-bold text-foreground truncate"
+                style={{ color: menuTitleColor }}
+              >
                 {menu.name}
               </h1>
             )}
@@ -228,7 +225,10 @@ export default function MenuDetail() {
             {/* Menu Header - only show if no hero image */}
             {!menu.heroImageUrl && (
               <div className="text-center space-y-4 pb-8 border-b">
-                <h2 className="text-4xl md:text-5xl font-bold text-foreground">
+                <h2 
+                  className="text-4xl md:text-5xl font-bold text-foreground"
+                  style={{ color: menuTitleColor }}
+                >
                   {menu.name}
                 </h2>
                 {menu.description && (

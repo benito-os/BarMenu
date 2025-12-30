@@ -36,6 +36,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Trash2, Pencil, QrCode, Plus, X } from "lucide-react";
 import { ImageUploader } from "@/components/ImageUploader";
+import { ColorPicker } from "@/components/ColorPicker";
 
 export default function MenusPage() {
   const [editingMenu, setEditingMenu] = useState<Menu | null>(null);
@@ -67,6 +68,8 @@ export default function MenusPage() {
       heroImageUrl: "",
       backgroundColor: "",
       accentColor: "",
+      sectionHeaderColor: "",
+      menuTitleColor: "",
       typography: "",
     },
   });
@@ -362,13 +365,12 @@ export default function MenusPage() {
                           name="backgroundColor"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Background Color</FormLabel>
                               <FormControl>
-                                <Input
-                                  placeholder="#ffffff or hsl(0, 0%, 100%)"
-                                  {...field}
-                                  value={field.value || ""}
-                                  disabled={createMenuPending}
+                                <ColorPicker
+                                  label="Background Color"
+                                  value={field.value}
+                                  onChange={field.onChange}
+                                  placeholder="#f5f5f5"
                                 />
                               </FormControl>
                               <FormMessage />
@@ -380,13 +382,46 @@ export default function MenusPage() {
                           name="accentColor"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Accent Color</FormLabel>
                               <FormControl>
-                                <Input
-                                  placeholder="#000000 or hsl(0, 0%, 0%)"
-                                  {...field}
-                                  value={field.value || ""}
-                                  disabled={createMenuPending}
+                                <ColorPicker
+                                  label="Accent Color"
+                                  value={field.value}
+                                  onChange={field.onChange}
+                                  placeholder="#c9a227"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={menuForm.control}
+                          name="sectionHeaderColor"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormControl>
+                                <ColorPicker
+                                  label="Section Header Color"
+                                  value={field.value}
+                                  onChange={field.onChange}
+                                  placeholder="#333333"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={menuForm.control}
+                          name="menuTitleColor"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormControl>
+                                <ColorPicker
+                                  label="Menu Title Color"
+                                  value={field.value}
+                                  onChange={field.onChange}
+                                  placeholder="#1a1a1a"
                                 />
                               </FormControl>
                               <FormMessage />
@@ -624,24 +659,30 @@ export default function MenusPage() {
                           />
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="edit-menu-bg-color">Background Color</Label>
-                            <Input
-                              id="edit-menu-bg-color"
-                              value={editingMenu.backgroundColor || ""}
-                              onChange={(e) => setEditingMenu({ ...editingMenu, backgroundColor: e.target.value })}
-                              placeholder="#ffffff or hsl(0, 0%, 100%)"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="edit-menu-accent-color">Accent Color</Label>
-                            <Input
-                              id="edit-menu-accent-color"
-                              value={editingMenu.accentColor || ""}
-                              onChange={(e) => setEditingMenu({ ...editingMenu, accentColor: e.target.value })}
-                              placeholder="#000000 or hsl(0, 0%, 0%)"
-                            />
-                          </div>
+                          <ColorPicker
+                            label="Background Color"
+                            value={editingMenu.backgroundColor}
+                            onChange={(value) => setEditingMenu({ ...editingMenu, backgroundColor: value || "" })}
+                            placeholder="#f5f5f5"
+                          />
+                          <ColorPicker
+                            label="Accent Color"
+                            value={editingMenu.accentColor}
+                            onChange={(value) => setEditingMenu({ ...editingMenu, accentColor: value || "" })}
+                            placeholder="#c9a227"
+                          />
+                          <ColorPicker
+                            label="Section Header Color"
+                            value={editingMenu.sectionHeaderColor}
+                            onChange={(value) => setEditingMenu({ ...editingMenu, sectionHeaderColor: value || "" })}
+                            placeholder="#333333"
+                          />
+                          <ColorPicker
+                            label="Menu Title Color"
+                            value={editingMenu.menuTitleColor}
+                            onChange={(value) => setEditingMenu({ ...editingMenu, menuTitleColor: value || "" })}
+                            placeholder="#1a1a1a"
+                          />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="edit-menu-typography">Typography Style</Label>
