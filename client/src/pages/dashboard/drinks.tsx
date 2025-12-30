@@ -903,8 +903,8 @@ export default function DrinksPage() {
 
         {/* Edit Drink Dialog */}
         <Dialog open={!!editingDrink} onOpenChange={(open) => !open && setEditingDrink(null)}>
-          <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
-            <DialogHeader>
+          <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
+            <DialogHeader className="flex-shrink-0 pb-2">
               <DialogTitle>Edit Drink</DialogTitle>
               <DialogDescription>
                 Update drink information and settings
@@ -915,7 +915,8 @@ export default function DrinksPage() {
                 onSubmit={handleUpdateDrink}
                 className="flex flex-col flex-1 min-h-0"
               >
-                <ScrollArea className="flex-1 pr-4">
+                <div className="flex-1 min-h-0 overflow-hidden">
+                  <ScrollArea className="h-full pr-4">
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="space-y-2">
@@ -1146,9 +1147,10 @@ export default function DrinksPage() {
                       </div>
                     </div>
                   </div>
-                </ScrollArea>
+                  </ScrollArea>
+                </div>
 
-                <div className="flex justify-end gap-2 pt-4 border-t mt-4">
+                <div className="flex justify-end gap-2 pt-4 border-t flex-shrink-0">
                   <Button
                     type="button"
                     variant="outline"
