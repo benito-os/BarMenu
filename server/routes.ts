@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { z } from "zod";
 import { isStorageError } from "./errors";
 import { storage } from "./storage";
+import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import {
   analyticsQuerySchema,
   drinkBulkDeleteSchema,
@@ -1029,6 +1030,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to lookup barcode" });
     }
   });
+
+  // Register object storage routes for image uploads
+  registerObjectStorageRoutes(app);
 
   const httpServer = createServer(app);
   return httpServer;
