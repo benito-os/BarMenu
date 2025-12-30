@@ -52,8 +52,8 @@ export function useMenus(enabled = true) {
 
   const updateMenuMutation = useMutation({
     mutationFn: async (menu: Menu) => {
-      const { id, name, slug, description, isActive, heroImageUrl, backgroundColor, accentColor, typography, sections } = menu;
-      const updateData = { name, slug, description, isActive, heroImageUrl, backgroundColor, accentColor, typography, sections };
+      const { id, name, slug, description, isActive, heroImageUrl, backgroundColor, accentColor, sectionHeaderColor, menuTitleColor, typography, sections } = menu;
+      const updateData = { name, slug, description, isActive, heroImageUrl, backgroundColor, accentColor, sectionHeaderColor, menuTitleColor, typography, sections };
       return apiRequest("PATCH", `/api/menus/${id}`, updateData);
     },
     onSuccess: () => {
