@@ -335,7 +335,7 @@ export default function MenuDetail() {
                   {section}
                 </h3>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
                   {drinksBySection[section]
                     .sort((a, b) => a.sortOrder - b.sortOrder)
                     .map((drink) => {
@@ -345,7 +345,7 @@ export default function MenuDetail() {
                       return (
                         <Card 
                           key={drink.id} 
-                          className="flex flex-col h-full hover-elevate relative"
+                          className="flex flex-col hover-elevate relative"
                           style={getCardStyle()}
                           data-testid={`card-drink-${drink.id}`}
                         >
@@ -362,22 +362,13 @@ export default function MenuDetail() {
                               </Badge>
                             </div>
                           )}
-                          <CardHeader className="flex-1">
+                          <CardHeader className="p-4 pb-2 space-y-2">
                             <CardTitle 
-                              className="text-xl mb-2"
+                              className="text-xl"
                               style={{ color: drinkTitleColor || undefined }}
                             >
                               {drink.name}
                             </CardTitle>
-                            {drink.style && (
-                              <Badge 
-                                variant="secondary" 
-                                className="w-fit mb-3"
-                                style={getBadgeStyle()}
-                              >
-                                {drink.style}
-                              </Badge>
-                            )}
                             {drink.description && (
                               <CardDescription 
                                 className="text-sm leading-relaxed"
@@ -387,8 +378,17 @@ export default function MenuDetail() {
                               </CardDescription>
                             )}
                             
-                            {/* Badges row */}
-                            <div className="flex flex-wrap gap-2 pt-3">
+                            {/* All badges in single row */}
+                            <div className="flex flex-wrap gap-2">
+                              {drink.style && (
+                                <Badge 
+                                  variant="secondary" 
+                                  className="text-xs"
+                                  style={getBadgeStyle()}
+                                >
+                                  {drink.style}
+                                </Badge>
+                              )}
                               {drink.isOutOfStock && (
                                 <Badge variant="destructive" className="text-xs">
                                   Out of stock
@@ -457,7 +457,7 @@ export default function MenuDetail() {
                             </div>
                           </CardHeader>
                           
-                          <CardContent>
+                          <CardContent className="mt-auto px-4 pb-4">
                             <Button
                               className="w-full"
                               onClick={() => handleOrderClick(drink.id)}
