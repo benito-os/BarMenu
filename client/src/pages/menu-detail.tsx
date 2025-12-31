@@ -160,14 +160,35 @@ export default function MenuDetail() {
   // Card and badge theming
   const cardBackgroundColor = menu?.cardBackgroundColor || undefined;
   const cardBorderColor = menu?.cardBorderColor || undefined;
-  const badgeActiveColor = menu?.badgeActiveColor || undefined;
-  const badgeMocktailColor = menu?.badgeMocktailColor || undefined;
+  const badgeBackgroundColor = menu?.badgeBackgroundColor || undefined;
+  const badgeTextColor = menu?.badgeTextColor || undefined;
+  const requestButtonBackgroundColor = menu?.requestButtonBackgroundColor || undefined;
+  const requestButtonTextColor = menu?.requestButtonTextColor || undefined;
   
   // Build card style object
   const getCardStyle = () => {
     const style: React.CSSProperties = {};
     if (cardBackgroundColor) style.backgroundColor = cardBackgroundColor;
     if (cardBorderColor) style.borderColor = cardBorderColor;
+    return style;
+  };
+  
+  // Build badge style object
+  const getBadgeStyle = () => {
+    const style: React.CSSProperties = {};
+    if (badgeBackgroundColor) style.backgroundColor = badgeBackgroundColor;
+    if (badgeTextColor) style.color = badgeTextColor;
+    return style;
+  };
+  
+  // Build request button style object
+  const getRequestButtonStyle = () => {
+    const style: React.CSSProperties = {};
+    if (requestButtonBackgroundColor) {
+      style.backgroundColor = requestButtonBackgroundColor;
+      style.borderColor = requestButtonBackgroundColor;
+    }
+    if (requestButtonTextColor) style.color = requestButtonTextColor;
     return style;
   };
 
@@ -305,7 +326,11 @@ export default function MenuDetail() {
                               {drink.name}
                             </CardTitle>
                             {drink.style && (
-                              <Badge variant="secondary" className="w-fit mb-3">
+                              <Badge 
+                                variant="secondary" 
+                                className="w-fit mb-3"
+                                style={getBadgeStyle()}
+                              >
                                 {drink.style}
                               </Badge>
                             )}
@@ -323,19 +348,15 @@ export default function MenuDetail() {
                                 </Badge>
                               )}
                               {!drink.isOutOfStock && drink.missingIngredients.length > 0 && (
-                                <Badge variant="secondary" className="text-xs">
+                                <Badge variant="secondary" className="text-xs" style={getBadgeStyle()}>
                                   Missing ingredients
                                 </Badge>
                               )}
                               {drink.isMocktail && (
                                 <Badge 
-                                  variant="outline" 
+                                  variant="secondary" 
                                   className="text-xs"
-                                  style={badgeMocktailColor ? { 
-                                    backgroundColor: badgeMocktailColor,
-                                    borderColor: badgeMocktailColor,
-                                    color: 'white'
-                                  } : undefined}
+                                  style={getBadgeStyle()}
                                 >
                                   <Sparkles className="w-3 h-3 mr-1" />
                                   Non-Alcoholic
@@ -345,47 +366,44 @@ export default function MenuDetail() {
                                 <Badge 
                                   variant="secondary" 
                                   className="text-xs"
-                                  style={badgeMocktailColor ? { 
-                                    backgroundColor: badgeMocktailColor,
-                                    color: 'white'
-                                  } : undefined}
+                                  style={getBadgeStyle()}
                                 >
                                   <Sparkles className="w-3 h-3 mr-1" />
                                   Mocktail Available
                                 </Badge>
                               )}
                               {drink.temperature === "hot" && (
-                                <Badge variant="outline" className="text-xs">
+                                <Badge variant="secondary" className="text-xs" style={getBadgeStyle()}>
                                   <Flame className="w-3 h-3 mr-1" />
                                   Hot
                                 </Badge>
                               )}
                               {drink.temperature === "cold" && (
-                                <Badge variant="outline" className="text-xs">
+                                <Badge variant="secondary" className="text-xs" style={getBadgeStyle()}>
                                   <Snowflake className="w-3 h-3 mr-1" />
                                   Cold
                                 </Badge>
                               )}
                               {drink.temperature === "room_temp" && (
-                                <Badge variant="outline" className="text-xs">
+                                <Badge variant="secondary" className="text-xs" style={getBadgeStyle()}>
                                   <ThermometerSun className="w-3 h-3 mr-1" />
                                   Room Temp
                                 </Badge>
                               )}
                               {drink.isStirred && (
-                                <Badge variant="outline" className="text-xs">
+                                <Badge variant="secondary" className="text-xs" style={getBadgeStyle()}>
                                   <Wine className="w-3 h-3 mr-1" />
                                   Stirred
                                 </Badge>
                               )}
                               {drink.isShaken && (
-                                <Badge variant="outline" className="text-xs">
+                                <Badge variant="secondary" className="text-xs" style={getBadgeStyle()}>
                                   <Glasses className="w-3 h-3 mr-1" />
                                   Shaken
                                 </Badge>
                               )}
                               {drink.baseSpirit && (
-                                <Badge variant="outline" className="text-xs">
+                                <Badge variant="secondary" className="text-xs" style={getBadgeStyle()}>
                                   {drink.baseSpirit}
                                 </Badge>
                               )}
@@ -398,6 +416,7 @@ export default function MenuDetail() {
                               onClick={() => handleOrderClick(drink.id)}
                               disabled={orderMutation.isPending || isOrdered || isUnavailable}
                               data-testid={`button-order-${drink.id}`}
+                              style={!isOrdered && !isUnavailable ? getRequestButtonStyle() : undefined}
                             >
                               {isOrdered ? (
                                 <>

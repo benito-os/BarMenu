@@ -683,7 +683,7 @@ export default function MenusPage() {
                           />
                         </div>
                         
-                        <h4 className="text-sm font-medium text-muted-foreground pt-2">Drink Cards & Badges</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground pt-2">Drink Cards</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <ColorPicker
                             label="Card Background"
@@ -697,18 +697,131 @@ export default function MenusPage() {
                             onChange={(value) => setEditingMenu({ ...editingMenu, cardBorderColor: value || "" })}
                             placeholder="#333333"
                           />
+                        </div>
+                        
+                        <h4 className="text-sm font-medium text-muted-foreground pt-2">Badges</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <ColorPicker
-                            label="Active Badge Color"
-                            value={editingMenu.badgeActiveColor}
-                            onChange={(value) => setEditingMenu({ ...editingMenu, badgeActiveColor: value || "" })}
-                            placeholder="#22c55e"
-                          />
-                          <ColorPicker
-                            label="Mocktail Badge Color"
-                            value={editingMenu.badgeMocktailColor}
-                            onChange={(value) => setEditingMenu({ ...editingMenu, badgeMocktailColor: value || "" })}
+                            label="Badge Background"
+                            value={editingMenu.badgeBackgroundColor}
+                            onChange={(value) => setEditingMenu({ ...editingMenu, badgeBackgroundColor: value || "" })}
                             placeholder="#8b5cf6"
                           />
+                          <ColorPicker
+                            label="Badge Text"
+                            value={editingMenu.badgeTextColor}
+                            onChange={(value) => setEditingMenu({ ...editingMenu, badgeTextColor: value || "" })}
+                            placeholder="#ffffff"
+                          />
+                        </div>
+                        
+                        <h4 className="text-sm font-medium text-muted-foreground pt-2">Request Button</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <ColorPicker
+                            label="Button Background"
+                            value={editingMenu.requestButtonBackgroundColor}
+                            onChange={(value) => setEditingMenu({ ...editingMenu, requestButtonBackgroundColor: value || "" })}
+                            placeholder="#C9A962"
+                          />
+                          <ColorPicker
+                            label="Button Text"
+                            value={editingMenu.requestButtonTextColor}
+                            onChange={(value) => setEditingMenu({ ...editingMenu, requestButtonTextColor: value || "" })}
+                            placeholder="#000000"
+                          />
+                        </div>
+                        
+                        {/* Live Preview */}
+                        <h4 className="text-sm font-medium text-muted-foreground pt-2">Preview</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* Normal Drink Card Preview */}
+                          <div className="space-y-2">
+                            <p className="text-xs text-muted-foreground">Available Drink</p>
+                            <Card 
+                              className="p-4"
+                              style={{
+                                backgroundColor: editingMenu.cardBackgroundColor || undefined,
+                                borderColor: editingMenu.cardBorderColor || undefined
+                              }}
+                            >
+                              <div className="space-y-2">
+                                <h4 className="font-semibold text-foreground">Sample Cocktail</h4>
+                                <div className="flex flex-wrap gap-1">
+                                  <Badge 
+                                    variant="secondary"
+                                    style={{
+                                      backgroundColor: editingMenu.badgeBackgroundColor || undefined,
+                                      color: editingMenu.badgeTextColor || undefined
+                                    }}
+                                  >
+                                    Tropical
+                                  </Badge>
+                                  <Badge 
+                                    variant="secondary"
+                                    style={{
+                                      backgroundColor: editingMenu.badgeBackgroundColor || undefined,
+                                      color: editingMenu.badgeTextColor || undefined
+                                    }}
+                                  >
+                                    Mocktail Available
+                                  </Badge>
+                                </div>
+                                <p className="text-sm text-muted-foreground">A refreshing blend of citrus and mint...</p>
+                                <Button
+                                  size="sm"
+                                  className="w-full mt-2"
+                                  style={{
+                                    backgroundColor: editingMenu.requestButtonBackgroundColor || undefined,
+                                    color: editingMenu.requestButtonTextColor || undefined,
+                                    borderColor: editingMenu.requestButtonBackgroundColor || undefined
+                                  }}
+                                >
+                                  Request This Drink
+                                </Button>
+                              </div>
+                            </Card>
+                          </div>
+                          
+                          {/* Ordered Drink Card Preview */}
+                          <div className="space-y-2">
+                            <p className="text-xs text-muted-foreground">Ordered Drink</p>
+                            <Card 
+                              className="p-4 relative"
+                              style={{
+                                backgroundColor: editingMenu.cardBackgroundColor || undefined,
+                                borderColor: editingMenu.cardBorderColor || undefined
+                              }}
+                            >
+                              <div className="absolute top-2 right-2">
+                                <Badge variant="default" className="bg-amber-600 text-white text-xs">
+                                  Preparing...
+                                </Badge>
+                              </div>
+                              <div className="space-y-2">
+                                <h4 className="font-semibold text-foreground">Sample Cocktail</h4>
+                                <div className="flex flex-wrap gap-1">
+                                  <Badge 
+                                    variant="secondary"
+                                    style={{
+                                      backgroundColor: editingMenu.badgeBackgroundColor || undefined,
+                                      color: editingMenu.badgeTextColor || undefined
+                                    }}
+                                  >
+                                    Tropical
+                                  </Badge>
+                                </div>
+                                <p className="text-sm text-muted-foreground">A refreshing blend of citrus and mint...</p>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="w-full mt-2"
+                                  disabled
+                                >
+                                  Already Ordered
+                                </Button>
+                              </div>
+                            </Card>
+                          </div>
                         </div>
                         
                         <div className="space-y-2">

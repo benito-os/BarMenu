@@ -16,11 +16,15 @@ export const menus = pgTable("menus", {
   sectionHeaderColor: text("section_header_color"),
   menuTitleColor: text("menu_title_color"),
   typography: text("typography"),
-  // Per-menu theme overrides
+  // Per-menu theme overrides for drink cards
   cardBackgroundColor: text("card_background_color"),
   cardBorderColor: text("card_border_color"),
-  badgeActiveColor: text("badge_active_color"),
-  badgeMocktailColor: text("badge_mocktail_color"),
+  // Badge theming (applies to all badges: style, mocktail, etc.)
+  badgeBackgroundColor: text("badge_background_color"),
+  badgeTextColor: text("badge_text_color"),
+  // Request button theming
+  requestButtonBackgroundColor: text("request_button_background_color"),
+  requestButtonTextColor: text("request_button_text_color"),
   sections: text("sections").array().notNull().default(sql`ARRAY[]::text[]`),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
