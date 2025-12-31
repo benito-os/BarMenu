@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SplashScreen, useSplashScreen } from "@/components/SplashScreen";
 import type { Menu } from "@shared/validation";
 import heroImage from "@assets/generated_images/Bar_hero_cocktails_overhead_0be3299c.png";
 import { Calendar, Sparkles } from "lucide-react";
@@ -12,11 +13,17 @@ export default function Landing() {
   const { data: menus, isLoading } = useQuery<Menu[]>({
     queryKey: ["/api/menus"],
   });
+  const { showSplash, dismissSplash } = useSplashScreen();
 
   const activeMenu = menus?.find(m => m.isActive);
 
   return (
     <div className="min-h-screen bg-background">
+      <SplashScreen 
+        show={showSplash} 
+        onComplete={dismissSplash}
+        duration={2500}
+      />
       {/* Hero Section */}
       <div className="relative h-[60vh] w-full overflow-hidden">
         <img

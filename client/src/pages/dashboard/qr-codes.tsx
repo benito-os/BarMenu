@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useMenus } from "@/hooks/useMenus";
+import { useSettings } from "@/hooks/useSettings";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function QRCodesPage() {
   const { menus, menusLoading, defaultMenu } = useMenus();
+  const { settings } = useSettings();
   const { toast } = useToast();
 
   const [selectedMenuId, setSelectedMenuId] = useState<string>("HOME");
@@ -142,6 +144,9 @@ export default function QRCodesPage() {
                     showActions={true}
                     showDownload={true}
                     showShare={true}
+                    customLogoUrl={settings.brandingLogoUrl}
+                    dotStyle={settings.qrDotStyle as "dots" | "squares"}
+                    eyeStyle={settings.qrEyeStyle as "rounded" | "square"}
                   />
 
                   <div className="w-full space-y-2">

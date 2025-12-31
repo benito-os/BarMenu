@@ -3,7 +3,7 @@ import { QRCode } from "react-qrcode-logo";
 import { Button } from "@/components/ui/button";
 import { Download, Share2, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import bfLogo from "@assets/generated_images/elegant_bf_cocktail_bar_logo.png";
+import defaultLogo from "@assets/generated_images/elegant_bf_cocktail_bar_logo.png";
 
 interface BrandedQRCodeProps {
   url: string;
@@ -16,6 +16,9 @@ interface BrandedQRCodeProps {
   showDownload?: boolean;
   showShare?: boolean;
   className?: string;
+  customLogoUrl?: string | null;
+  dotStyle?: "dots" | "squares";
+  eyeStyle?: "rounded" | "square";
 }
 
 export function BrandedQRCode({
@@ -29,9 +32,18 @@ export function BrandedQRCode({
   showDownload = true,
   showShare = true,
   className = "",
+  customLogoUrl = null,
+  dotStyle = "dots",
+  eyeStyle = "rounded",
 }: BrandedQRCodeProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  const logoImage = customLogoUrl || defaultLogo;
+  const qrStyle = dotStyle === "squares" ? "squares" : "dots";
+  const eyeRadius: [{ outer: number; inner: number }, { outer: number; inner: number }, { outer: number; inner: number }] = eyeStyle === "square" 
+    ? [{ outer: 0, inner: 0 }, { outer: 0, inner: 0 }, { outer: 0, inner: 0 }]
+    : [{ outer: 8, inner: 4 }, { outer: 8, inner: 4 }, { outer: 8, inner: 4 }];
 
   const downloadQRCode = useCallback(() => {
     if (!containerRef.current) return;
@@ -130,7 +142,7 @@ export function BrandedQRCode({
         <QRCode
           value={url}
           size={size}
-          logoImage={bfLogo}
+          logoImage={logoImage}
           logoWidth={logoSize}
           logoHeight={logoSize}
           logoOpacity={1}
@@ -139,12 +151,8 @@ export function BrandedQRCode({
           logoPaddingStyle="circle"
           fgColor={fgColor}
           bgColor={bgColor}
-          qrStyle="dots"
-          eyeRadius={[
-            { outer: 8, inner: 4 },
-            { outer: 8, inner: 4 },
-            { outer: 8, inner: 4 },
-          ]}
+          qrStyle={qrStyle}
+          eyeRadius={eyeRadius}
           ecLevel="H"
           enableCORS={true}
         />

@@ -557,14 +557,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PATCH /api/settings - Update application settings
   app.patch("/api/settings", async (req, res) => {
     try {
-      const { waitingWarningMinutes, waitingUrgentMinutes } = req.body;
-      const updates: Record<string, number> = {};
+      const { 
+        waitingWarningMinutes, 
+        waitingUrgentMinutes,
+        brandingLogoUrl,
+        welcomeMessage,
+        headlineFont,
+        bodyFont,
+        qrDotStyle,
+        qrEyeStyle
+      } = req.body;
+      const updates: Record<string, unknown> = {};
       
+      // Queue settings
       if (typeof waitingWarningMinutes === "number" && waitingWarningMinutes >= 1) {
         updates.waitingWarningMinutes = waitingWarningMinutes;
       }
       if (typeof waitingUrgentMinutes === "number" && waitingUrgentMinutes >= 1) {
         updates.waitingUrgentMinutes = waitingUrgentMinutes;
+      }
+      
+      // Branding settings
+      if (brandingLogoUrl !== undefined) {
+        updates.brandingLogoUrl = brandingLogoUrl || null;
+      }
+      if (welcomeMessage !== undefined) {
+        updates.welcomeMessage = welcomeMessage || null;
+      }
+      if (typeof headlineFont === "string") {
+        updates.headlineFont = headlineFont;
+      }
+      if (typeof bodyFont === "string") {
+        updates.bodyFont = bodyFont;
+      }
+      if (typeof qrDotStyle === "string") {
+        updates.qrDotStyle = qrDotStyle;
+      }
+      if (typeof qrEyeStyle === "string") {
+        updates.qrEyeStyle = qrEyeStyle;
       }
       
       if (Object.keys(updates).length === 0) {

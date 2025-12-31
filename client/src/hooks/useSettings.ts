@@ -1,7 +1,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Settings } from "@shared/schema";
+import type { Settings, InsertSettings } from "@shared/schema";
 
 export function useSettings() {
   const { toast } = useToast();
@@ -12,7 +12,7 @@ export function useSettings() {
   });
 
   const updateSettingsMutation = useMutation({
-    mutationFn: async (data: { waitingWarningMinutes?: number; waitingUrgentMinutes?: number }) => {
+    mutationFn: async (data: Partial<InsertSettings>) => {
       const response = await apiRequest("PATCH", "/api/settings", data);
       return response.json();
     },
@@ -32,13 +32,21 @@ export function useSettings() {
     },
   });
 
+  const defaultSettings: Settings = {
+    id: "default",
+    waitingWarningMinutes: 3,
+    waitingUrgentMinutes: 5,
+    brandingLogoUrl: null,
+    welcomeMessage: null,
+    headlineFont: "playfair",
+    bodyFont: "inter",
+    qrDotStyle: "dots",
+    qrEyeStyle: "rounded",
+    updatedAt: new Date(),
+  };
+
   return {
-    settings: settings ?? {
-      id: "default",
-      waitingWarningMinutes: 3,
-      waitingUrgentMinutes: 5,
-      updatedAt: new Date(),
-    },
+    settings: settings ?? defaultSettings,
     settingsLoading,
     updateSettings: updateSettingsMutation.mutate,
     updateSettingsPending: updateSettingsMutation.isPending,

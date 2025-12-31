@@ -110,6 +110,13 @@ export const settings = pgTable("settings", {
   id: varchar("id").primaryKey().default("default"),
   waitingWarningMinutes: integer("waiting_warning_minutes").notNull().default(3),
   waitingUrgentMinutes: integer("waiting_urgent_minutes").notNull().default(5),
+  // Branding settings
+  brandingLogoUrl: text("branding_logo_url"),
+  welcomeMessage: text("welcome_message"),
+  headlineFont: text("headline_font").default("playfair"),
+  bodyFont: text("body_font").default("inter"),
+  qrDotStyle: text("qr_dot_style").default("dots"),
+  qrEyeStyle: text("qr_eye_style").default("rounded"),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
@@ -120,6 +127,34 @@ export const insertSettingsSchema = createInsertSchema(settings).omit({
 
 export type InsertSettings = z.infer<typeof insertSettingsSchema>;
 export type Settings = typeof settings.$inferSelect;
+
+// Typography preset options
+export const FONT_PRESETS = {
+  headline: [
+    { id: "playfair", name: "Playfair Display", family: "'Playfair Display', serif" },
+    { id: "lora", name: "Lora", family: "'Lora', serif" },
+    { id: "roboto", name: "Roboto", family: "'Roboto', sans-serif" },
+    { id: "opensans", name: "Open Sans", family: "'Open Sans', sans-serif" },
+  ],
+  body: [
+    { id: "inter", name: "Inter", family: "'Inter', sans-serif" },
+    { id: "roboto", name: "Roboto", family: "'Roboto', sans-serif" },
+    { id: "opensans", name: "Open Sans", family: "'Open Sans', sans-serif" },
+    { id: "lora", name: "Lora", family: "'Lora', serif" },
+  ],
+} as const;
+
+// QR code style options
+export const QR_STYLES = {
+  dotStyles: [
+    { id: "dots", name: "Dots" },
+    { id: "squares", name: "Squares" },
+  ],
+  eyeStyles: [
+    { id: "rounded", name: "Rounded" },
+    { id: "square", name: "Square" },
+  ],
+} as const;
 
 // Analytics types
 export type DrinkAnalytics = {
