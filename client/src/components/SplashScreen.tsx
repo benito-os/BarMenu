@@ -42,7 +42,7 @@ export function SplashScreen({
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
-          className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background"
+          className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black"
           data-testid="splash-screen"
         >
           <motion.div
@@ -54,13 +54,13 @@ export function SplashScreen({
               ease: [0.22, 1, 0.36, 1],
               delay: 0.1 
             }}
-            className="flex flex-col items-center gap-8"
+            className="flex flex-col items-center gap-6"
           >
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
-              className="w-32 h-32 md:w-40 md:h-40 rounded-full bg-card shadow-lg flex items-center justify-center p-4 border"
+              className="w-48 h-48 md:w-56 md:h-56 flex items-center justify-center"
             >
               <img 
                 src={logoImage} 
@@ -77,14 +77,16 @@ export function SplashScreen({
               className="text-center space-y-3"
             >
               <h1 
-                className="text-3xl md:text-4xl font-serif font-bold text-foreground"
+                className="text-3xl md:text-4xl font-serif font-bold"
+                style={{ color: "#C9A962" }}
                 data-testid="splash-title"
               >
                 Bar Flores
               </h1>
               {welcomeMessage && (
                 <p 
-                  className="text-lg text-muted-foreground max-w-sm px-4"
+                  className="text-lg max-w-sm px-4"
+                  style={{ color: "#C9A962", opacity: 0.8 }}
                   data-testid="splash-message"
                 >
                   {welcomeMessage}
@@ -96,15 +98,16 @@ export function SplashScreen({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.3, delay: 0.7 }}
-              className="flex gap-1"
+              className="flex gap-1.5"
             >
               {[0, 1, 2].map((i) => (
                 <motion.span
                   key={i}
-                  className="w-2 h-2 rounded-full bg-primary/60"
+                  className="w-2 h-2 rounded-full"
+                  style={{ backgroundColor: "#C9A962" }}
                   animate={{
                     scale: [1, 1.2, 1],
-                    opacity: [0.6, 1, 0.6],
+                    opacity: [0.5, 1, 0.5],
                   }}
                   transition={{
                     duration: 1,
