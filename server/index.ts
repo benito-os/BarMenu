@@ -1,9 +1,14 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
+import pgSession from "connect-pg-simple";
+import { Pool } from "@neondatabase/serverless";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
+
+const PostgresStore = pgSession(session);
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 declare module 'http' {
   interface IncomingMessage {
@@ -32,6 +37,11 @@ if (process.env.NODE_ENV === "production") {
 
 // Session setup for dashboard authentication (after body parsers)
 app.use(session({
+  store: new PostgresStore({
+    pool,
+    tableName: "session",
+    createTableIfMissing: true,
+  }),
   secret: process.env.SESSION_SECRET || "dev-secret-change-in-production",
   resave: false,
   saveUninitialized: false,
