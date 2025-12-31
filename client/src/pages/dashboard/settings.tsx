@@ -48,12 +48,6 @@ export default function SettingsPage() {
   const [qrDotStyle, setQrDotStyle] = useState("dots");
   const [qrEyeStyle, setQrEyeStyle] = useState("rounded");
   
-  // Site theme settings state
-  const [sitePrimaryColor, setSitePrimaryColor] = useState("");
-  const [siteSurfaceColor, setSiteSurfaceColor] = useState("");
-  const [siteBadgeActiveColor, setSiteBadgeActiveColor] = useState("");
-  const [siteBadgeMocktailColor, setSiteBadgeMocktailColor] = useState("");
-  
   useEffect(() => {
     if (settings) {
       setWarningMinutes(settings.waitingWarningMinutes);
@@ -64,10 +58,6 @@ export default function SettingsPage() {
       setBodyFont(settings.bodyFont || "inter");
       setQrDotStyle(settings.qrDotStyle || "dots");
       setQrEyeStyle(settings.qrEyeStyle || "rounded");
-      setSitePrimaryColor(settings.sitePrimaryColor || "");
-      setSiteSurfaceColor(settings.siteSurfaceColor || "");
-      setSiteBadgeActiveColor(settings.siteBadgeActiveColor || "");
-      setSiteBadgeMocktailColor(settings.siteBadgeMocktailColor || "");
     }
   }, [settings]);
 
@@ -120,22 +110,6 @@ export default function SettingsPage() {
     bodyFont !== (settings?.bodyFont || "inter") ||
     qrDotStyle !== (settings?.qrDotStyle || "dots") ||
     qrEyeStyle !== (settings?.qrEyeStyle || "rounded");
-
-  // Site theme handlers
-  const handleSaveSiteTheme = () => {
-    updateSettings({
-      sitePrimaryColor: sitePrimaryColor || null,
-      siteSurfaceColor: siteSurfaceColor || null,
-      siteBadgeActiveColor: siteBadgeActiveColor || null,
-      siteBadgeMocktailColor: siteBadgeMocktailColor || null,
-    });
-  };
-
-  const hasSiteThemeChanges = 
-    sitePrimaryColor !== (settings?.sitePrimaryColor || "") ||
-    siteSurfaceColor !== (settings?.siteSurfaceColor || "") ||
-    siteBadgeActiveColor !== (settings?.siteBadgeActiveColor || "") ||
-    siteBadgeMocktailColor !== (settings?.siteBadgeMocktailColor || "");
 
   return (
     <DashboardLayout>
@@ -440,137 +414,6 @@ export default function SettingsPage() {
                   >
                     <Save className="w-4 h-4 mr-2" />
                     {updateSettingsPending ? "Saving..." : "Save Branding"}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Site Theme Colors */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Palette className="w-5 h-5" />
-                Site Theme Colors
-              </CardTitle>
-              <CardDescription>
-                Set default colors for your site. Menus can override these with their own colors.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  {/* Primary Color */}
-                  <div className="space-y-2">
-                    <Label htmlFor="sitePrimaryColor">Primary Accent Color</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Used for buttons and interactive elements
-                    </p>
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="color"
-                        id="sitePrimaryColor"
-                        value={sitePrimaryColor || "#C9A962"}
-                        onChange={(e) => setSitePrimaryColor(e.target.value)}
-                        className="w-12 h-10 rounded border cursor-pointer"
-                        data-testid="input-site-primary-color"
-                      />
-                      <Input
-                        value={sitePrimaryColor}
-                        onChange={(e) => setSitePrimaryColor(e.target.value)}
-                        placeholder="#C9A962"
-                        className="flex-1"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Surface Color */}
-                  <div className="space-y-2">
-                    <Label htmlFor="siteSurfaceColor">Card Surface Color</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Background color for drink cards
-                    </p>
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="color"
-                        id="siteSurfaceColor"
-                        value={siteSurfaceColor || "#1a1a1a"}
-                        onChange={(e) => setSiteSurfaceColor(e.target.value)}
-                        className="w-12 h-10 rounded border cursor-pointer"
-                        data-testid="input-site-surface-color"
-                      />
-                      <Input
-                        value={siteSurfaceColor}
-                        onChange={(e) => setSiteSurfaceColor(e.target.value)}
-                        placeholder="#1a1a1a"
-                        className="flex-1"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Active Badge Color */}
-                  <div className="space-y-2">
-                    <Label htmlFor="siteBadgeActiveColor">"Active Tonight" Badge Color</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Color for the Active Tonight badge
-                    </p>
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="color"
-                        id="siteBadgeActiveColor"
-                        value={siteBadgeActiveColor || "#22c55e"}
-                        onChange={(e) => setSiteBadgeActiveColor(e.target.value)}
-                        className="w-12 h-10 rounded border cursor-pointer"
-                        data-testid="input-site-badge-active-color"
-                      />
-                      <Input
-                        value={siteBadgeActiveColor}
-                        onChange={(e) => setSiteBadgeActiveColor(e.target.value)}
-                        placeholder="#22c55e"
-                        className="flex-1"
-                      />
-                      <Badge style={{ backgroundColor: siteBadgeActiveColor || "#22c55e" }}>
-                        Active Tonight
-                      </Badge>
-                    </div>
-                  </div>
-
-                  {/* Mocktail Badge Color */}
-                  <div className="space-y-2">
-                    <Label htmlFor="siteBadgeMocktailColor">"Mocktail" Badge Color</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Color for mocktail drink badges
-                    </p>
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="color"
-                        id="siteBadgeMocktailColor"
-                        value={siteBadgeMocktailColor || "#8b5cf6"}
-                        onChange={(e) => setSiteBadgeMocktailColor(e.target.value)}
-                        className="w-12 h-10 rounded border cursor-pointer"
-                        data-testid="input-site-badge-mocktail-color"
-                      />
-                      <Input
-                        value={siteBadgeMocktailColor}
-                        onChange={(e) => setSiteBadgeMocktailColor(e.target.value)}
-                        placeholder="#8b5cf6"
-                        className="flex-1"
-                      />
-                      <Badge style={{ backgroundColor: siteBadgeMocktailColor || "#8b5cf6" }}>
-                        Mocktail
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex justify-end">
-                  <Button
-                    onClick={handleSaveSiteTheme}
-                    disabled={!hasSiteThemeChanges || updateSettingsPending || settingsLoading}
-                    data-testid="button-save-site-theme"
-                  >
-                    <Save className="w-4 h-4 mr-2" />
-                    {updateSettingsPending ? "Saving..." : "Save Theme"}
                   </Button>
                 </div>
               </div>

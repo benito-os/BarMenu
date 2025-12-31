@@ -12,11 +12,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { addTrackedOrder, getTrackedOrders } from "@/lib/orderCookies";
+import { addTrackedOrder } from "@/lib/orderCookies";
 import { OrderStatusBanner } from "@/components/OrderStatusBanner";
 import type { Menu, DrinkAvailability } from "@shared/validation";
 import { Home, Wine, Sparkles, Glasses, Check, Flame, Snowflake, ThermometerSun, Share2, QrCode } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { BrandedQRCode } from "@/components/BrandedQRCode";
 
 export default function MenuDetail() {
@@ -30,21 +30,6 @@ export default function MenuDetail() {
   const [comments, setComments] = useState("");
   const [asMocktail, setAsMocktail] = useState(false);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
-
-  // Load ordered drinks from cookies on mount and when orders change
-  useEffect(() => {
-    const loadOrderedDrinks = () => {
-      const trackedOrders = getTrackedOrders();
-      const drinkIds = new Set(trackedOrders.map(order => order.drinkId).filter(Boolean));
-      setOrderedDrinks(drinkIds);
-    };
-
-    loadOrderedDrinks();
-
-    // Listen for order updates
-    window.addEventListener('ordersUpdated', loadOrderedDrinks);
-    return () => window.removeEventListener('ordersUpdated', loadOrderedDrinks);
-  }, []);
 
   const { data: menu, isLoading: menuLoading } = useQuery<Menu>({
     queryKey: ["/api/menus", slug],
@@ -84,7 +69,6 @@ export default function MenuDetail() {
       if (data && data.id) {
         addTrackedOrder({
           orderId: data.id,
-          drinkId: drinkId,
           drinkName: drink?.name || "Unknown Drink",
           guestName: guestName,
           timestamp: Date.now(),
@@ -172,53 +156,6 @@ export default function MenuDetail() {
   const accentColor = menu?.accentColor || undefined;
   const sectionHeaderColor = menu?.sectionHeaderColor || undefined;
   const menuTitleColor = menu?.menuTitleColor || undefined;
-  
-  // Card and badge theming
-  const cardBackgroundColor = menu?.cardBackgroundColor || undefined;
-  const cardBorderColor = menu?.cardBorderColor || undefined;
-  const badgeBackgroundColor = menu?.badgeBackgroundColor || undefined;
-  const badgeTextColor = menu?.badgeTextColor || undefined;
-  const requestButtonBackgroundColor = menu?.requestButtonBackgroundColor || undefined;
-  const requestButtonTextColor = menu?.requestButtonTextColor || undefined;
-  const drinkTitleColor = menu?.drinkTitleColor || undefined;
-  const drinkDescriptionColor = menu?.drinkDescriptionColor || undefined;
-  const orderedBadgeBackgroundColor = menu?.orderedBadgeBackgroundColor || undefined;
-  const orderedBadgeTextColor = menu?.orderedBadgeTextColor || undefined;
-  
-  // Build ordered badge style object
-  const getOrderedBadgeStyle = () => {
-    const style: React.CSSProperties = {};
-    style.backgroundColor = orderedBadgeBackgroundColor || '#d97706';
-    style.color = orderedBadgeTextColor || '#ffffff';
-    return style;
-  };
-  
-  // Build card style object
-  const getCardStyle = () => {
-    const style: React.CSSProperties = {};
-    if (cardBackgroundColor) style.backgroundColor = cardBackgroundColor;
-    if (cardBorderColor) style.borderColor = cardBorderColor;
-    return style;
-  };
-  
-  // Build badge style object
-  const getBadgeStyle = () => {
-    const style: React.CSSProperties = {};
-    if (badgeBackgroundColor) style.backgroundColor = badgeBackgroundColor;
-    if (badgeTextColor) style.color = badgeTextColor;
-    return style;
-  };
-  
-  // Build request button style object
-  const getRequestButtonStyle = () => {
-    const style: React.CSSProperties = {};
-    if (requestButtonBackgroundColor) {
-      style.backgroundColor = requestButtonBackgroundColor;
-      style.borderColor = requestButtonBackgroundColor;
-    }
-    if (requestButtonTextColor) style.color = requestButtonTextColor;
-    return style;
-  };
 
   return (
     <div className="min-h-screen bg-background" style={themingStyle}>
@@ -335,7 +272,7 @@ export default function MenuDetail() {
                   {section}
                 </h3>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {drinksBySection[section]
                     .sort((a, b) => a.sortOrder - b.sortOrder)
                     .map((drink) => {
@@ -345,125 +282,92 @@ export default function MenuDetail() {
                       return (
                         <Card 
                           key={drink.id} 
-                          className="flex flex-col hover-elevate relative"
-                          style={getCardStyle()}
+                          className="flex flex-col h-full hover-elevate"
                           data-testid={`card-drink-${drink.id}`}
                         >
-                          {isOrdered && (
-                            <div className="absolute top-2 right-2 z-10">
-                              <Badge 
-                                variant="default" 
-                                className="text-xs"
-                                style={getOrderedBadgeStyle()}
-                                data-testid={`badge-ordered-${drink.id}`}
-                              >
-                                <Check className="w-3 h-3 mr-1" />
-                                Ordered
-                              </Badge>
-                            </div>
-                          )}
-                          <CardHeader className="p-4 pb-2 space-y-2">
-                            <CardTitle 
-                              className="text-xl"
-                              style={{ color: drinkTitleColor || undefined }}
-                            >
+                          <CardHeader className="flex-1">
+                            <CardTitle className="text-xl text-foreground mb-2">
                               {drink.name}
                             </CardTitle>
+                            {drink.style && (
+                              <Badge variant="secondary" className="w-fit mb-3">
+                                {drink.style}
+                              </Badge>
+                            )}
                             {drink.description && (
-                              <CardDescription 
-                                className="text-sm leading-relaxed"
-                                style={{ color: drinkDescriptionColor || undefined }}
-                              >
+                              <CardDescription className="text-sm leading-relaxed">
                                 {drink.description}
                               </CardDescription>
                             )}
                             
-                            {/* All badges in single row */}
-                            <div className="flex flex-wrap gap-2">
-                              {drink.style && (
-                                <Badge 
-                                  variant="secondary" 
-                                  className="text-xs"
-                                  style={getBadgeStyle()}
-                                >
-                                  {drink.style}
-                                </Badge>
-                              )}
+                            {/* Badges row */}
+                            <div className="flex flex-wrap gap-2 pt-3">
                               {drink.isOutOfStock && (
                                 <Badge variant="destructive" className="text-xs">
                                   Out of stock
                                 </Badge>
                               )}
                               {!drink.isOutOfStock && drink.missingIngredients.length > 0 && (
-                                <Badge variant="secondary" className="text-xs" style={getBadgeStyle()}>
+                                <Badge variant="secondary" className="text-xs">
                                   Missing ingredients
                                 </Badge>
                               )}
                               {drink.isMocktail && (
-                                <Badge 
-                                  variant="secondary" 
-                                  className="text-xs"
-                                  style={getBadgeStyle()}
-                                >
+                                <Badge variant="outline" className="text-xs">
                                   <Sparkles className="w-3 h-3 mr-1" />
                                   Non-Alcoholic
                                 </Badge>
                               )}
                               {drink.canBeMocktail && !drink.isMocktail && (
-                                <Badge 
-                                  variant="secondary" 
-                                  className="text-xs"
-                                  style={getBadgeStyle()}
-                                >
+                                <Badge variant="secondary" className="text-xs">
                                   <Sparkles className="w-3 h-3 mr-1" />
                                   Mocktail Available
                                 </Badge>
                               )}
                               {drink.temperature === "hot" && (
-                                <Badge variant="secondary" className="text-xs" style={getBadgeStyle()}>
+                                <Badge variant="outline" className="text-xs">
                                   <Flame className="w-3 h-3 mr-1" />
                                   Hot
                                 </Badge>
                               )}
                               {drink.temperature === "cold" && (
-                                <Badge variant="secondary" className="text-xs" style={getBadgeStyle()}>
+                                <Badge variant="outline" className="text-xs">
                                   <Snowflake className="w-3 h-3 mr-1" />
                                   Cold
                                 </Badge>
                               )}
                               {drink.temperature === "room_temp" && (
-                                <Badge variant="secondary" className="text-xs" style={getBadgeStyle()}>
+                                <Badge variant="outline" className="text-xs">
                                   <ThermometerSun className="w-3 h-3 mr-1" />
                                   Room Temp
                                 </Badge>
                               )}
                               {drink.isStirred && (
-                                <Badge variant="secondary" className="text-xs" style={getBadgeStyle()}>
+                                <Badge variant="outline" className="text-xs">
                                   <Wine className="w-3 h-3 mr-1" />
                                   Stirred
                                 </Badge>
                               )}
                               {drink.isShaken && (
-                                <Badge variant="secondary" className="text-xs" style={getBadgeStyle()}>
+                                <Badge variant="outline" className="text-xs">
                                   <Glasses className="w-3 h-3 mr-1" />
                                   Shaken
                                 </Badge>
                               )}
                               {drink.baseSpirit && (
-                                <Badge variant="secondary" className="text-xs" style={getBadgeStyle()}>
+                                <Badge variant="outline" className="text-xs">
                                   {drink.baseSpirit}
                                 </Badge>
                               )}
                             </div>
                           </CardHeader>
                           
-                          <CardContent className="mt-auto px-4 pb-4">
+                          <CardContent>
                             <Button
                               className="w-full"
                               onClick={() => handleOrderClick(drink.id)}
                               disabled={orderMutation.isPending || isOrdered || isUnavailable}
                               data-testid={`button-order-${drink.id}`}
-                              style={!isOrdered && !isUnavailable ? getRequestButtonStyle() : undefined}
                             >
                               {isOrdered ? (
                                 <>
