@@ -12,11 +12,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { addTrackedOrder } from "@/lib/orderCookies";
+import { addTrackedOrder, getTrackedOrders } from "@/lib/orderCookies";
 import { OrderStatusBanner } from "@/components/OrderStatusBanner";
 import type { Menu, DrinkAvailability } from "@shared/validation";
 import { Home, Wine, Sparkles, Glasses, Check, Flame, Snowflake, ThermometerSun, Share2, QrCode } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BrandedQRCode } from "@/components/BrandedQRCode";
 
 export default function MenuDetail() {
@@ -30,6 +30,21 @@ export default function MenuDetail() {
   const [comments, setComments] = useState("");
   const [asMocktail, setAsMocktail] = useState(false);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
+
+  // Load ordered drinks from cookies on mount and when orders change
+  useEffect(() => {
+    const loadOrderedDrinks = () => {
+      const trackedOrders = getTrackedOrders();
+      const drinkIds = new Set(trackedOrders.map(order => order.drinkId).filter(Boolean));
+      setOrderedDrinks(drinkIds);
+    };
+
+    loadOrderedDrinks();
+
+    // Listen for order updates
+    window.addEventListener('ordersUpdated', loadOrderedDrinks);
+    return () => window.removeEventListener('ordersUpdated', loadOrderedDrinks);
+  }, []);
 
   const { data: menu, isLoading: menuLoading } = useQuery<Menu>({
     queryKey: ["/api/menus", slug],
@@ -69,6 +84,7 @@ export default function MenuDetail() {
       if (data && data.id) {
         addTrackedOrder({
           orderId: data.id,
+          drinkId: drinkId,
           drinkName: drink?.name || "Unknown Drink",
           guestName: guestName,
           timestamp: Date.now(),
@@ -166,6 +182,16 @@ export default function MenuDetail() {
   const requestButtonTextColor = menu?.requestButtonTextColor || undefined;
   const drinkTitleColor = menu?.drinkTitleColor || undefined;
   const drinkDescriptionColor = menu?.drinkDescriptionColor || undefined;
+  const orderedBadgeBackgroundColor = menu?.orderedBadgeBackgroundColor || undefined;
+  const orderedBadgeTextColor = menu?.orderedBadgeTextColor || undefined;
+  
+  // Build ordered badge style object
+  const getOrderedBadgeStyle = () => {
+    const style: React.CSSProperties = {};
+    style.backgroundColor = orderedBadgeBackgroundColor || '#d97706';
+    style.color = orderedBadgeTextColor || '#ffffff';
+    return style;
+  };
   
   // Build card style object
   const getCardStyle = () => {
@@ -319,10 +345,23 @@ export default function MenuDetail() {
                       return (
                         <Card 
                           key={drink.id} 
-                          className="flex flex-col h-full hover-elevate"
+                          className="flex flex-col h-full hover-elevate relative"
                           style={getCardStyle()}
                           data-testid={`card-drink-${drink.id}`}
                         >
+                          {isOrdered && (
+                            <div className="absolute top-2 right-2 z-10">
+                              <Badge 
+                                variant="default" 
+                                className="text-xs"
+                                style={getOrderedBadgeStyle()}
+                                data-testid={`badge-ordered-${drink.id}`}
+                              >
+                                <Check className="w-3 h-3 mr-1" />
+                                Ordered
+                              </Badge>
+                            </div>
+                          )}
                           <CardHeader className="flex-1">
                             <CardTitle 
                               className="text-xl mb-2"

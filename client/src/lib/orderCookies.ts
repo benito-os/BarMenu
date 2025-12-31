@@ -4,6 +4,7 @@ const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days in seconds
 
 export interface TrackedOrder {
   orderId: string;
+  drinkId: string;
   drinkName: string;
   guestName?: string;
   timestamp: number;

@@ -743,6 +743,22 @@ export default function MenusPage() {
                           />
                         </div>
                         
+                        <h4 className="text-sm font-medium text-muted-foreground pt-2">Ordered Status Badge</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <ColorPicker
+                            label="Ordered Badge Background"
+                            value={editingMenu.orderedBadgeBackgroundColor}
+                            onChange={(value) => setEditingMenu({ ...editingMenu, orderedBadgeBackgroundColor: value || "" })}
+                            placeholder="#d97706"
+                          />
+                          <ColorPicker
+                            label="Ordered Badge Text"
+                            value={editingMenu.orderedBadgeTextColor}
+                            onChange={(value) => setEditingMenu({ ...editingMenu, orderedBadgeTextColor: value || "" })}
+                            placeholder="#ffffff"
+                          />
+                        </div>
+                        
                         {/* Live Preview */}
                         <h4 className="text-sm font-medium text-muted-foreground pt-2">Preview</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -815,7 +831,14 @@ export default function MenusPage() {
                               }}
                             >
                               <div className="absolute top-2 right-2">
-                                <Badge variant="default" className="bg-amber-600 text-white text-xs">
+                                <Badge 
+                                  variant="default" 
+                                  className="text-xs"
+                                  style={{
+                                    backgroundColor: editingMenu.orderedBadgeBackgroundColor || '#d97706',
+                                    color: editingMenu.orderedBadgeTextColor || '#ffffff'
+                                  }}
+                                >
                                   Preparing...
                                 </Badge>
                               </div>
