@@ -164,6 +164,8 @@ export default function MenuDetail() {
   const badgeTextColor = menu?.badgeTextColor || undefined;
   const requestButtonBackgroundColor = menu?.requestButtonBackgroundColor || undefined;
   const requestButtonTextColor = menu?.requestButtonTextColor || undefined;
+  const drinkTitleColor = menu?.drinkTitleColor || undefined;
+  const drinkDescriptionColor = menu?.drinkDescriptionColor || undefined;
   
   // Build card style object
   const getCardStyle = () => {
@@ -322,7 +324,10 @@ export default function MenuDetail() {
                           data-testid={`card-drink-${drink.id}`}
                         >
                           <CardHeader className="flex-1">
-                            <CardTitle className="text-xl text-foreground mb-2">
+                            <CardTitle 
+                              className="text-xl mb-2"
+                              style={{ color: drinkTitleColor || undefined }}
+                            >
                               {drink.name}
                             </CardTitle>
                             {drink.style && (
@@ -335,7 +340,10 @@ export default function MenuDetail() {
                               </Badge>
                             )}
                             {drink.description && (
-                              <CardDescription className="text-sm leading-relaxed">
+                              <CardDescription 
+                                className="text-sm leading-relaxed"
+                                style={{ color: drinkDescriptionColor || undefined }}
+                              >
                                 {drink.description}
                               </CardDescription>
                             )}

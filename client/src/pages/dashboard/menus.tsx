@@ -697,6 +697,18 @@ export default function MenusPage() {
                             onChange={(value) => setEditingMenu({ ...editingMenu, cardBorderColor: value || "" })}
                             placeholder="#333333"
                           />
+                          <ColorPicker
+                            label="Drink Title Color"
+                            value={editingMenu.drinkTitleColor}
+                            onChange={(value) => setEditingMenu({ ...editingMenu, drinkTitleColor: value || "" })}
+                            placeholder="#ffffff"
+                          />
+                          <ColorPicker
+                            label="Drink Description Color"
+                            value={editingMenu.drinkDescriptionColor}
+                            onChange={(value) => setEditingMenu({ ...editingMenu, drinkDescriptionColor: value || "" })}
+                            placeholder="#a1a1aa"
+                          />
                         </div>
                         
                         <h4 className="text-sm font-medium text-muted-foreground pt-2">Badges</h4>
@@ -745,7 +757,12 @@ export default function MenusPage() {
                               }}
                             >
                               <div className="space-y-2">
-                                <h4 className="font-semibold text-foreground">Sample Cocktail</h4>
+                                <h4 
+                                  className="font-semibold"
+                                  style={{ color: editingMenu.drinkTitleColor || undefined }}
+                                >
+                                  Sample Cocktail
+                                </h4>
                                 <div className="flex flex-wrap gap-1">
                                   <Badge 
                                     variant="secondary"
@@ -766,7 +783,12 @@ export default function MenusPage() {
                                     Mocktail Available
                                   </Badge>
                                 </div>
-                                <p className="text-sm text-muted-foreground">A refreshing blend of citrus and mint...</p>
+                                <p 
+                                  className="text-sm"
+                                  style={{ color: editingMenu.drinkDescriptionColor || undefined }}
+                                >
+                                  A refreshing blend of citrus and mint...
+                                </p>
                                 <Button
                                   size="sm"
                                   className="w-full mt-2"
@@ -798,7 +820,12 @@ export default function MenusPage() {
                                 </Badge>
                               </div>
                               <div className="space-y-2">
-                                <h4 className="font-semibold text-foreground">Sample Cocktail</h4>
+                                <h4 
+                                  className="font-semibold"
+                                  style={{ color: editingMenu.drinkTitleColor || undefined }}
+                                >
+                                  Sample Cocktail
+                                </h4>
                                 <div className="flex flex-wrap gap-1">
                                   <Badge 
                                     variant="secondary"
@@ -810,7 +837,12 @@ export default function MenusPage() {
                                     Tropical
                                   </Badge>
                                 </div>
-                                <p className="text-sm text-muted-foreground">A refreshing blend of citrus and mint...</p>
+                                <p 
+                                  className="text-sm"
+                                  style={{ color: editingMenu.drinkDescriptionColor || undefined }}
+                                >
+                                  A refreshing blend of citrus and mint...
+                                </p>
                                 <Button
                                   size="sm"
                                   variant="outline"
