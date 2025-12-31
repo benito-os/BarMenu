@@ -19,6 +19,8 @@ export const menus = pgTable("menus", {
   // Per-menu theme overrides for drink cards
   cardBackgroundColor: text("card_background_color"),
   cardBorderColor: text("card_border_color"),
+  drinkTitleColor: text("drink_title_color"),
+  drinkDescriptionColor: text("drink_description_color"),
   // Badge theming (applies to all badges: style, mocktail, etc.)
   badgeBackgroundColor: text("badge_background_color"),
   badgeTextColor: text("badge_text_color"),
