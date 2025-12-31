@@ -16,6 +16,11 @@ export const menus = pgTable("menus", {
   sectionHeaderColor: text("section_header_color"),
   menuTitleColor: text("menu_title_color"),
   typography: text("typography"),
+  // Per-menu theme overrides
+  cardBackgroundColor: text("card_background_color"),
+  cardBorderColor: text("card_border_color"),
+  badgeActiveColor: text("badge_active_color"),
+  badgeMocktailColor: text("badge_mocktail_color"),
   sections: text("sections").array().notNull().default(sql`ARRAY[]::text[]`),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
@@ -117,6 +122,11 @@ export const settings = pgTable("settings", {
   bodyFont: text("body_font").default("inter"),
   qrDotStyle: text("qr_dot_style").default("dots"),
   qrEyeStyle: text("qr_eye_style").default("rounded"),
+  // Site-wide theme colors
+  sitePrimaryColor: text("site_primary_color"),
+  siteSurfaceColor: text("site_surface_color"),
+  siteBadgeActiveColor: text("site_badge_active_color"),
+  siteBadgeMocktailColor: text("site_badge_mocktail_color"),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 

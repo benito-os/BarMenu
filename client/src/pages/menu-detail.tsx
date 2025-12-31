@@ -156,6 +156,20 @@ export default function MenuDetail() {
   const accentColor = menu?.accentColor || undefined;
   const sectionHeaderColor = menu?.sectionHeaderColor || undefined;
   const menuTitleColor = menu?.menuTitleColor || undefined;
+  
+  // Card and badge theming
+  const cardBackgroundColor = menu?.cardBackgroundColor || undefined;
+  const cardBorderColor = menu?.cardBorderColor || undefined;
+  const badgeActiveColor = menu?.badgeActiveColor || undefined;
+  const badgeMocktailColor = menu?.badgeMocktailColor || undefined;
+  
+  // Build card style object
+  const getCardStyle = () => {
+    const style: React.CSSProperties = {};
+    if (cardBackgroundColor) style.backgroundColor = cardBackgroundColor;
+    if (cardBorderColor) style.borderColor = cardBorderColor;
+    return style;
+  };
 
   return (
     <div className="min-h-screen bg-background" style={themingStyle}>
@@ -283,6 +297,7 @@ export default function MenuDetail() {
                         <Card 
                           key={drink.id} 
                           className="flex flex-col h-full hover-elevate"
+                          style={getCardStyle()}
                           data-testid={`card-drink-${drink.id}`}
                         >
                           <CardHeader className="flex-1">
@@ -313,13 +328,28 @@ export default function MenuDetail() {
                                 </Badge>
                               )}
                               {drink.isMocktail && (
-                                <Badge variant="outline" className="text-xs">
+                                <Badge 
+                                  variant="outline" 
+                                  className="text-xs"
+                                  style={badgeMocktailColor ? { 
+                                    backgroundColor: badgeMocktailColor,
+                                    borderColor: badgeMocktailColor,
+                                    color: 'white'
+                                  } : undefined}
+                                >
                                   <Sparkles className="w-3 h-3 mr-1" />
                                   Non-Alcoholic
                                 </Badge>
                               )}
                               {drink.canBeMocktail && !drink.isMocktail && (
-                                <Badge variant="secondary" className="text-xs">
+                                <Badge 
+                                  variant="secondary" 
+                                  className="text-xs"
+                                  style={badgeMocktailColor ? { 
+                                    backgroundColor: badgeMocktailColor,
+                                    color: 'white'
+                                  } : undefined}
+                                >
                                   <Sparkles className="w-3 h-3 mr-1" />
                                   Mocktail Available
                                 </Badge>

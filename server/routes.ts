@@ -565,7 +565,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         headlineFont,
         bodyFont,
         qrDotStyle,
-        qrEyeStyle
+        qrEyeStyle,
+        sitePrimaryColor,
+        siteSurfaceColor,
+        siteBadgeActiveColor,
+        siteBadgeMocktailColor
       } = req.body;
       const updates: Record<string, unknown> = {};
       
@@ -595,6 +599,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       if (typeof qrEyeStyle === "string") {
         updates.qrEyeStyle = qrEyeStyle;
+      }
+      
+      // Site-wide theme colors
+      if (sitePrimaryColor !== undefined) {
+        updates.sitePrimaryColor = sitePrimaryColor || null;
+      }
+      if (siteSurfaceColor !== undefined) {
+        updates.siteSurfaceColor = siteSurfaceColor || null;
+      }
+      if (siteBadgeActiveColor !== undefined) {
+        updates.siteBadgeActiveColor = siteBadgeActiveColor || null;
+      }
+      if (siteBadgeMocktailColor !== undefined) {
+        updates.siteBadgeMocktailColor = siteBadgeMocktailColor || null;
       }
       
       if (Object.keys(updates).length === 0) {

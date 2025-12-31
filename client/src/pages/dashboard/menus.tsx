@@ -682,6 +682,35 @@ export default function MenusPage() {
                             placeholder="#1a1a1a"
                           />
                         </div>
+                        
+                        <h4 className="text-sm font-medium text-muted-foreground pt-2">Drink Cards & Badges</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <ColorPicker
+                            label="Card Background"
+                            value={editingMenu.cardBackgroundColor}
+                            onChange={(value) => setEditingMenu({ ...editingMenu, cardBackgroundColor: value || "" })}
+                            placeholder="#1f1f1f"
+                          />
+                          <ColorPicker
+                            label="Card Border"
+                            value={editingMenu.cardBorderColor}
+                            onChange={(value) => setEditingMenu({ ...editingMenu, cardBorderColor: value || "" })}
+                            placeholder="#333333"
+                          />
+                          <ColorPicker
+                            label="Active Badge Color"
+                            value={editingMenu.badgeActiveColor}
+                            onChange={(value) => setEditingMenu({ ...editingMenu, badgeActiveColor: value || "" })}
+                            placeholder="#22c55e"
+                          />
+                          <ColorPicker
+                            label="Mocktail Badge Color"
+                            value={editingMenu.badgeMocktailColor}
+                            onChange={(value) => setEditingMenu({ ...editingMenu, badgeMocktailColor: value || "" })}
+                            placeholder="#8b5cf6"
+                          />
+                        </div>
+                        
                         <div className="space-y-2">
                           <Label htmlFor="edit-menu-typography">Typography Style</Label>
                           <Select

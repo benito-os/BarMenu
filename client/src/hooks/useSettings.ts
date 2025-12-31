@@ -42,6 +42,10 @@ export function useSettings() {
     bodyFont: "inter",
     qrDotStyle: "dots",
     qrEyeStyle: "rounded",
+    sitePrimaryColor: null,
+    siteSurfaceColor: null,
+    siteBadgeActiveColor: null,
+    siteBadgeMocktailColor: null,
     updatedAt: new Date(),
   };
 
