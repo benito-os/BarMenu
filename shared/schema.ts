@@ -27,6 +27,9 @@ export const menus = pgTable("menus", {
   // Request button theming
   requestButtonBackgroundColor: text("request_button_background_color"),
   requestButtonTextColor: text("request_button_text_color"),
+  // Ordered status badge theming
+  orderedBadgeBackgroundColor: text("ordered_badge_background_color"),
+  orderedBadgeTextColor: text("ordered_badge_text_color"),
   sections: text("sections").array().notNull().default(sql`ARRAY[]::text[]`),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
