@@ -1,5 +1,6 @@
 import type { Express, Response } from "express";
 import { createServer, type Server } from "http";
+import { timingSafeEqual } from "crypto";
 import { z } from "zod";
 import { isStorageError } from "./errors";
 import { storage } from "./storage";
@@ -51,24 +52,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return result.data;
   };
 
-  // Simple hardcoded password - in production this would use proper hashing
-  const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD || "barflores2025";
+  const mapStorageError = (error: unknown) => {
+    if (isStorageError(error)) {
+      return {
+        status: error.options.status,
+        body: {
+          error: error.message,
+          code: error.options.code,
+          details: error.options.context,
+        },
+      } as const;
+    }
+
+    return null;
+  };
+
+  const requireAuth = (
+    req: import("express").Request,
+    res: Response,
+    next: import("express").NextFunction,
+  ) => {
+    if (req.session?.isAuthenticated) {
+      return next();
+    }
+    return res.status(401).json({ error: "Authentication required" });
+  };
+
+  // Read dashboard password from env. No source-code fallback — see fail-fast
+  // check at boot in server/index.ts for production. In dev, a missing value
+  // disables login (returns 401) so credentials are never accidentally hardcoded.
+  const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD;
+
+  const passwordMatches = (provided: string, expected: string): boolean => {
+    const a = Buffer.from(provided, "utf8");
+    const b = Buffer.from(expected, "utf8");
+    if (a.length !== b.length) return false;
+    return timingSafeEqual(a, b);
+  };
 
   // POST /api/auth/login - Dashboard login
   app.post("/api/auth/login", async (req, res) => {
     try {
       const { username, password } = req.body;
-      
+
       if (!username || !password) {
         return res.status(400).json({ error: "Username and password are required" });
       }
-      
+
+      if (!DASHBOARD_PASSWORD) {
+        console.error("DASHBOARD_PASSWORD env var is not set; login disabled");
+        return res.status(503).json({ error: "Login is not configured" });
+      }
+
       // Only allow "admin" username
       if (username !== "admin") {
         return res.status(401).json({ error: "Invalid credentials" });
       }
-      
-      if (password === DASHBOARD_PASSWORD) {
+
+      if (passwordMatches(password, DASHBOARD_PASSWORD)) {
         req.session.isAuthenticated = true;
         // Explicitly save session to ensure it persists
         req.session.save((err) => {
@@ -134,7 +175,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // POST /api/menus - Create new menu
-  app.post("/api/menus", async (req, res) => {
+  app.post("/api/menus", requireAuth, async (req, res) => {
     try {
       const validatedData = validate(menuCreateSchema, req.body, res, "Invalid menu data");
       if (!validatedData) return;
@@ -147,7 +188,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // PATCH /api/menus/:id - Update menu (any fields including theming)
-  app.patch("/api/menus/:id", async (req, res) => {
+  app.patch("/api/menus/:id", requireAuth, async (req, res) => {
     try {
       const params = validate(idParamsSchema, req.params, res, "Menu id is required");
       if (!params) return;
@@ -166,7 +207,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // DELETE /api/menus/:id - Delete menu
-  app.delete("/api/menus/:id", async (req, res) => {
+  app.delete("/api/menus/:id", requireAuth, async (req, res) => {
     try {
       const params = validate(idParamsSchema, req.params, res, "Menu id is required");
       if (!params) return;
@@ -193,7 +234,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // GET /api/drinks/all?menuId=xxx - Get all drinks by menu ID (including inactive, for admin)
-  app.get("/api/drinks/all", async (req, res) => {
+  app.get("/api/drinks/all", requireAuth, async (req, res) => {
     try {
       const query = validate(menuIdQuerySchema, req.query, res, "menuId query parameter is required");
       if (!query) return;
@@ -225,7 +266,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // POST /api/drinks - Create new drink
-  app.post("/api/drinks", async (req, res) => {
+  app.post("/api/drinks", requireAuth, async (req, res) => {
     try {
       const validatedData = validate(drinkCreateSchema, req.body, res, "Invalid drink data");
       if (!validatedData) return;
@@ -240,7 +281,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // PATCH /api/drinks/reorder - Update drink sort orders
-  app.patch("/api/drinks/reorder", async (req, res) => {
+  app.patch("/api/drinks/reorder", requireAuth, async (req, res) => {
     try {
       const payload = validate(drinkReorderSchema, req.body, res, "Invalid reorder payload");
       if (!payload) return;
@@ -260,7 +301,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // DELETE /api/drinks/bulk - Bulk delete drinks
-  app.delete("/api/drinks/bulk", async (req, res) => {
+  app.delete("/api/drinks/bulk", requireAuth, async (req, res) => {
     try {
       const payload = validate(drinkBulkDeleteSchema, req.body, res, "Invalid bulk delete payload");
       if (!payload) return;
@@ -280,7 +321,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // PATCH /api/drinks/bulk - Bulk update drinks (activate/deactivate)
-  app.patch("/api/drinks/bulk", async (req, res) => {
+  app.patch("/api/drinks/bulk", requireAuth, async (req, res) => {
     try {
       console.log("Bulk update request body:", req.body);
       const payload = validate(drinkBulkUpdateSchema, req.body, res, "Invalid bulk update payload");
@@ -303,7 +344,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // PATCH /api/drinks/:id - Update drink
-  app.patch("/api/drinks/:id", async (req, res) => {
+  app.patch("/api/drinks/:id", requireAuth, async (req, res) => {
     try {
       const params = validate(drinkIdParamsSchema, req.params, res, "Invalid drink id");
       if (!params) return;
@@ -326,7 +367,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // GET /api/ingredients - Get all ingredients
-  app.get("/api/ingredients", async (_req, res) => {
+  app.get("/api/ingredients", requireAuth, async (_req, res) => {
     try {
       const ingredients = await storage.getIngredients();
       res.json(ingredients);
@@ -337,7 +378,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // POST /api/ingredients - Create new ingredient
-  app.post("/api/ingredients", async (req, res) => {
+  app.post("/api/ingredients", requireAuth, async (req, res) => {
     try {
       const validatedData = validate(ingredientCreateSchema, req.body, res, "Invalid ingredient data");
       if (!validatedData) return;
@@ -350,7 +391,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // PATCH /api/ingredients/:id - Update ingredient
-  app.patch("/api/ingredients/:id", async (req, res) => {
+  app.patch("/api/ingredients/:id", requireAuth, async (req, res) => {
     try {
       const params = validate(idParamsSchema, req.params, res, "Invalid ingredient id");
       if (!params) return;
@@ -369,7 +410,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // DELETE /api/ingredients/:id - Delete ingredient
-  app.delete("/api/ingredients/:id", async (req, res) => {
+  app.delete("/api/ingredients/:id", requireAuth, async (req, res) => {
     try {
       const params = validate(idParamsSchema, req.params, res, "Invalid ingredient id");
       if (!params) return;
@@ -382,7 +423,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // GET /api/availability/active-menus - Drinks unavailable due to stock
-  app.get("/api/availability/active-menus", async (_req, res) => {
+  app.get("/api/availability/active-menus", requireAuth, async (_req, res) => {
     try {
       const alerts = await storage.getActiveMenuDrinkAlerts();
       res.json(alerts);
@@ -425,7 +466,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // GET /api/orders/queue - Get live queue of pending orders
-  app.get("/api/orders/queue", async (req, res) => {
+  app.get("/api/orders/queue", requireAuth, async (req, res) => {
     try {
       const queue = await storage.getOrderQueue();
       res.json(queue);
@@ -454,7 +495,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // PATCH /api/orders/:id - Update order status
-  app.patch("/api/orders/:id", async (req, res) => {
+  app.patch("/api/orders/:id", requireAuth, async (req, res) => {
     try {
       const params = validate(idParamsSchema, req.params, res, "Order id is required");
       if (!params) return;
@@ -497,7 +538,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // POST /api/orders/batch - Batch update order statuses
-  app.post("/api/orders/batch", async (req, res) => {
+  app.post("/api/orders/batch", requireAuth, async (req, res) => {
     try {
       const { orderIds, status } = req.body;
       
@@ -517,7 +558,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // DELETE /api/orders/served - Clear all served orders
-  app.delete("/api/orders/served", async (req, res) => {
+  app.delete("/api/orders/served", requireAuth, async (req, res) => {
     try {
       const count = await storage.deleteServedOrders();
       res.json({ deleted: count });
@@ -528,7 +569,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // GET /api/analytics - Get drink analytics
-  app.get("/api/analytics", async (req, res) => {
+  app.get("/api/analytics", requireAuth, async (req, res) => {
     try {
       const query = validate(analyticsQuerySchema, req.query, res, "Invalid analytics query");
       if (!query) return;
@@ -555,7 +596,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // PATCH /api/settings - Update application settings
-  app.patch("/api/settings", async (req, res) => {
+  app.patch("/api/settings", requireAuth, async (req, res) => {
     try {
       const { 
         waitingWarningMinutes, 
@@ -627,7 +668,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // GET /api/export/menus - Export all menus as CSV
-  app.get("/api/export/menus", async (req, res) => {
+  app.get("/api/export/menus", requireAuth, async (req, res) => {
     try {
       const menus = await storage.getAllMenus();
       const headers = ["id", "slug (REQUIRED)", "name (REQUIRED)", "description", "isActive", "heroImageUrl", "backgroundColor", "accentColor", "sectionHeaderColor", "menuTitleColor", "typography", "sections", "createdAt"];
@@ -649,7 +690,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // GET /api/export/drinks - Export all drinks as CSV
-  app.get("/api/export/drinks", async (req, res) => {
+  app.get("/api/export/drinks", requireAuth, async (req, res) => {
     try {
       const menus = await storage.getAllMenus();
       const allDrinks: any[] = [];
@@ -681,7 +722,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // GET /api/export/ingredients - Export all ingredients as CSV
-  app.get("/api/export/ingredients", async (req, res) => {
+  app.get("/api/export/ingredients", requireAuth, async (req, res) => {
     try {
       const ingredients = await storage.getIngredients();
       const headers = ["id", "name (REQUIRED)", "category", "unit (REQUIRED)", "onHand", "parLevel", "isActive", "createdAt"];
@@ -701,7 +742,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // GET /api/export/orders - Export all orders as CSV
-  app.get("/api/export/orders", async (req, res) => {
+  app.get("/api/export/orders", requireAuth, async (req, res) => {
     try {
       const orders = await storage.getOrderQueue();
       const headers = [
@@ -726,7 +767,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============ TEMPLATE ENDPOINTS ============
   
   // GET /api/templates/menus - Get empty CSV template for menus
-  app.get("/api/templates/menus", async (req, res) => {
+  app.get("/api/templates/menus", requireAuth, async (req, res) => {
     const headers = ["slug (REQUIRED)", "name (REQUIRED)", "description", "isActive", "heroImageUrl", "backgroundColor", "accentColor", "sectionHeaderColor", "menuTitleColor", "typography", "sections"];
     const exampleRow = ["summer-2024", "Summer Menu", "Our summer cocktail selection", "true", "", "#f5f5f5", "#c9a227", "#333333", "#1a1a1a", "Playfair Display", "Classic|Signature|Mocktails"];
     
@@ -737,7 +778,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // GET /api/templates/drinks - Get empty CSV template for drinks
-  app.get("/api/templates/drinks", async (req, res) => {
+  app.get("/api/templates/drinks", requireAuth, async (req, res) => {
     const headers = [
       "menuId (REQUIRED)", "name (REQUIRED)", "section (REQUIRED)", "description", "recipe", "style",
       "temperature", "isMocktail", "canBeMocktail", "isStirred", "isShaken",
@@ -755,7 +796,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // GET /api/templates/ingredients - Get empty CSV template for ingredients
-  app.get("/api/templates/ingredients", async (req, res) => {
+  app.get("/api/templates/ingredients", requireAuth, async (req, res) => {
     const headers = ["name (REQUIRED)", "category", "unit (REQUIRED)", "onHand", "parLevel", "isActive"];
     const exampleRow = ["Buffalo Trace Bourbon", "Spirits", "bottles", "5", "3", "true"];
     
@@ -766,7 +807,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // GET /api/templates/orders - Get empty CSV template for orders
-  app.get("/api/templates/orders", async (req, res) => {
+  app.get("/api/templates/orders", requireAuth, async (req, res) => {
     const headers = ["drinkId (REQUIRED)", "menuId (REQUIRED)", "guestName", "comments", "asMocktail"];
     const exampleRow = ["drink-uuid-here", "menu-uuid-here", "John", "Extra ice please", "false"];
     
@@ -823,7 +864,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // POST /api/import/menus - Import menus from CSV
-  app.post("/api/import/menus", async (req, res) => {
+  app.post("/api/import/menus", requireAuth, async (req, res) => {
     try {
       const { csv } = req.body;
       if (!csv || typeof csv !== "string") {
@@ -869,7 +910,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // POST /api/import/drinks - Import drinks from CSV
-  app.post("/api/import/drinks", async (req, res) => {
+  app.post("/api/import/drinks", requireAuth, async (req, res) => {
     try {
       const { csv } = req.body;
       if (!csv || typeof csv !== "string") {
@@ -919,7 +960,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // POST /api/import/ingredients - Import ingredients from CSV
-  app.post("/api/import/ingredients", async (req, res) => {
+  app.post("/api/import/ingredients", requireAuth, async (req, res) => {
     try {
       const { csv } = req.body;
       if (!csv || typeof csv !== "string") {
@@ -960,7 +1001,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // POST /api/import/orders - Import orders from CSV
-  app.post("/api/import/orders", async (req, res) => {
+  app.post("/api/import/orders", requireAuth, async (req, res) => {
     try {
       const { csv } = req.body;
       if (!csv || typeof csv !== "string") {
@@ -1000,7 +1041,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // POST /api/barcode/lookup - Look up product info from barcode
-  app.post("/api/barcode/lookup", async (req, res) => {
+  app.post("/api/barcode/lookup", requireAuth, async (req, res) => {
     try {
       const { barcode } = req.body;
       
@@ -1070,17 +1111,3 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   return httpServer;
 }
-  const mapStorageError = (error: unknown) => {
-    if (isStorageError(error)) {
-      return {
-        status: error.options.status,
-        body: {
-          error: error.message,
-          code: error.options.code,
-          details: error.options.context,
-        },
-      } as const;
-    }
-
-    return null;
-  };

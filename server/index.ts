@@ -30,6 +30,21 @@ if (process.env.NODE_ENV === "production") {
   app.set("trust proxy", 1);
 }
 
+// In production, secrets must be set in Replit Secrets — fail fast at boot
+// rather than silently running with hardcoded defaults.
+if (process.env.NODE_ENV === "production") {
+  if (!process.env.SESSION_SECRET) {
+    throw new Error(
+      "SESSION_SECRET must be set in production (configure it in Replit Secrets)",
+    );
+  }
+  if (!process.env.DASHBOARD_PASSWORD) {
+    throw new Error(
+      "DASHBOARD_PASSWORD must be set in production (configure it in Replit Secrets)",
+    );
+  }
+}
+
 // Session setup for dashboard authentication (after body parsers)
 app.use(session({
   secret: process.env.SESSION_SECRET || "dev-secret-change-in-production",
