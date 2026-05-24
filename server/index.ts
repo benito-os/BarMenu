@@ -61,6 +61,9 @@ app.use(session({
     pool,
     tableName: "session",
     createTableIfMissing: true,
+    // Prune expired rows every 15 minutes. Default is on, but making it
+    // explicit so future changes don't accidentally disable cleanup.
+    pruneSessionInterval: 60 * 15,
   }),
   secret: process.env.SESSION_SECRET || "dev-secret-change-in-production",
   resave: false,

@@ -27,7 +27,6 @@ function Router() {
       <Route path="/dashboard/drinks" component={DrinksPage} />
       <Route path="/dashboard/inventory" component={InventoryPage} />
       <Route path="/dashboard/qr-codes" component={QRCodesPage} />
-      <Route path="/dashboard/qr" component={QRCodesPage} />
       <Route path="/dashboard/settings" component={SettingsPage} />
       <Route path="/dashboard/import-export" component={ImportExportPage} />
       <Route path="/dashboard" component={QueuePage} />
