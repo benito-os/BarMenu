@@ -63,6 +63,13 @@
   --font-sans: Inter, sans-serif;
   --font-serif: Playfair Display, serif;
   --font-mono: Menlo, monospace;
+  /* Brand font slots. Populated at runtime by useApplyBrandSettings from
+     the admin Settings page (headlineFont/bodyFont presets). Default to the
+     serif/sans tokens so guest-facing UI without explicit branding still
+     renders correctly. Used by the .font-headline and .font-body utility
+     classes below. */
+  --font-headline: var(--font-serif);
+  --font-body: var(--font-sans);
   --radius: .5rem;
   --shadow-2xs: 0px 2px 0px 0px hsl(0 0% 0% / 0.00);
   --shadow-xs: 0px 2px 0px 0px hsl(0 0% 0% / 0.00);
@@ -204,6 +211,17 @@
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
+  }
+
+  /* Opt-in brand fonts. Guest-facing surfaces (landing, splash, menu pages)
+     use these so the admin's Settings page choices for headlineFont/bodyFont
+     actually take effect; the dashboard keeps the fixed Inter + Playfair
+     stack via the standard font-sans / font-serif utilities. */
+  .font-headline {
+    font-family: var(--font-headline);
+  }
+  .font-body {
+    font-family: var(--font-body);
   }
 }
 

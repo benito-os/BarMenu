@@ -147,10 +147,13 @@ export default function MenuDetail() {
     );
   }
 
-  // Dynamic theming styles
+  // Dynamic theming styles. Per-menu typography wins; otherwise fall through
+  // to the global brand headline font (set by useApplyBrandSettings) so a
+  // menu with no explicit typography still picks up the admin's brand choice
+  // instead of the browser default.
   const themingStyle = menu ? {
     backgroundColor: menu.backgroundColor || undefined,
-    fontFamily: menu.typography || undefined,
+    fontFamily: menu.typography || "var(--font-headline)",
   } : {};
 
   const accentColor = menu?.accentColor || undefined;

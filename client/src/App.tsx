@@ -4,6 +4,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useApplyBrandSettings } from "@/hooks/useApplyBrandSettings";
 
 // Eager-load the public/guest pages — they're the highest-traffic entry points
 // and frequently hit from QR-code scans where extra round-trips hurt most.
@@ -44,13 +45,22 @@ function Router() {
   );
 }
 
+// Inner component so useApplyBrandSettings runs INSIDE the QueryClientProvider
+// (it consumes useSettings, which needs the query client in context).
+function BrandedApp() {
+  useApplyBrandSettings();
+  return (
+    <TooltipProvider>
+      <Toaster />
+      <Router />
+    </TooltipProvider>
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
+      <BrandedApp />
     </QueryClientProvider>
   );
 }

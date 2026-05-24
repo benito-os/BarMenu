@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SplashScreen, useSplashScreen } from "@/components/SplashScreen";
+import { useSettings } from "@/hooks/useSettings";
 import type { Menu } from "@shared/validation";
 import heroImage from "@assets/generated_images/Bar_hero_cocktails_overhead_0be3299c.png";
 import { Calendar, Sparkles } from "lucide-react";
@@ -13,9 +14,15 @@ export default function Landing() {
   const { data: menus, isLoading } = useQuery<Menu[]>({
     queryKey: ["/api/menus"],
   });
+  const { settings } = useSettings();
   const { showSplash, dismissSplash } = useSplashScreen();
 
   const activeMenu = menus?.find(m => m.isActive);
+  // Brand settings come from /dashboard/settings. Logo + welcome message
+  // replace the default brand mark + tagline; fonts come from the global
+  // CSS variables set by useApplyBrandSettings in App.tsx.
+  const brandLogo = settings.brandingLogoUrl;
+  const tagline = settings.welcomeMessage || "Whimsical drinks with friends";
 
   return (
     <div className="min-h-screen bg-background">
@@ -38,16 +45,25 @@ export default function Landing() {
         
         {/* Hero content */}
         <div className="relative h-full flex flex-col items-center justify-center px-6 text-center">
-          <h1 className="font-serif text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-4 tracking-tight">
-            Bar Flores
-          </h1>
-          <p className="text-lg md:text-xl text-white/90 mb-8 max-w-2xl">
-            Whimsical drinks with friends
+          {brandLogo ? (
+            <img
+              src={brandLogo}
+              alt="Bar Flores"
+              className="h-24 md:h-32 lg:h-40 w-auto mb-4 drop-shadow-lg"
+              data-testid="landing-brand-logo"
+            />
+          ) : (
+            <h1 className="font-headline text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-4 tracking-tight">
+              Bar Flores
+            </h1>
+          )}
+          <p className="font-body text-lg md:text-xl text-white/90 mb-8 max-w-2xl">
+            {tagline}
           </p>
           {activeMenu && (
             <Link href={`/menu/${activeMenu.slug}`}>
-              <Button 
-                size="lg" 
+              <Button
+                size="lg"
                 className="text-base px-8"
                 data-testid="button-view-tonights-menu"
               >
@@ -62,10 +78,10 @@ export default function Landing() {
       {/* Menu Grid Section */}
       <div className="max-w-7xl mx-auto px-6 py-16">
         <div className="mb-12">
-          <h2 className="font-sans text-2xl md:text-3xl font-semibold text-foreground mb-2 uppercase tracking-wide">
+          <h2 className="font-body text-2xl md:text-3xl font-semibold text-foreground mb-2 uppercase tracking-wide">
             Our Menus
           </h2>
-          <p className="text-muted-foreground">
+          <p className="font-body text-muted-foreground">
             Explore our curated collection of seasonal and event-specific cocktail experiences
           </p>
         </div>
@@ -94,7 +110,7 @@ export default function Landing() {
                 >
                   <CardHeader className="space-y-3">
                     <div className="flex items-start justify-between gap-2">
-                      <CardTitle className="font-serif text-2xl text-foreground">
+                      <CardTitle className="font-headline text-2xl text-foreground">
                         {menu.name}
                       </CardTitle>
                       {menu.isActive && (
