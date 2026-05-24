@@ -423,7 +423,7 @@ export function InventorySection() {
                     return (
                       <div 
                         key={item.id} 
-                        className={`border rounded-lg p-2 ${isOut ? "border-destructive/50 bg-destructive/5" : isLow ? "border-yellow-500/50 bg-yellow-500/5" : ""}`}
+                        className={`border rounded-lg p-2 ${isOut ? "border-destructive/50 bg-destructive/5" : isLow ? "border-warning/50 bg-warning/5" : ""}`}
                         data-testid={`mobile-ingredient-${item.id}`}
                       >
                         {/* Row 1: Name + Status Badge */}
