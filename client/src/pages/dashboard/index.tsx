@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useOrders } from "@/hooks/useOrders";
+import { useMenus } from "@/hooks/useMenus";
 import { useSettings } from "@/hooks/useSettings";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -61,6 +62,16 @@ export default function QueuePage() {
     editDetailsPending,
   } = useOrders(true);
   const { settings } = useSettings();
+  // Pull menus so each queue row and the order Sheet header can show a
+  // colored hint matching the order's originating menu — visual cue for
+  // which menu a guest is sitting at when multiple are active.
+  const { menus } = useMenus(true);
+  const accentByMenuId = useMemo(
+    () => new Map(menus.map((m) => [m.id, m.accentColor ?? null])),
+    [menus],
+  );
+  const accentFor = (menuId: string): string | undefined =>
+    accentByMenuId.get(menuId) ?? undefined;
   const [selectedOrder, setSelectedOrder] = useState<OrderWithDrink | null>(null);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -372,10 +383,18 @@ export default function QueuePage() {
     const isSelected = selectedIds.has(order.id);
     const waitingBadge = getWaitingBadge(order.requestedAt.toString(), order.status);
     const isOutOfStock = order.drinkIsOutOfStock;
-    
+    const menuAccent = accentFor(order.menuId);
+
     return (
-      <div 
-        className={`border rounded-lg mb-2 overflow-hidden ${isSelected ? "ring-2 ring-primary" : ""} ${isOutOfStock ? "border-destructive/50 bg-destructive/5" : ""}`}
+      <div
+        className={`border rounded-lg mb-2 overflow-hidden border-l-4 ${isSelected ? "ring-2 ring-primary" : ""} ${isOutOfStock ? "border-destructive/50 bg-destructive/5" : ""}`}
+        style={
+          !isOutOfStock && menuAccent
+            ? { borderLeftColor: menuAccent }
+            : !isOutOfStock
+              ? { borderLeftColor: "transparent" }
+              : undefined
+        }
         data-testid={`mobile-order-${order.id}`}
       >
         <Collapsible
@@ -684,11 +703,23 @@ export default function QueuePage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {queue.map((order) => (
-                        <TableRow 
+                      {queue.map((order) => {
+                        const menuAccent = accentFor(order.menuId);
+                        // Destructive "out of stock" border wins over the
+                        // menu-accent hint; otherwise show a 4px stripe in
+                        // the order's originating menu colour.
+                        return (
+                        <TableRow
                           key={order.id}
                           data-testid={`row-order-${order.id}`}
-                          className={`cursor-pointer hover-elevate ${selectedIds.has(order.id) ? "bg-muted/50" : ""} ${order.drinkIsOutOfStock ? "bg-destructive/5 border-l-2 border-l-destructive" : ""}`}
+                          className={`cursor-pointer hover-elevate border-l-4 ${selectedIds.has(order.id) ? "bg-muted/50" : ""} ${order.drinkIsOutOfStock ? "bg-destructive/5 border-l-destructive" : ""}`}
+                          style={
+                            !order.drinkIsOutOfStock && menuAccent
+                              ? { borderLeftColor: menuAccent }
+                              : !order.drinkIsOutOfStock
+                                ? { borderLeftColor: "transparent" }
+                                : undefined
+                          }
                           onClick={() => setSelectedOrder(order)}
                         >
                           <TableCell onClick={(e) => e.stopPropagation()}>
@@ -788,7 +819,8 @@ export default function QueuePage() {
                             </div>
                           </TableCell>
                         </TableRow>
-                      ))}
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>
@@ -810,6 +842,19 @@ export default function QueuePage() {
           <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
             {selectedOrder && (
               <>
+                {/* Top stripe matches the order's menu accent so the
+                    bartender can see at a glance which menu this order
+                    belongs to, in case multiple are active. */}
+                {(() => {
+                  const stripe = accentFor(selectedOrder.menuId);
+                  return stripe ? (
+                    <div
+                      className="absolute top-0 left-0 right-0 h-1"
+                      style={{ backgroundColor: stripe }}
+                      aria-hidden
+                    />
+                  ) : null;
+                })()}
                 <SheetHeader>
                   <SheetTitle className="font-serif text-2xl">{selectedOrder.drinkName}</SheetTitle>
                   <SheetDescription>
