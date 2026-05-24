@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useMenus } from "@/hooks/useMenus";
 import { useSettings } from "@/hooks/useSettings";
@@ -8,10 +8,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BrandedQRCode } from "@/components/BrandedQRCode";
-import { Copy, Palette } from "lucide-react";
+import { QRPrintSheet } from "@/components/QRPrintSheet";
+import { Copy, Palette, Printer, FlaskConical } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import type { DrinkAvailability } from "@shared/validation";
 
 export default function QRCodesPage() {
   const { menus, menusLoading, defaultMenu } = useMenus();
@@ -23,6 +28,60 @@ export default function QRCodesPage() {
   const [qrFgColor, setQrFgColor] = useState<string>("#1a1a1a");
   const [qrBgColor, setQrBgColor] = useState<string>("#ffffff");
   const [useMenuColors, setUseMenuColors] = useState<boolean>(true);
+  const [showArchived, setShowArchived] = useState(false);
+  const [printOpen, setPrintOpen] = useState(false);
+
+  // Hide inactive menus from the picker by default. Keep the currently
+  // selected one visible so it doesn't disappear mid-edit.
+  const visibleMenus = useMemo(
+    () => menus.filter((m) => showArchived || m.isActive || m.id === selectedMenuId),
+    [menus, showArchived, selectedMenuId],
+  );
+  const archivedCount = menus.filter((m) => !m.isActive).length;
+  const activeMenuCount = menus.filter((m) => m.isActive).length;
+
+  // "Place test order" — sanity-checks the guest flow end-to-end without
+  // needing to scan a QR with a phone. Fetches the selected menu's drinks,
+  // grabs the first one that's active + in stock, posts an order with a
+  // visible Test label, then invalidates the queue cache so it shows up.
+  const testOrderMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedMenuId || selectedMenuId === "HOME") {
+        throw new Error("Pick a menu first");
+      }
+      const drinksRes = await apiRequest("GET", `/api/drinks?menuId=${selectedMenuId}`);
+      const drinks: DrinkAvailability[] = await drinksRes.json();
+      const candidate = drinks.find(
+        (d) => d.isActive && !d.isOutOfStock && d.isMakeable,
+      );
+      if (!candidate) {
+        throw new Error("No active in-stock drinks on this menu");
+      }
+      const res = await apiRequest("POST", "/api/orders", {
+        drinkId: candidate.id,
+        menuId: selectedMenuId,
+        guestName: "🧪 Test Order",
+        comments: "Placed from QR Codes page — safe to cancel",
+        asMocktail: false,
+      });
+      const order = await res.json();
+      return { order, drinkName: candidate.name };
+    },
+    onSuccess: ({ drinkName }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/orders/queue"] });
+      toast({
+        title: "Test order placed",
+        description: `Ordered "${drinkName}". Check the Queue page.`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Test order failed",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    },
+  });
 
   const baseUrl = window.location.origin;
 
@@ -87,14 +146,60 @@ export default function QRCodesPage() {
   return (
     <DashboardLayout>
       <div className="p-4 md:p-6 max-w-full">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold mb-2" data-testid="text-page-title">
-            Branded QR Codes
-          </h2>
-          <p className="text-muted-foreground" data-testid="text-page-description">
-            Generate branded QR codes with your Bar Flores logo for guests to scan
-          </p>
+        <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-2xl font-bold mb-2" data-testid="text-page-title">
+              Branded QR Codes
+            </h2>
+            <p className="text-muted-foreground" data-testid="text-page-description">
+              Generate branded QR codes with your Bar Flores logo for guests to scan
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => testOrderMutation.mutate()}
+              disabled={
+                testOrderMutation.isPending ||
+                !selectedMenuId ||
+                selectedMenuId === "HOME"
+              }
+              data-testid="button-test-order"
+              title={
+                selectedMenuId && selectedMenuId !== "HOME"
+                  ? "Place a test order on this menu"
+                  : "Pick a menu first"
+              }
+            >
+              <FlaskConical className="w-4 h-4 mr-2" />
+              {testOrderMutation.isPending ? "Placing..." : "Place test order"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPrintOpen(true)}
+              disabled={activeMenuCount === 0}
+              data-testid="button-open-print"
+              title={
+                activeMenuCount > 0
+                  ? `Print QR codes for ${activeMenuCount} active menu${activeMenuCount === 1 ? "" : "s"}`
+                  : "No active menus to print"
+              }
+            >
+              <Printer className="w-4 h-4 mr-2" />
+              Print sheet
+            </Button>
+          </div>
         </div>
+
+        <QRPrintSheet
+          open={printOpen}
+          onOpenChange={setPrintOpen}
+          menus={menus}
+          baseUrl={baseUrl}
+          settings={settings}
+        />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>
@@ -110,8 +215,8 @@ export default function QRCodesPage() {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="menu-select">Select Menu</Label>
-                  <Select 
-                    value={selectedMenuId} 
+                  <Select
+                    value={selectedMenuId}
                     onValueChange={setSelectedMenuId}
                   >
                     <SelectTrigger id="menu-select" data-testid="select-menu">
@@ -121,17 +226,31 @@ export default function QRCodesPage() {
                       <SelectItem value="HOME" data-testid="select-menu-home">
                         Home Page (All Menus)
                       </SelectItem>
-                      {menus.map((menu) => (
-                        <SelectItem 
-                          key={menu.id} 
+                      {visibleMenus.map((menu) => (
+                        <SelectItem
+                          key={menu.id}
                           value={menu.id}
                           data-testid={`select-menu-${menu.id}`}
                         >
-                          {menu.name} {menu.isActive && "(Active)"}
+                          {menu.name}
+                          {!menu.isActive && " (archived)"}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  {archivedCount > 0 && (
+                    <div className="flex items-center gap-2 pt-1">
+                      <Checkbox
+                        id="qr-show-archived"
+                        checked={showArchived}
+                        onCheckedChange={(c) => setShowArchived(c === true)}
+                        data-testid="checkbox-qr-show-archived"
+                      />
+                      <Label htmlFor="qr-show-archived" className="text-xs text-muted-foreground cursor-pointer">
+                        Show archived menus ({archivedCount})
+                      </Label>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex flex-col items-center gap-4 py-6">

@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { AlertCircle } from "lucide-react";
@@ -16,9 +18,19 @@ const ALL_MENUS = "__all__";
 export default function AnalyticsPage() {
   const { menus, menusLoading } = useMenus(true);
   const [selectedMenuId, setSelectedMenuId] = useState<string>(ALL_MENUS);
+  const [showArchived, setShowArchived] = useState(false);
   const menuIdParam = selectedMenuId === ALL_MENUS ? undefined : selectedMenuId;
   const { analytics, analyticsLoading } = useAnalytics(menuIdParam, true);
   const [filterMode, setFilterMode] = useState<"all" | "never-made" | "least-ordered">("all");
+
+  // Hide inactive menus from the picker by default. The currently selected
+  // menu is always kept visible so navigating to its analytics doesn't yank
+  // the option out from under the user.
+  const visibleMenus = useMemo(
+    () => menus.filter((m) => showArchived || m.isActive || m.id === selectedMenuId),
+    [menus, showArchived, selectedMenuId],
+  );
+  const archivedCount = menus.filter((m) => !m.isActive).length;
 
   const filteredAnalytics = useMemo(() => {
     if (!analytics || analytics.length === 0) return [];
@@ -59,13 +71,28 @@ export default function AnalyticsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={ALL_MENUS}>All menus</SelectItem>
-                  {menus.map((menu) => (
+                  {visibleMenus.map((menu) => (
                     <SelectItem key={menu.id} value={menu.id}>
                       {menu.name}
+                      {!menu.isActive && " (archived)"}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+
+              {archivedCount > 0 && (
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="analytics-show-archived"
+                    checked={showArchived}
+                    onCheckedChange={(c) => setShowArchived(c === true)}
+                    data-testid="checkbox-analytics-show-archived"
+                  />
+                  <Label htmlFor="analytics-show-archived" className="text-sm cursor-pointer">
+                    Show archived ({archivedCount})
+                  </Label>
+                </div>
+              )}
 
               <Button
                 variant={filterMode === "all" ? "default" : "outline"}
