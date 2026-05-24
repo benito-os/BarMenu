@@ -33,7 +33,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Trash2, Pencil, CheckCircle2, AlertCircle, Ban, Undo2 } from "lucide-react";
+import { GripVertical, Trash2, Pencil, CheckCircle2, AlertCircle, Ban, Undo2, Copy } from "lucide-react";
 
 export default function DrinksPage() {
   const [selectedMenuId, setSelectedMenuId] = useState<string>("");
@@ -72,6 +72,8 @@ export default function DrinksPage() {
     reorderDrinks,
     bulkDelete,
     bulkDeletePending,
+    duplicateDrink,
+    duplicateDrinkPending,
     bulkUpdate,
     bulkUpdatePending,
   } = useDrinks(selectedMenuId, !!selectedMenuId);
@@ -323,6 +325,19 @@ export default function DrinksPage() {
             >
               <Pencil className="w-3 h-3 mr-1" />
               Edit
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                duplicateDrink(drink.id);
+              }}
+              disabled={duplicateDrinkPending}
+              data-testid={`button-duplicate-drink-${drink.id}`}
+            >
+              <Copy className="w-3 h-3 mr-1" />
+              Duplicate
             </Button>
             <Button
               variant="outline"

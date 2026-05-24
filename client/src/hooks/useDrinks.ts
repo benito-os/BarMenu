@@ -123,6 +123,29 @@ export function useDrinks(menuId?: string, enabled = true) {
     },
   });
 
+  const duplicateDrinkMutation = useMutation({
+    mutationFn: async (drinkId: string) => {
+      const response = await apiRequest("POST", `/api/drinks/${drinkId}/duplicate`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        predicate: (query) => query.queryKey[0] === "/api/drinks/all",
+      });
+      toast({
+        title: "Drink duplicated",
+        description: "Copy added at the end of the section",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to duplicate drink",
+        variant: "destructive",
+      });
+    },
+  });
+
   const bulkUpdateMutation = useMutation({
     mutationFn: async ({ drinkIds, isActive }: { drinkIds: string[]; isActive: boolean }) => {
       return await apiRequest("PATCH", "/api/drinks/bulk", { drinkIds, isActive });
@@ -156,5 +179,7 @@ export function useDrinks(menuId?: string, enabled = true) {
     bulkDeletePending: bulkDeleteMutation.isPending,
     bulkUpdate: bulkUpdateMutation.mutate,
     bulkUpdatePending: bulkUpdateMutation.isPending,
+    duplicateDrink: duplicateDrinkMutation.mutate,
+    duplicateDrinkPending: duplicateDrinkMutation.isPending,
   };
 }

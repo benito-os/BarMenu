@@ -81,6 +81,19 @@ export const orderStatusUpdateSchema = z.object({
   status: z.enum(["requested", "in_progress", "served", "cancelled"]),
 });
 
+// Edit guest-facing details on a pre-served order. Each field is optional;
+// at least one must be present (refined below).
+export const orderDetailsUpdateSchema = z
+  .object({
+    guestName: z.string().max(80).nullable(),
+    comments: z.string().max(500).nullable(),
+    asMocktail: z.boolean(),
+  })
+  .partial()
+  .refine((data) => Object.keys(data).length > 0, {
+    message: "At least one detail field must be provided",
+  });
+
 // Cap matches the client-side trackedOrders cap (10) with headroom; guards
 // against abusively long ids lists on the public endpoint.
 export const orderIdsQuerySchema = z.object({

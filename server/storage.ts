@@ -31,7 +31,8 @@ export interface IStorage {
   createMenu(menu: InsertMenu): Promise<Menu>;
   updateMenu(id: string, data: Partial<Menu>): Promise<Menu | undefined>;
   deleteMenu(id: string): Promise<void>;
-  
+  duplicateMenu(id: string): Promise<Menu>;
+
   // Drink operations
   getDrinksByMenuId(menuId: string): Promise<Drink[]>;
   getAllDrinksByMenuId(menuId: string): Promise<Drink[]>;
@@ -42,6 +43,7 @@ export interface IStorage {
   bulkDeleteDrinks(drinkIds: string[]): Promise<void>;
   bulkUpdateDrinks(drinkIds: string[], isActive: boolean): Promise<void>;
   setDrinkIngredients(drinkId: string, ingredientIds: string[]): Promise<void>;
+  duplicateDrink(id: string): Promise<Drink>;
   
   // Order operations
   createOrder(order: InsertOrder): Promise<Order>;
@@ -49,6 +51,7 @@ export interface IStorage {
   getOrdersByIds(ids: string[]): Promise<Order[]>;
   getOrderQueue(): Promise<OrderWithDrink[]>;
   updateOrderStatus(id: string, status: string, completedAt?: Date): Promise<Order | undefined>;
+  updateOrderDetails(id: string, data: { guestName?: string | null; comments?: string | null; asMocktail?: boolean }): Promise<Order | undefined>;
   batchUpdateOrderStatus(orderIds: string[], status: string): Promise<number>;
   deleteServedOrders(): Promise<number>;
   
@@ -103,6 +106,101 @@ export class DatabaseStorage implements IStorage {
 
   async deleteMenu(id: string): Promise<void> {
     await db.delete(menus).where(eq(menus.id, id));
+  }
+
+  // Deep-copy a menu (including its drinks and the drink-ingredient links)
+  // into a new, inactive menu with a unique slug. Used by seasonal rotation
+  // workflows where most fields carry over and only a few need editing.
+  async duplicateMenu(id: string): Promise<Menu> {
+    return await withTransaction("duplicateMenu", async (tx) => {
+      const [source] = await tx.select().from(menus).where(eq(menus.id, id));
+      if (!source) {
+        throw new StorageError("Menu not found", {
+          status: 404,
+          code: "DRINK_NOT_FOUND", // reuse — TODO: add MENU_NOT_FOUND
+          context: { id },
+        });
+      }
+
+      // Find a free slug. Try `${slug}-copy`, then `-copy-2`, `-copy-3`, etc.
+      let candidate = `${source.slug}-copy`;
+      let suffix = 1;
+      while (true) {
+        const [taken] = await tx
+          .select({ id: menus.id })
+          .from(menus)
+          .where(eq(menus.slug, candidate));
+        if (!taken) break;
+        suffix += 1;
+        candidate = `${source.slug}-copy-${suffix}`;
+      }
+
+      const [copy] = await tx
+        .insert(menus)
+        .values({
+          slug: candidate,
+          name: `${source.name} (Copy)`,
+          description: source.description,
+          isActive: false, // never auto-publish a copy
+          heroImageUrl: source.heroImageUrl,
+          backgroundColor: source.backgroundColor,
+          accentColor: source.accentColor,
+          sectionHeaderColor: source.sectionHeaderColor,
+          menuTitleColor: source.menuTitleColor,
+          typography: source.typography,
+          sections: source.sections,
+        })
+        .returning();
+
+      // Copy every drink on the source menu, preserving section + sort order.
+      // Capture an oldId -> newId map so we can carry ingredient associations.
+      const sourceDrinks = await tx.select().from(drinks).where(eq(drinks.menuId, id));
+      const idMap = new Map<string, string>();
+      for (const sd of sourceDrinks) {
+        const [newDrink] = await tx
+          .insert(drinks)
+          .values({
+            menuId: copy.id,
+            name: sd.name,
+            section: sd.section,
+            description: sd.description,
+            recipe: sd.recipe,
+            style: sd.style,
+            temperature: sd.temperature,
+            isMocktail: sd.isMocktail,
+            canBeMocktail: sd.canBeMocktail,
+            isStirred: sd.isStirred,
+            isShaken: sd.isShaken,
+            baseSpirit: sd.baseSpirit,
+            isActive: sd.isActive,
+            isOutOfStock: false, // fresh menu starts in-stock
+            sortOrder: sd.sortOrder,
+          })
+          .returning();
+        idMap.set(sd.id, newDrink.id);
+      }
+
+      // Carry ingredient associations across the new drink ids.
+      if (idMap.size > 0) {
+        const oldDrinkIds = Array.from(idMap.keys());
+        const sourceLinks = await tx
+          .select()
+          .from(drinkIngredients)
+          .where(inArray(drinkIngredients.drinkId, oldDrinkIds));
+
+        if (sourceLinks.length > 0) {
+          await tx.insert(drinkIngredients).values(
+            sourceLinks.map((link) => ({
+              drinkId: idMap.get(link.drinkId)!,
+              ingredientId: link.ingredientId,
+              amount: link.amount,
+            })),
+          );
+        }
+      }
+
+      return copy;
+    });
   }
 
   async getDrinksByMenuId(menuId: string): Promise<Drink[]> {
@@ -200,6 +298,65 @@ export class DatabaseStorage implements IStorage {
           context: { missing },
         });
       }
+    });
+  }
+
+  // Copy a single drink within the same menu. New drink lands at the end of
+  // the section (max sortOrder + 1) so it doesn't shuffle other drinks.
+  async duplicateDrink(id: string): Promise<Drink> {
+    return await withTransaction("duplicateDrink", async (tx) => {
+      const [source] = await tx.select().from(drinks).where(eq(drinks.id, id));
+      if (!source) {
+        throw new StorageError("Drink not found", {
+          status: 404,
+          code: "DRINK_NOT_FOUND",
+          context: { id },
+        });
+      }
+
+      const [maxRow] = await tx
+        .select({ max: sql<number>`COALESCE(MAX(${drinks.sortOrder}), 0)` })
+        .from(drinks)
+        .where(eq(drinks.menuId, source.menuId));
+      const nextSortOrder = (maxRow?.max ?? 0) + 1;
+
+      const [copy] = await tx
+        .insert(drinks)
+        .values({
+          menuId: source.menuId,
+          name: `${source.name} (Copy)`,
+          section: source.section,
+          description: source.description,
+          recipe: source.recipe,
+          style: source.style,
+          temperature: source.temperature,
+          isMocktail: source.isMocktail,
+          canBeMocktail: source.canBeMocktail,
+          isStirred: source.isStirred,
+          isShaken: source.isShaken,
+          baseSpirit: source.baseSpirit,
+          isActive: source.isActive,
+          isOutOfStock: false,
+          sortOrder: nextSortOrder,
+        })
+        .returning();
+
+      const sourceLinks = await tx
+        .select()
+        .from(drinkIngredients)
+        .where(eq(drinkIngredients.drinkId, id));
+
+      if (sourceLinks.length > 0) {
+        await tx.insert(drinkIngredients).values(
+          sourceLinks.map((link) => ({
+            drinkId: copy.id,
+            ingredientId: link.ingredientId,
+            amount: link.amount,
+          })),
+        );
+      }
+
+      return copy;
     });
   }
 
@@ -350,6 +507,28 @@ export class DatabaseStorage implements IStorage {
       drinkBaseSpirit: r.drinkBaseSpirit || "",
       drinkTemperature: r.drinkTemperature || "",
     }));
+  }
+
+  // Edit guest-facing fields on a pre-served order. The handler enforces that
+  // the order isn't yet in a final state; this storage method is the raw write.
+  async updateOrderDetails(
+    id: string,
+    data: { guestName?: string | null; comments?: string | null; asMocktail?: boolean },
+  ): Promise<Order | undefined> {
+    const updates: Record<string, unknown> = {};
+    if (data.guestName !== undefined) updates.guestName = data.guestName;
+    if (data.comments !== undefined) updates.comments = data.comments;
+    if (data.asMocktail !== undefined) updates.asMocktail = data.asMocktail;
+    if (Object.keys(updates).length === 0) {
+      return await this.getOrderById(id);
+    }
+
+    const [order] = await db
+      .update(orders)
+      .set(updates)
+      .where(eq(orders.id, id))
+      .returning();
+    return order || undefined;
   }
 
   async updateOrderStatus(id: string, status: string, completedAt?: Date): Promise<Order | undefined> {

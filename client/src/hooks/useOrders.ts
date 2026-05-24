@@ -55,6 +55,37 @@ export function useOrders(enabled = true) {
     },
   });
 
+  const editDetailsMutation = useMutation({
+    mutationFn: async ({
+      orderId,
+      data,
+    }: {
+      orderId: string;
+      data: { guestName?: string | null; comments?: string | null; asMocktail?: boolean };
+    }) => {
+      const response = await apiRequest(
+        "PATCH",
+        `/api/orders/${orderId}/details`,
+        data,
+      );
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/orders/queue"] });
+      toast({
+        title: "Order Updated",
+        description: "Guest details saved",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update order",
+        variant: "destructive",
+      });
+    },
+  });
+
   const clearServedMutation = useMutation({
     mutationFn: async () => {
       return apiRequest("DELETE", "/api/orders/served");
@@ -79,5 +110,7 @@ export function useOrders(enabled = true) {
     batchUpdatePending: batchUpdateMutation.isPending,
     clearServed: clearServedMutation.mutate,
     clearServedPending: clearServedMutation.isPending,
+    editDetails: editDetailsMutation.mutate,
+    editDetailsPending: editDetailsMutation.isPending,
   };
 }

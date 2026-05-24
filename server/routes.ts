@@ -24,6 +24,7 @@ import {
   idParamsSchema,
   orderBatchUpdateSchema,
   orderCreateSchema,
+  orderDetailsUpdateSchema,
   orderIdsQuerySchema,
   orderStatusUpdateSchema,
   settingsUpdateSchema,
@@ -241,6 +242,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/menus/:id/duplicate - Deep-copy a menu + its drinks
+  app.post("/api/menus/:id/duplicate", requireAuth, async (req, res) => {
+    try {
+      const params = validate(idParamsSchema, req.params, res, "Menu id is required");
+      if (!params) return;
+      const copy = await storage.duplicateMenu(params.id);
+      res.status(201).json(copy);
+    } catch (error) {
+      const mapped = mapStorageError(error);
+      if (mapped) return res.status(mapped.status).json(mapped.body);
+      console.error("Error duplicating menu:", error);
+      res.status(500).json({ error: "Failed to duplicate menu" });
+    }
+  });
+
   // GET /api/drinks?menuId=xxx - Get drinks by menu ID (active only)
   app.get("/api/drinks", async (req, res) => {
     try {
@@ -362,6 +378,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.error("Error bulk updating drinks:", error);
       res.status(500).json({ error: "Failed to update drinks" });
+    }
+  });
+
+  // POST /api/drinks/:id/duplicate - Copy a drink within its menu
+  app.post("/api/drinks/:id/duplicate", requireAuth, async (req, res) => {
+    try {
+      const params = validate(drinkIdParamsSchema, req.params, res, "Invalid drink id");
+      if (!params) return;
+      const copy = await storage.duplicateDrink(params.id);
+      res.status(201).json(copy);
+    } catch (error) {
+      const mapped = mapStorageError(error);
+      if (mapped) return res.status(mapped.status).json(mapped.body);
+      console.error("Error duplicating drink:", error);
+      res.status(500).json({ error: "Failed to duplicate drink" });
     }
   });
 
@@ -544,6 +575,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching order:", error);
       res.status(500).json({ error: "Failed to fetch order" });
+    }
+  });
+
+  // PATCH /api/orders/:id/details - Edit guest-facing fields (guestName,
+  // comments, asMocktail) before the order is served. Separate endpoint from
+  // PATCH /api/orders/:id (which is for status transitions) to keep the two
+  // workflows clearly distinct. Must be registered before /api/orders/:id so
+  // the literal "details" path segment isn't captured as a status update body.
+  app.patch("/api/orders/:id/details", requireAuth, async (req, res) => {
+    try {
+      const params = validate(idParamsSchema, req.params, res, "Order id is required");
+      if (!params) return;
+      const body = validate(
+        orderDetailsUpdateSchema,
+        req.body,
+        res,
+        "Invalid order details update payload",
+      );
+      if (!body) return;
+
+      const current = await storage.getOrderById(params.id);
+      if (!current) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+      if (current.status === "served" || current.status === "cancelled") {
+        return res.status(400).json({
+          error: `Cannot edit details on a ${current.status} order`,
+        });
+      }
+
+      const updated = await storage.updateOrderDetails(params.id, body);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating order details:", error);
+      res.status(500).json({ error: "Failed to update order details" });
     }
   });
 
