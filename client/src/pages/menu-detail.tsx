@@ -196,10 +196,14 @@ export default function MenuDetail() {
 
       {/* Hero Image Section */}
       {menu?.heroImageUrl && (
-        <div 
-          className="relative h-64 md:h-96 w-full bg-cover bg-center"
-          style={{ backgroundImage: `url(${menu.heroImageUrl})` }}
-        >
+        <div className="relative h-64 md:h-96 w-full overflow-hidden">
+          <img
+            src={menu.heroImageUrl}
+            alt={menu.name}
+            className="absolute inset-0 w-full h-full object-cover"
+            decoding="async"
+            fetchPriority="high"
+          />
           <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-black/60 flex items-center justify-center">
             <div className="text-center text-white px-6">
               <h2 className="text-4xl md:text-6xl font-bold mb-4">

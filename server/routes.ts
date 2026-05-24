@@ -24,6 +24,7 @@ import {
   idParamsSchema,
   orderBatchUpdateSchema,
   orderCreateSchema,
+  orderIdsQuerySchema,
   orderStatusUpdateSchema,
   settingsUpdateSchema,
 } from "@shared/validation";
@@ -43,12 +44,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return res.status(400).json({ error: message });
   };
 
-  const validate = <T>(
-    schema: z.ZodSchema<T>,
+  // Generic over the schema itself (not just its output) so that schemas with
+  // transforms / pipes — where input and output types differ — still satisfy
+  // the constraint. The return type is inferred from the schema's output.
+  const validate = <S extends z.ZodTypeAny>(
+    schema: S,
     data: unknown,
     res: Response,
     message: string,
-  ): T | undefined => {
+  ): z.infer<S> | undefined => {
     const result = schema.safeParse(data);
     if (!result.success) {
       respondValidationError(res, result.error, message);
@@ -500,6 +504,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching order queue:", error);
       res.status(500).json({ error: "Failed to fetch order queue" });
+    }
+  });
+
+  // GET /api/orders/by-ids?ids=a,b,c - Batch lookup for guest order tracking.
+  // Public (same as GET /api/orders/:id) so the menu page can poll status
+  // without an admin session. Must be registered before /api/orders/:id so the
+  // literal "by-ids" path isn't captured as an order id.
+  app.get("/api/orders/by-ids", async (req, res) => {
+    try {
+      const query = validate(
+        orderIdsQuerySchema,
+        req.query,
+        res,
+        "Invalid ids query parameter",
+      );
+      if (!query) return;
+
+      const found = await storage.getOrdersByIds(query.ids);
+      res.json(found);
+    } catch (error) {
+      console.error("Error fetching orders by ids:", error);
+      res.status(500).json({ error: "Failed to fetch orders" });
     }
   });
 
