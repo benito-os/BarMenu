@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   Download,
   Upload,
@@ -17,6 +18,7 @@ import {
   AlertTriangle,
   FileText,
   Info,
+  X,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
@@ -27,6 +29,14 @@ type DataType = "menus" | "drinks" | "ingredients" | "orders";
 interface ImportResult {
   imported: number;
   errors: string[];
+}
+
+interface PreviewResult {
+  preview: true;
+  totalRows: number;
+  validRows: number;
+  errors: string[];
+  sample: Record<string, unknown>[];
 }
 
 const dataTypes: { id: DataType; label: string; icon: typeof MenuIcon; description: string }[] = [
@@ -40,8 +50,32 @@ export default function ImportExportPage() {
   const { toast } = useToast();
   const [selectedType, setSelectedType] = useState<DataType>("menus");
   const [importResults, setImportResults] = useState<ImportResult | null>(null);
+  const [preview, setPreview] = useState<PreviewResult | null>(null);
+  const [pendingCsv, setPendingCsv] = useState<string | null>(null);
+  const [pendingFileName, setPendingFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Step 1: POST with ?dryRun=true to validate + sample without writing.
+  const previewMutation = useMutation({
+    mutationFn: async ({ type, csv }: { type: DataType; csv: string }) => {
+      const response = await apiRequest("POST", `/api/import/${type}?dryRun=true`, { csv });
+      return response.json() as Promise<PreviewResult>;
+    },
+    onSuccess: (data) => {
+      setPreview(data);
+      setImportResults(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Preview failed",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+      resetPending();
+    },
+  });
+
+  // Step 2: POST the same csv without dryRun to actually write.
   const importMutation = useMutation({
     mutationFn: async ({ type, csv }: { type: DataType; csv: string }) => {
       const response = await apiRequest("POST", `/api/import/${type}`, { csv });
@@ -49,6 +83,8 @@ export default function ImportExportPage() {
     },
     onSuccess: (data) => {
       setImportResults(data);
+      setPreview(null);
+      resetPending();
       if (data.imported > 0) {
         toast({
           title: "Import successful",
@@ -74,6 +110,24 @@ export default function ImportExportPage() {
     },
   });
 
+  const resetPending = () => {
+    setPendingCsv(null);
+    setPendingFileName(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const cancelPreview = () => {
+    setPreview(null);
+    resetPending();
+  };
+
+  const confirmImport = () => {
+    if (!pendingCsv) return;
+    importMutation.mutate({ type: selectedType, csv: pendingCsv });
+  };
+
   const handleExport = (type: DataType) => {
     window.location.href = `/api/export/${type}`;
   };
@@ -82,19 +136,20 @@ export default function ImportExportPage() {
     window.location.href = `/api/templates/${type}`;
   };
 
-  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
     reader.onload = (e) => {
       const csv = e.target?.result as string;
-      if (csv) {
-        importMutation.mutate({ type: selectedType, csv });
-      }
+      if (!csv) return;
+      setPendingCsv(csv);
+      setPendingFileName(file.name);
+      previewMutation.mutate({ type: selectedType, csv });
     };
     reader.readAsText(file);
-    
+
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -102,6 +157,7 @@ export default function ImportExportPage() {
 
   const currentType = dataTypes.find(t => t.id === selectedType)!;
   const Icon = currentType.icon;
+  const isPending = previewMutation.isPending || importMutation.isPending;
 
   return (
     <DashboardLayout>
@@ -114,7 +170,15 @@ export default function ImportExportPage() {
             </p>
           </div>
 
-          <Tabs value={selectedType} onValueChange={(v) => { setSelectedType(v as DataType); setImportResults(null); }}>
+          <Tabs
+            value={selectedType}
+            onValueChange={(v) => {
+              setSelectedType(v as DataType);
+              setImportResults(null);
+              setPreview(null);
+              resetPending();
+            }}
+          >
             <TabsList className="grid w-full grid-cols-4 mb-6">
               {dataTypes.map((type) => (
                 <TabsTrigger key={type.id} value={type.id} className="flex items-center gap-2" data-testid={`tab-${type.id}`}>
@@ -139,7 +203,7 @@ export default function ImportExportPage() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <p className="text-sm text-muted-foreground">
-                        Export your current {type.label.toLowerCase()} data including all fields. 
+                        Export your current {type.label.toLowerCase()} data including all fields.
                         The exported file can be used as a backup or to transfer data.
                       </p>
                       <Button onClick={() => handleExport(type.id)} className="w-full" data-testid={`button-export-${type.id}`}>
@@ -179,7 +243,7 @@ export default function ImportExportPage() {
                       Import {type.label}
                     </CardTitle>
                     <CardDescription>
-                      Upload a CSV file to add new {type.label.toLowerCase()}
+                      Upload a CSV file to add new {type.label.toLowerCase()} — you'll see a preview before anything is written
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -193,37 +257,151 @@ export default function ImportExportPage() {
                           <li>For drinks, you'll need valid menu IDs from your existing menus</li>
                           <li>Boolean fields accept "true" or "false" values</li>
                           <li>Imports create new records (existing records are not updated)</li>
+                          <li>Selecting a file shows a preview — nothing is written until you click <strong>Confirm import</strong></li>
                         </ul>
                       </AlertDescription>
                     </Alert>
 
-                    <div className="flex flex-col sm:flex-row gap-4">
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept=".csv"
-                        onChange={handleFileSelect}
-                        className="hidden"
-                        data-testid={`input-file-${type.id}`}
-                      />
-                      <Button
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={importMutation.isPending}
-                        className="flex-1"
-                        data-testid={`button-import-${type.id}`}
-                      >
-                        {importMutation.isPending ? (
-                          <>Importing...</>
-                        ) : (
-                          <>
-                            <Upload className="w-4 h-4 mr-2" />
-                            Select CSV File to Import
-                          </>
-                        )}
-                      </Button>
-                    </div>
+                    {/* File picker — only shown when not in preview mode */}
+                    {!preview && (
+                      <div className="flex flex-col sm:flex-row gap-4">
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept=".csv"
+                          onChange={handleFileSelect}
+                          className="hidden"
+                          data-testid={`input-file-${type.id}`}
+                        />
+                        <Button
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={isPending}
+                          className="flex-1"
+                          data-testid={`button-import-${type.id}`}
+                        >
+                          {previewMutation.isPending ? (
+                            <>Parsing CSV...</>
+                          ) : (
+                            <>
+                              <Upload className="w-4 h-4 mr-2" />
+                              Select CSV File
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    )}
 
-                    {importResults && (
+                    {/* Preview panel — shown after a successful dry-run */}
+                    {preview && (
+                      <div className="space-y-4 rounded-lg border p-4 bg-muted/30" data-testid="import-preview">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <h3 className="font-semibold">Preview: {pendingFileName}</h3>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              <span className="font-medium text-foreground">{preview.validRows}</span>{" "}
+                              of <span className="font-medium text-foreground">{preview.totalRows}</span>{" "}
+                              rows ready to import
+                              {preview.errors.length > 0 && (
+                                <>
+                                  {" — "}
+                                  <span className="text-destructive font-medium">
+                                    {preview.errors.length} {preview.errors.length === 1 ? "row will be skipped" : "rows will be skipped"}
+                                  </span>
+                                </>
+                              )}
+                            </p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={cancelPreview}
+                            data-testid="button-cancel-preview"
+                          >
+                            <X className="w-4 h-4 mr-1" />
+                            Cancel
+                          </Button>
+                        </div>
+
+                        {preview.errors.length > 0 && (
+                          <Alert variant="destructive">
+                            <AlertTriangle className="w-4 h-4" />
+                            <AlertTitle>Parse errors</AlertTitle>
+                            <AlertDescription>
+                              <ul className="list-disc list-inside mt-2 space-y-1 text-sm max-h-32 overflow-y-auto">
+                                {preview.errors.slice(0, 20).map((error, i) => (
+                                  <li key={i}>{error}</li>
+                                ))}
+                                {preview.errors.length > 20 && (
+                                  <li className="italic">
+                                    …and {preview.errors.length - 20} more
+                                  </li>
+                                )}
+                              </ul>
+                            </AlertDescription>
+                          </Alert>
+                        )}
+
+                        {preview.sample.length > 0 && (
+                          <div>
+                            <p className="text-sm font-medium mb-2">
+                              Sample of valid rows (first {preview.sample.length}):
+                            </p>
+                            <div className="rounded-md border overflow-x-auto bg-background">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    {Object.keys(preview.sample[0]).map((key) => (
+                                      <TableHead key={key} className="text-xs whitespace-nowrap">
+                                        {key}
+                                      </TableHead>
+                                    ))}
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {preview.sample.map((row, i) => (
+                                    <TableRow key={i}>
+                                      {Object.keys(preview.sample[0]).map((key) => (
+                                        <TableCell key={key} className="text-xs whitespace-nowrap max-w-[200px] truncate">
+                                          {formatCellValue(row[key])}
+                                        </TableCell>
+                                      ))}
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex gap-2 justify-end pt-2 border-t">
+                          <Button
+                            variant="outline"
+                            onClick={cancelPreview}
+                            disabled={importMutation.isPending}
+                            data-testid="button-cancel-import"
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            onClick={confirmImport}
+                            disabled={importMutation.isPending || preview.validRows === 0}
+                            data-testid="button-confirm-import"
+                          >
+                            {importMutation.isPending ? (
+                              <>Importing...</>
+                            ) : (
+                              <>
+                                <CheckCircle2 className="w-4 h-4 mr-2" />
+                                Confirm import ({preview.validRows} {preview.validRows === 1 ? "row" : "rows"})
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Final result panel — shown after a successful import */}
+                    {importResults && !preview && (
                       <div className="space-y-4 mt-4">
                         {importResults.imported > 0 && (
                           <Alert className="border-green-500/50 bg-green-500/10">
@@ -276,6 +454,13 @@ export default function ImportExportPage() {
       </div>
     </DashboardLayout>
   );
+}
+
+function formatCellValue(value: unknown): string {
+  if (value === null || value === undefined) return "—";
+  if (Array.isArray(value)) return value.join(", ") || "—";
+  if (typeof value === "boolean") return value ? "true" : "false";
+  return String(value);
 }
 
 function FieldReference({ type }: { type: DataType }) {
