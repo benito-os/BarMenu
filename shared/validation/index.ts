@@ -81,6 +81,35 @@ export const orderStatusUpdateSchema = z.object({
   status: z.enum(["requested", "in_progress", "served", "cancelled"]),
 });
 
+export const orderBatchUpdateSchema = z.object({
+  orderIds: z.array(z.string().min(1)).nonempty("orderIds is required"),
+  status: z.enum(["in_progress", "served"]),
+});
+
+export const settingsUpdateSchema = z
+  .object({
+    waitingWarningMinutes: z.number().int().min(1),
+    waitingUrgentMinutes: z.number().int().min(1),
+    brandingLogoUrl: z.string().nullable(),
+    welcomeMessage: z.string().nullable(),
+    headlineFont: z.string().min(1),
+    bodyFont: z.string().min(1),
+    qrDotStyle: z.string().min(1),
+    qrEyeStyle: z.string().min(1),
+  })
+  .partial()
+  .strict()
+  .refine((data) => Object.keys(data).length > 0, {
+    message: "At least one setting field must be provided",
+  });
+
+export const csvImportSchema = z.object({
+  csv: z
+    .string()
+    .min(1, "csv is required")
+    .max(2_000_000, "csv payload exceeds 2MB limit"),
+});
+
 export const menuSlugSchema = z.object({
   slug: z.string().min(1, "slug is required"),
 });

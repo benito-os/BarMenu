@@ -8,6 +8,7 @@ import { storage } from "./storage";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import {
   analyticsQuerySchema,
+  csvImportSchema,
   drinkBulkDeleteSchema,
   drinkBulkUpdateSchema,
   drinkCreateSchema,
@@ -21,9 +22,13 @@ import {
   menuSlugSchema,
   menuUpdateSchema,
   idParamsSchema,
+  orderBatchUpdateSchema,
   orderCreateSchema,
   orderStatusUpdateSchema,
+  settingsUpdateSchema,
 } from "@shared/validation";
+
+const MAX_CSV_ROWS = 5000;
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const respondValidationError = (
@@ -446,14 +451,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Order create schema allows menuId to be omitted — handler derives it from
+  // the drink record when missing. Built once at registration to avoid
+  // rebuilding the schema on every request.
+  const publicOrderCreateSchema = orderCreateSchema.extend({
+    menuId: z.string().optional(),
+  });
+
   // POST /api/orders - Create new order (guest requests drink)
   app.post("/api/orders", async (req, res) => {
     try {
-      // Extend the schema to allow optional guestName
-      const orderSchema = orderCreateSchema.extend({
-        menuId: z.string().optional(),
-      });
-      const validatedData = orderSchema.parse(req.body);
+      const validatedData = validate(
+        publicOrderCreateSchema,
+        req.body,
+        res,
+        "Invalid order data",
+      );
+      if (!validatedData) return;
 
       // Validate drink and menu relationship before creating the order
       const drink = await storage.getDrinkById(validatedData.drinkId);
@@ -553,16 +567,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/orders/batch - Batch update order statuses
   app.post("/api/orders/batch", requireAuth, async (req, res) => {
     try {
-      const { orderIds, status } = req.body;
-      
-      if (!orderIds || !Array.isArray(orderIds) || orderIds.length === 0) {
-        return res.status(400).json({ error: "orderIds array is required" });
-      }
-      if (!status || !["in_progress", "served"].includes(status)) {
-        return res.status(400).json({ error: "Valid status (in_progress or served) is required" });
-      }
+      const payload = validate(
+        orderBatchUpdateSchema,
+        req.body,
+        res,
+        "Invalid batch order update payload",
+      );
+      if (!payload) return;
 
-      const count = await storage.batchUpdateOrderStatus(orderIds, status);
+      const count = await storage.batchUpdateOrderStatus(
+        payload.orderIds,
+        payload.status,
+      );
       res.json({ updated: count });
     } catch (error) {
       console.error("Error batch updating orders:", error);
@@ -611,51 +627,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PATCH /api/settings - Update application settings
   app.patch("/api/settings", requireAuth, async (req, res) => {
     try {
-      const { 
-        waitingWarningMinutes, 
-        waitingUrgentMinutes,
-        brandingLogoUrl,
-        welcomeMessage,
-        headlineFont,
-        bodyFont,
-        qrDotStyle,
-        qrEyeStyle
-      } = req.body;
-      const updates: Record<string, unknown> = {};
-      
-      // Queue settings
-      if (typeof waitingWarningMinutes === "number" && waitingWarningMinutes >= 1) {
-        updates.waitingWarningMinutes = waitingWarningMinutes;
-      }
-      if (typeof waitingUrgentMinutes === "number" && waitingUrgentMinutes >= 1) {
-        updates.waitingUrgentMinutes = waitingUrgentMinutes;
-      }
-      
-      // Branding settings
-      if (brandingLogoUrl !== undefined) {
-        updates.brandingLogoUrl = brandingLogoUrl || null;
-      }
-      if (welcomeMessage !== undefined) {
-        updates.welcomeMessage = welcomeMessage || null;
-      }
-      if (typeof headlineFont === "string") {
-        updates.headlineFont = headlineFont;
-      }
-      if (typeof bodyFont === "string") {
-        updates.bodyFont = bodyFont;
-      }
-      if (typeof qrDotStyle === "string") {
-        updates.qrDotStyle = qrDotStyle;
-      }
-      if (typeof qrEyeStyle === "string") {
-        updates.qrEyeStyle = qrEyeStyle;
-      }
-      
-      if (Object.keys(updates).length === 0) {
-        return res.status(400).json({ error: "No valid settings to update" });
-      }
-      
-      const settings = await storage.updateSettings(updates);
+      const payload = validate(
+        settingsUpdateSchema,
+        req.body,
+        res,
+        "Invalid settings update payload",
+      );
+      if (!payload) return;
+
+      const settings = await storage.updateSettings(payload);
       res.json(settings);
     } catch (error) {
       console.error("Error updating settings:", error);
@@ -876,15 +856,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return obj;
   };
 
+  // Validate the import payload (size limit via zod) and parse the CSV.
+  // Also enforces a row cap so a multi-million-row CSV can't tie up the loop.
+  const parseImportPayload = (
+    body: unknown,
+    res: Response,
+  ): { headers: string[]; rows: string[][] } | undefined => {
+    const payload = validate(csvImportSchema, body, res, "Invalid CSV payload");
+    if (!payload) return undefined;
+
+    const parsed = parseCSV(payload.csv);
+    if (parsed.rows.length > MAX_CSV_ROWS) {
+      res.status(400).json({
+        error: `CSV exceeds row limit of ${MAX_CSV_ROWS}`,
+        rows: parsed.rows.length,
+      });
+      return undefined;
+    }
+    return parsed;
+  };
+
   // POST /api/import/menus - Import menus from CSV
   app.post("/api/import/menus", requireAuth, async (req, res) => {
     try {
-      const { csv } = req.body;
-      if (!csv || typeof csv !== "string") {
-        return res.status(400).json({ error: "CSV data is required" });
-      }
-
-      const { headers, rows } = parseCSV(csv);
+      const parsed = parseImportPayload(req.body, res);
+      if (!parsed) return;
+      const { headers, rows } = parsed;
       const imported: any[] = [];
       const errors: string[] = [];
 
@@ -925,12 +922,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/import/drinks - Import drinks from CSV
   app.post("/api/import/drinks", requireAuth, async (req, res) => {
     try {
-      const { csv } = req.body;
-      if (!csv || typeof csv !== "string") {
-        return res.status(400).json({ error: "CSV data is required" });
-      }
-
-      const { headers, rows } = parseCSV(csv);
+      const parsed = parseImportPayload(req.body, res);
+      if (!parsed) return;
+      const { headers, rows } = parsed;
       const imported: any[] = [];
       const errors: string[] = [];
 
@@ -975,12 +969,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/import/ingredients - Import ingredients from CSV
   app.post("/api/import/ingredients", requireAuth, async (req, res) => {
     try {
-      const { csv } = req.body;
-      if (!csv || typeof csv !== "string") {
-        return res.status(400).json({ error: "CSV data is required" });
-      }
-
-      const { headers, rows } = parseCSV(csv);
+      const parsed = parseImportPayload(req.body, res);
+      if (!parsed) return;
+      const { headers, rows } = parsed;
       const imported: any[] = [];
       const errors: string[] = [];
 
@@ -1016,12 +1007,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/import/orders - Import orders from CSV
   app.post("/api/import/orders", requireAuth, async (req, res) => {
     try {
-      const { csv } = req.body;
-      if (!csv || typeof csv !== "string") {
-        return res.status(400).json({ error: "CSV data is required" });
-      }
-
-      const { headers, rows } = parseCSV(csv);
+      const parsed = parseImportPayload(req.body, res);
+      if (!parsed) return;
+      const { headers, rows } = parsed;
       const imported: any[] = [];
       const errors: string[] = [];
 
