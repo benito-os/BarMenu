@@ -1,6 +1,7 @@
 import type { Express, Response } from "express";
 import { createServer, type Server } from "http";
 import { timingSafeEqual } from "crypto";
+import rateLimit from "express-rate-limit";
 import { z } from "zod";
 import { isStorageError } from "./errors";
 import { storage } from "./storage";
@@ -90,8 +91,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return timingSafeEqual(a, b);
   };
 
+  // Rate limit login attempts. With trust proxy = 1 set in index.ts, this keys
+  // off X-Forwarded-For (Replit's proxy) so each client IP gets its own bucket.
+  // skipSuccessfulRequests so legitimate logins don't burn through the budget.
+  const loginRateLimit = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    skipSuccessfulRequests: true,
+    message: { error: "Too many login attempts. Please try again in 15 minutes." },
+  });
+
   // POST /api/auth/login - Dashboard login
-  app.post("/api/auth/login", async (req, res) => {
+  app.post("/api/auth/login", loginRateLimit, async (req, res) => {
     try {
       const { username, password } = req.body;
 

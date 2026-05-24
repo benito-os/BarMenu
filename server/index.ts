@@ -1,7 +1,9 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { pool } from "./db";
 
 const app = express();
 
@@ -45,8 +47,17 @@ if (process.env.NODE_ENV === "production") {
   }
 }
 
-// Session setup for dashboard authentication (after body parsers)
+// Session setup for dashboard authentication (after body parsers).
+// Sessions are persisted in Postgres (via connect-pg-simple) so they survive
+// Replit container restarts. The "session" table is created on first run.
+const PgSession = connectPgSimple(session);
+
 app.use(session({
+  store: new PgSession({
+    pool,
+    tableName: "session",
+    createTableIfMissing: true,
+  }),
   secret: process.env.SESSION_SECRET || "dev-secret-change-in-production",
   resave: false,
   saveUninitialized: false,
