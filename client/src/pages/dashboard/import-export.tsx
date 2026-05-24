@@ -404,9 +404,9 @@ export default function ImportExportPage() {
                     {importResults && !preview && (
                       <div className="space-y-4 mt-4">
                         {importResults.imported > 0 && (
-                          <Alert className="border-green-500/50 bg-green-500/10">
-                            <CheckCircle2 className="w-4 h-4 text-green-500" />
-                            <AlertTitle className="text-green-700 dark:text-green-400">
+                          <Alert className="border-success/50 bg-success/10">
+                            <CheckCircle2 className="w-4 h-4 text-success" />
+                            <AlertTitle className="text-success">
                               Successfully imported
                             </AlertTitle>
                             <AlertDescription>

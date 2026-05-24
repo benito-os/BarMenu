@@ -38,6 +38,23 @@
   --destructive-foreground: 0 20% 98%;
   --input: 0 0% 75%;
   --ring: 24 88% 42%;
+
+  /* Semantic status palette. One source of truth for the queue badges,
+     OrderStatusBanner, settings threshold previews, inventory levels. Each
+     pair is (solid + soft) so the same semantic can be used as a strong
+     "filled badge" or a "soft surface" without per-component color picking. */
+  --success: 142 71% 38%;
+  --success-foreground: 0 0% 100%;
+  --success-soft: 142 76% 94%;
+  --success-soft-foreground: 142 71% 22%;
+  --warning: 38 92% 50%;
+  --warning-foreground: 0 0% 100%;
+  --warning-soft: 48 96% 89%;
+  --warning-soft-foreground: 32 81% 29%;
+  --info: 217 91% 50%;
+  --info-foreground: 0 0% 100%;
+  --info-soft: 214 95% 93%;
+  --info-soft-foreground: 224 76% 33%;
   --chart-1: 24 88% 42%;
   --chart-2: 32 86% 38%;
   --chart-3: 15 76% 46%;
@@ -122,6 +139,21 @@
   --destructive-foreground: 0 20% 98%;
   --input: 0 0% 30%;
   --ring: 24 88% 48%;
+
+  /* Status palette — dark mode mirrors above with brightened solids and
+     dimmed soft surfaces so contrast holds. */
+  --success: 142 71% 45%;
+  --success-foreground: 0 0% 100%;
+  --success-soft: 142 60% 14%;
+  --success-soft-foreground: 142 70% 78%;
+  --warning: 38 92% 55%;
+  --warning-foreground: 0 0% 8%;
+  --warning-soft: 38 60% 14%;
+  --warning-soft-foreground: 48 96% 80%;
+  --info: 217 91% 60%;
+  --info-foreground: 0 0% 100%;
+  --info-soft: 217 60% 16%;
+  --info-soft-foreground: 214 95% 80%;
   --chart-1: 24 88% 65%;
   --chart-2: 32 86% 62%;
   --chart-3: 15 76% 68%;

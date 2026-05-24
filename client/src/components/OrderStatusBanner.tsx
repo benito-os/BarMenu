@@ -100,28 +100,34 @@ export function OrderStatusBanner() {
     return null;
   }
 
+  // NOTE: The semantic mapping for "requested" intentionally uses the info
+  // (blue) palette to match the dashboard queue's "Requested" badge. The
+  // previous OrderStatusBanner used yellow for requested and blue for
+  // in_progress — guests and the bartender saw the same order in two
+  // different colors. Aligning here so the guest's status banner mirrors
+  // exactly what the bartender sees on the queue page.
   const getStatusInfo = (status: string) => {
     switch (status) {
       case "requested":
         return {
           icon: Clock,
           label: "Requested",
-          color: "text-yellow-600 dark:text-yellow-400",
-          bgColor: "bg-yellow-50 dark:bg-yellow-950",
+          color: "text-info-soft-foreground",
+          bgColor: "bg-info-soft",
         };
       case "in_progress":
         return {
           icon: ChefHat,
           label: "In Progress",
-          color: "text-blue-600 dark:text-blue-400",
-          bgColor: "bg-blue-50 dark:bg-blue-950",
+          color: "text-warning-soft-foreground",
+          bgColor: "bg-warning-soft",
         };
       default:
         return {
           icon: Clock,
           label: "Pending",
-          color: "text-gray-600 dark:text-gray-400",
-          bgColor: "bg-gray-50 dark:bg-gray-950",
+          color: "text-muted-foreground",
+          bgColor: "bg-muted",
         };
     }
   };
@@ -193,11 +199,11 @@ export function OrderStatusBanner() {
               return (
                 <div
                   key={orderId}
-                  className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-950"
+                  className="flex items-center justify-between p-3 rounded-lg bg-muted"
                   data-testid={`order-item-loading-${orderId}`}
                 >
                   <div className="flex items-center gap-3 flex-1">
-                    <Clock className="w-5 h-5 text-gray-400 animate-pulse" />
+                    <Clock className="w-5 h-5 text-muted-foreground animate-pulse" />
                     <div className="flex-1">
                       <p className="font-medium text-foreground">
                         {trackedOrder?.drinkName || "Your Drink"}
@@ -208,7 +214,7 @@ export function OrderStatusBanner() {
                     </div>
                   </div>
 
-                  <Badge variant="outline" className="text-gray-600 dark:text-gray-400">
+                  <Badge variant="outline" className="text-muted-foreground">
                     Loading
                   </Badge>
                 </div>

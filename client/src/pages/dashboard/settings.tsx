@@ -138,8 +138,9 @@ export default function SettingsPage() {
                         data-testid="input-warning-minutes"
                         className="w-24"
                       />
-                      <Badge variant="outline" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
-                        Yellow
+                      {/* Mirrors the actual queue waiting-time badge style. */}
+                      <Badge className="bg-warning text-warning-foreground hover:bg-warning">
+                        Warning
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">
@@ -161,8 +162,9 @@ export default function SettingsPage() {
                         data-testid="input-urgent-minutes"
                         className="w-24"
                       />
-                      <Badge variant="outline" className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
-                        Red
+                      {/* Matches variant="destructive" used for urgent on the queue. */}
+                      <Badge variant="destructive">
+                        Urgent
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">

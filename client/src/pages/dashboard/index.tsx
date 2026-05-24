@@ -282,7 +282,7 @@ export default function QueuePage() {
     }
     if (minutes >= warningThreshold) {
       return (
-        <Badge className="bg-yellow-500 hover:bg-yellow-600 text-xs font-mono" data-testid="badge-wait-warning">
+        <Badge className="bg-warning text-warning-foreground hover:bg-warning/90 text-xs font-mono" data-testid="badge-wait-warning">
           <Clock className="w-3 h-3 mr-1" />
           {display}
         </Badge>
@@ -299,11 +299,11 @@ export default function QueuePage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "requested":
-        return <Badge variant="default" className="bg-blue-500">Requested</Badge>;
+        return <Badge className="bg-info text-info-foreground hover:bg-info/90">Requested</Badge>;
       case "in_progress":
-        return <Badge variant="default" className="bg-yellow-500">In Progress</Badge>;
+        return <Badge className="bg-warning text-warning-foreground hover:bg-warning/90">In Progress</Badge>;
       case "served":
-        return <Badge variant="default" className="bg-green-500">Served</Badge>;
+        return <Badge className="bg-success text-success-foreground hover:bg-success/90">Served</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
