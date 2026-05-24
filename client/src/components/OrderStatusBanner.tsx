@@ -37,40 +37,38 @@ export function OrderStatusBanner() {
     };
   }, []);
 
-  // Query to fetch order details
-  const { data: orders, refetch } = useQuery<Order[]>({
-    queryKey: ["/api/orders/status", trackedOrderIds],
+  // Single batch fetch for all tracked orders. Replaces the previous
+  // one-request-per-order pattern (10 orders => 10 requests every 5s).
+  const { data: orders } = useQuery<Order[]>({
+    queryKey: ["/api/orders/by-ids", trackedOrderIds],
     enabled: trackedOrderIds.length > 0,
-    refetchInterval: 5000, // Refetch every 5 seconds to check for status updates
+    refetchInterval: 5000,
     queryFn: async () => {
       if (trackedOrderIds.length === 0) return [];
-      
-      // Fetch each order's status
-      const promises = trackedOrderIds.map(async (orderId) => {
-        try {
-          const response = await fetch(`/api/orders/${orderId}`);
-          if (!response.ok) {
-            // Only remove from tracking if order is truly not found (404)
-            if (response.status === 404) {
-              removeTrackedOrder(orderId);
-              return null;
-            }
-            // For other errors (500, network issues, etc.), keep the order tracked
-            // and return null so it doesn't show in the banner temporarily
-            // but will retry on next refetch
-            console.warn(`Temporary error fetching order ${orderId}, will retry:`, response.status);
-            return null;
-          }
-          return response.json();
-        } catch (error) {
-          // Network errors or other exceptions - keep the order tracked
-          console.error(`Network error fetching order ${orderId}, will retry:`, error);
-          return null;
-        }
-      });
 
-      const results = await Promise.all(promises);
-      return results.filter((order): order is Order => order !== null);
+      const response = await fetch(
+        `/api/orders/by-ids?ids=${encodeURIComponent(trackedOrderIds.join(","))}`,
+      );
+
+      // Network failure or server error: keep all orders tracked, return empty.
+      // The banner will fall through to the "loading" state for unmatched ids.
+      if (!response.ok) {
+        console.warn(`Batch order fetch returned ${response.status}, will retry`);
+        return [];
+      }
+
+      const fetched: Order[] = await response.json();
+
+      // Orders that were tracked but no longer exist server-side are 404-equivalent:
+      // remove from cookies so we stop asking for them.
+      const returnedIds = new Set(fetched.map((o) => o.id));
+      for (const id of trackedOrderIds) {
+        if (!returnedIds.has(id)) {
+          removeTrackedOrder(id);
+        }
+      }
+
+      return fetched;
     },
   });
 

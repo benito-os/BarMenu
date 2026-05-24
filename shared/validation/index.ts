@@ -81,6 +81,21 @@ export const orderStatusUpdateSchema = z.object({
   status: z.enum(["requested", "in_progress", "served", "cancelled"]),
 });
 
+// Cap matches the client-side trackedOrders cap (10) with headroom; guards
+// against abusively long ids lists on the public endpoint.
+export const orderIdsQuerySchema = z.object({
+  ids: z
+    .string()
+    .min(1, "ids is required")
+    .transform((value) =>
+      value
+        .split(",")
+        .map((id) => id.trim())
+        .filter(Boolean),
+    )
+    .pipe(z.array(z.string().min(1)).min(1).max(50, "too many ids")),
+});
+
 export const orderBatchUpdateSchema = z.object({
   orderIds: z.array(z.string().min(1)).nonempty("orderIds is required"),
   status: z.enum(["in_progress", "served"]),

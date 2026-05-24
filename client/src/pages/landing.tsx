@@ -30,6 +30,8 @@ export default function Landing() {
           src={heroImage}
           alt="Craft cocktails at Bar Flores"
           className="absolute inset-0 w-full h-full object-cover"
+          decoding="async"
+          fetchPriority="high"
         />
         {/* Dark gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70" />
