@@ -22,6 +22,28 @@ import type { OrderWithDrink } from "@shared/validation";
 const ALERT_PREF_KEY = "barflores_queue_alerts";
 const ORIGINAL_TITLE = "Bar Flores";
 
+/**
+ * Split a recipe string into discrete steps for line-by-line display in the
+ * queue. Honors author-supplied newlines first; falls back to comma splitting
+ * when the recipe is a single line with multiple commas (the common
+ * "2oz gin, 0.5oz vermouth, bitters" pattern). Returns the original string as
+ * a one-element array if neither heuristic applies, so single-step recipes
+ * like "Stir with ice and strain" stay intact.
+ */
+function splitRecipe(recipe: string): string[] {
+  const lines = recipe
+    .split(/\r?\n/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (lines.length > 1) return lines;
+  if (lines.length === 0) return [];
+
+  const sole = lines[0];
+  const commaParts = sole.split(",").map((s) => s.trim()).filter(Boolean);
+  if (commaParts.length >= 2) return commaParts;
+  return [sole];
+}
+
 export default function QueuePage() {
   const { toast } = useToast();
   const {
@@ -931,7 +953,23 @@ export default function QueuePage() {
                   {selectedOrder.drinkRecipe && (
                     <div>
                       <h3 className="font-semibold mb-2">Recipe & Instructions</h3>
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{selectedOrder.drinkRecipe}</p>
+                      {(() => {
+                        const steps = splitRecipe(selectedOrder.drinkRecipe);
+                        if (steps.length <= 1) {
+                          return (
+                            <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                              {steps[0] ?? selectedOrder.drinkRecipe}
+                            </p>
+                          );
+                        }
+                        return (
+                          <ul className="text-sm leading-relaxed space-y-1 list-disc list-inside marker:text-muted-foreground">
+                            {steps.map((step, i) => (
+                              <li key={i}>{step}</li>
+                            ))}
+                          </ul>
+                        );
+                      })()}
                     </div>
                   )}
 
