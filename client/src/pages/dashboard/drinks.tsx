@@ -12,10 +12,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
-import type { DrinkAvailability } from "@shared/validation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { drinkCreateSchema, drinkUpdateSchema } from "@shared/validation";
+import type { DrinkAvailability, InsertDrink } from "@shared/validation";
 import {
   DndContext,
   closestCenter,
@@ -35,13 +39,52 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Trash2, Pencil, CheckCircle2, AlertCircle, Ban, Undo2, Copy } from "lucide-react";
 
+// Small wrapper for the boolean switch rows so we don't repeat the same
+// FormField + Switch + Label boilerplate six times per form.
+function DrinkBoolField({
+  control,
+  name,
+  label,
+  testId,
+  disabled,
+}: {
+  control: ReturnType<typeof useForm<InsertDrink>>["control"];
+  name: "isMocktail" | "canBeMocktail" | "isStirred" | "isShaken" | "isActive" | "isOutOfStock";
+  label: string;
+  testId: string;
+  disabled?: boolean;
+}) {
+  return (
+    <FormField
+      control={control}
+      name={name}
+      render={({ field }) => (
+        <FormItem className="flex flex-row items-center gap-2 space-y-0">
+          <FormControl>
+            <Switch
+              checked={!!field.value}
+              onCheckedChange={field.onChange}
+              disabled={disabled}
+              data-testid={testId}
+            />
+          </FormControl>
+          <FormLabel className="text-sm cursor-pointer">{label}</FormLabel>
+        </FormItem>
+      )}
+    />
+  );
+}
+
 export default function DrinksPage() {
   const [selectedMenuId, setSelectedMenuId] = useState<string>("");
   const [selectedDrinks, setSelectedDrinks] = useState<Set<string>>(new Set());
   const [localDrinks, setLocalDrinks] = useState<DrinkAvailability[]>([]);
   const [sectionFilter, setSectionFilter] = useState<string>("all");
   const [editingDrink, setEditingDrink] = useState<DrinkAvailability | null>(null);
-  const [newDrink, setNewDrink] = useState({
+
+  // Create form values. These match InsertDrink so the resolver / submit
+  // payload line up exactly with the schema in shared/validation.
+  const defaultCreateValues: InsertDrink = {
     menuId: "",
     name: "",
     section: "",
@@ -57,7 +100,17 @@ export default function DrinksPage() {
     isActive: true,
     isOutOfStock: false,
     sortOrder: 0,
-    ingredientIds: [] as string[],
+    ingredientIds: [],
+  };
+
+  const createForm = useForm<InsertDrink>({
+    resolver: zodResolver(drinkCreateSchema),
+    defaultValues: defaultCreateValues,
+  });
+
+  const editForm = useForm<InsertDrink>({
+    resolver: zodResolver(drinkUpdateSchema),
+    defaultValues: defaultCreateValues,
   });
 
   const { menus, menusLoading, defaultMenu } = useMenus(true);
@@ -78,15 +131,15 @@ export default function DrinksPage() {
     bulkUpdatePending,
   } = useDrinks(selectedMenuId, !!selectedMenuId);
 
-  // Set default menu
+  // Set default menu, and seed the create form's menuId once menus load.
   useEffect(() => {
     if (!selectedMenuId && !menusLoading && defaultMenu) {
       setSelectedMenuId(defaultMenu.id);
-      setNewDrink(prev => ({
-        ...prev,
-        menuId: prev.menuId || defaultMenu.id,
-        sortOrder: prev.menuId ? prev.sortOrder : getNextSortOrder(defaultMenu.id),
-      }));
+      const current = createForm.getValues();
+      if (!current.menuId) {
+        createForm.setValue("menuId", defaultMenu.id);
+        createForm.setValue("sortOrder", getNextSortOrder(defaultMenu.id));
+      }
     }
   }, [defaultMenu, menusLoading, selectedMenuId]);
 
@@ -106,15 +159,45 @@ export default function DrinksPage() {
     setSelectedDrinks(new Set());
   }, [selectedMenuId]);
 
-  // Auto-update sortOrder when menuId changes in newDrink
+  // Watch the create form's menuId so we can refresh sortOrder (and reset the
+  // section if the new menu doesn't have the old one) when it changes.
+  const createMenuId = createForm.watch("menuId");
   useEffect(() => {
-    if (newDrink.menuId) {
-      setNewDrink(prev => ({
-        ...prev,
-        sortOrder: getNextSortOrder(prev.menuId),
-      }));
+    if (createMenuId) {
+      createForm.setValue("sortOrder", getNextSortOrder(createMenuId));
+      const currentSection = createForm.getValues("section");
+      const newMenu = menus?.find((m) => m.id === createMenuId);
+      const newSections = newMenu?.sections || [];
+      if (currentSection && !newSections.includes(currentSection)) {
+        createForm.setValue("section", "");
+      }
     }
-  }, [newDrink.menuId]);
+  }, [createMenuId]);
+
+  // When the edit dialog opens for a different drink, reset the form to that
+  // drink's values so the inputs reflect what's being edited.
+  useEffect(() => {
+    if (editingDrink) {
+      editForm.reset({
+        menuId: editingDrink.menuId,
+        name: editingDrink.name,
+        section: editingDrink.section,
+        description: editingDrink.description ?? "",
+        recipe: editingDrink.recipe ?? "",
+        style: editingDrink.style ?? "",
+        temperature: editingDrink.temperature ?? "",
+        baseSpirit: editingDrink.baseSpirit ?? "",
+        isMocktail: editingDrink.isMocktail,
+        canBeMocktail: editingDrink.canBeMocktail,
+        isStirred: editingDrink.isStirred,
+        isShaken: editingDrink.isShaken,
+        isActive: editingDrink.isActive,
+        isOutOfStock: editingDrink.isOutOfStock,
+        sortOrder: editingDrink.sortOrder,
+        ingredientIds: editingDrink.ingredientIds ?? [],
+      });
+    }
+  }, [editingDrink]);
 
   const getNextSortOrder = useCallback((menuId: string) => {
     if (!menuId) return 0;
@@ -391,39 +474,25 @@ export default function DrinksPage() {
     );
   }
 
-  const handleCreateDrink = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newDrink.menuId && newDrink.name) {
-      createDrink(newDrink);
-      // Reset form after successful creation
-      setNewDrink({
-        menuId: newDrink.menuId,
-        name: "",
-        section: "",
-        description: "",
-        recipe: "",
-        style: "",
-        temperature: "",
-        baseSpirit: "",
-        isMocktail: false,
-        canBeMocktail: false,
-        isStirred: false,
-        isShaken: false,
-        isActive: true,
-        isOutOfStock: false,
-        sortOrder: getNextSortOrder(newDrink.menuId),
-        ingredientIds: [],
-      });
-    }
-  };
+  const handleCreateDrink = createForm.handleSubmit((data) => {
+    createDrink(data);
+    // Reset to defaults but keep the selected menu so the bartender can keep
+    // adding drinks to the same menu without re-picking it.
+    const menuId = data.menuId;
+    createForm.reset({
+      ...defaultCreateValues,
+      menuId,
+      sortOrder: getNextSortOrder(menuId),
+    });
+  });
 
-  const handleUpdateDrink = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingDrink) {
-      updateDrink(editingDrink);
-      setEditingDrink(null);
-    }
-  };
+  const handleUpdateDrink = editForm.handleSubmit((data) => {
+    if (!editingDrink) return;
+    // updateDrink hook expects a DrinkAvailability — merge form values onto the
+    // original drink so we preserve id and any derived availability fields.
+    updateDrink({ ...editingDrink, ...data });
+    setEditingDrink(null);
+  });
 
   return (
     <DashboardLayout>
@@ -437,264 +506,300 @@ export default function DrinksPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleCreateDrink} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="drink-menu">Menu</Label>
-                  <Select
-                    value={newDrink.menuId}
-                    onValueChange={(value) => setNewDrink(prev => ({
-                      ...prev,
-                      menuId: value,
-                      sortOrder: getNextSortOrder(value),
-                    }))}
-                    disabled={createDrinkPending || menusLoading || !menus || menus.length === 0}
-                  >
-                    <SelectTrigger id="drink-menu" data-testid="select-drink-menu">
-                      <SelectValue placeholder="Select a menu" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {menus?.map((menu) => (
-                        <SelectItem key={menu.id} value={menu.id}>
-                          {menu.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="drink-name">Drink Name</Label>
-                  <Input
-                    id="drink-name"
-                    value={newDrink.name}
-                    onChange={(e) => setNewDrink({ ...newDrink, name: e.target.value })}
-                    placeholder="Midnight Martini"
-                    disabled={createDrinkPending}
-                    data-testid="input-drink-name"
+            <Form {...createForm}>
+              <form onSubmit={handleCreateDrink} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={createForm.control}
+                    name="menuId"
+                    render={({ field }) => {
+                      const noMenus = !menus || menus.length === 0;
+                      return (
+                        <FormItem>
+                          <FormLabel>Menu <span className="text-destructive">*</span></FormLabel>
+                          <Select
+                            value={field.value || ""}
+                            onValueChange={field.onChange}
+                            disabled={createDrinkPending || menusLoading || noMenus}
+                          >
+                            <FormControl>
+                              <SelectTrigger data-testid="select-drink-menu">
+                                <SelectValue placeholder="Select a menu" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {menus?.map((menu) => (
+                                <SelectItem key={menu.id} value={menu.id}>
+                                  {menu.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
                   />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="drink-section">Section</Label>
-                  {(() => {
-                    const selectedMenu = menus?.find(m => m.id === newDrink.menuId);
-                    const menuSections = selectedMenu?.sections || [];
-                    return (
-                      <Select
-                        value={newDrink.section || "not_specified"}
-                        onValueChange={(value) => setNewDrink({ ...newDrink, section: value === "not_specified" ? "" : value })}
-                        disabled={createDrinkPending || !newDrink.menuId}
-                      >
-                        <SelectTrigger id="drink-section" data-testid="select-drink-section">
-                          <SelectValue placeholder="Select section" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="not_specified">Not Specified</SelectItem>
-                          {menuSections.map((section, idx) => (
-                            <SelectItem key={idx} value={section}>{section}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    );
-                  })()}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="drink-style">Style</Label>
-                  <Input
-                    id="drink-style"
-                    value={newDrink.style}
-                    onChange={(e) => setNewDrink({ ...newDrink, style: e.target.value })}
-                    placeholder="Dry, Boozy"
-                    disabled={createDrinkPending}
-                    data-testid="input-drink-style"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="drink-description">Description</Label>
-                <Textarea
-                  id="drink-description"
-                  value={newDrink.description}
-                  onChange={(e) => setNewDrink({ ...newDrink, description: e.target.value })}
-                  placeholder="A classic martini with a twist..."
-                  rows={2}
-                  disabled={createDrinkPending}
-                  data-testid="input-drink-description"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="drink-recipe">Recipe / Instructions</Label>
-                <Textarea
-                  id="drink-recipe"
-                  value={newDrink.recipe}
-                  onChange={(e) => setNewDrink({ ...newDrink, recipe: e.target.value })}
-                  placeholder="2 oz gin, 0.5 oz dry vermouth, stir with ice..."
-                  rows={3}
-                  disabled={createDrinkPending}
-                  data-testid="input-drink-recipe"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="drink-base">Base Spirit</Label>
-                  <Input
-                    id="drink-base"
-                    value={newDrink.baseSpirit}
-                    onChange={(e) => setNewDrink({ ...newDrink, baseSpirit: e.target.value })}
-                    placeholder="Gin"
-                    disabled={createDrinkPending}
-                    data-testid="input-drink-base"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="drink-temperature">Temperature</Label>
-                  <Select
-                    value={newDrink.temperature || "not_specified"}
-                    onValueChange={(value) => setNewDrink({ ...newDrink, temperature: value === "not_specified" ? "" : value })}
-                    disabled={createDrinkPending}
-                  >
-                    <SelectTrigger id="drink-temperature" data-testid="select-drink-temperature">
-                      <SelectValue placeholder="Select temperature" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="not_specified">Not Specified</SelectItem>
-                      <SelectItem value="hot">Hot</SelectItem>
-                      <SelectItem value="cold">Cold</SelectItem>
-                      <SelectItem value="room_temp">Room Temperature</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="drink-mocktail"
-                    checked={newDrink.isMocktail}
-                    onCheckedChange={(checked) => setNewDrink({ ...newDrink, isMocktail: checked })}
-                    disabled={createDrinkPending}
-                    data-testid="switch-drink-mocktail"
-                  />
-                  <Label htmlFor="drink-mocktail" className="text-sm">Non-Alcoholic</Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="drink-can-be-mocktail"
-                    checked={newDrink.canBeMocktail}
-                    onCheckedChange={(checked) => setNewDrink({ ...newDrink, canBeMocktail: checked })}
-                    disabled={createDrinkPending}
-                    data-testid="switch-drink-can-be-mocktail"
-                  />
-                  <Label htmlFor="drink-can-be-mocktail" className="text-sm">Mocktail Available</Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="drink-stirred"
-                    checked={newDrink.isStirred}
-                    onCheckedChange={(checked) => setNewDrink({ ...newDrink, isStirred: checked })}
-                    disabled={createDrinkPending}
-                    data-testid="switch-drink-stirred"
-                  />
-                  <Label htmlFor="drink-stirred" className="text-sm">Stirred</Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="drink-shaken"
-                    checked={newDrink.isShaken}
-                    onCheckedChange={(checked) => setNewDrink({ ...newDrink, isShaken: checked })}
-                    disabled={createDrinkPending}
-                    data-testid="switch-drink-shaken"
-                  />
-                  <Label htmlFor="drink-shaken" className="text-sm">Shaken</Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="drink-active"
-                    checked={newDrink.isActive}
-                    onCheckedChange={(checked) => setNewDrink({ ...newDrink, isActive: checked })}
-                    disabled={createDrinkPending}
-                    data-testid="switch-drink-active"
-                  />
-                  <Label htmlFor="drink-active" className="text-sm">Active</Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="drink-out-of-stock"
-                    checked={newDrink.isOutOfStock}
-                    onCheckedChange={(checked) => setNewDrink({ ...newDrink, isOutOfStock: checked })}
-                    disabled={createDrinkPending}
-                    data-testid="switch-drink-out-of-stock"
-                  />
-                  <Label htmlFor="drink-out-of-stock" className="text-sm">Out of Stock</Label>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="drink-order" className="text-sm">Sort Order</Label>
-                  <Input
-                    id="drink-order"
-                    type="number"
-                    value={newDrink.sortOrder}
-                    onChange={(e) => setNewDrink({ ...newDrink, sortOrder: parseInt(e.target.value) || 0 })}
-                    disabled={createDrinkPending}
-                    data-testid="input-drink-order"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Ingredients</Label>
-                <div className="rounded-md border p-3">
-                  {ingredientsLoading ? (
-                    <div className="space-y-2">
-                      {[1, 2, 3].map((row) => (
-                        <Skeleton key={row} className="h-5 w-full" />
-                      ))}
-                    </div>
-                  ) : ingredients.length > 0 ? (
-                    <div className="max-h-48 overflow-y-auto space-y-2">
-                      {ingredients.map((ingredient) => (
-                        <label key={ingredient.id} className="flex items-center gap-2 text-sm">
-                          <Checkbox
-                            checked={newDrink.ingredientIds.includes(ingredient.id)}
-                            onCheckedChange={(checked) => {
-                              setNewDrink((prev) => ({
-                                ...prev,
-                                ingredientIds: checked
-                                  ? [...prev.ingredientIds, ingredient.id]
-                                  : prev.ingredientIds.filter((id) => id !== ingredient.id),
-                              }));
-                            }}
+                  <FormField
+                    control={createForm.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Drink Name <span className="text-destructive">*</span></FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Midnight Martini"
+                            disabled={createDrinkPending}
+                            data-testid="input-drink-name"
+                            {...field}
+                            value={field.value ?? ""}
                           />
-                          <span>{ingredient.name}</span>
-                          {ingredient.onHand <= 0 && (
-                            <Badge variant="destructive" className="text-[10px]">Out</Badge>
-                          )}
-                        </label>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">Add ingredients in Inventory to assign them.</p>
-                  )}
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
-              </div>
 
-              <Button
-                type="submit"
-                disabled={createDrinkPending || !newDrink.menuId || !newDrink.name.trim()}
-                data-testid="button-create-drink"
-              >
-                {createDrinkPending ? "Creating..." : "Create Drink"}
-              </Button>
-              {!menus || menus.length === 0 ? (
-                <p className="text-sm text-muted-foreground mt-2">
-                  Please create a menu first before adding drinks
-                </p>
-              ) : null}
-            </form>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={createForm.control}
+                    name="section"
+                    render={({ field }) => {
+                      const selectedMenu = menus?.find((m) => m.id === createMenuId);
+                      const menuSections = selectedMenu?.sections || [];
+                      return (
+                        <FormItem>
+                          <FormLabel>Section <span className="text-destructive">*</span></FormLabel>
+                          <Select
+                            value={field.value || "not_specified"}
+                            onValueChange={(value) =>
+                              field.onChange(value === "not_specified" ? "" : value)
+                            }
+                            disabled={createDrinkPending || !createMenuId}
+                          >
+                            <FormControl>
+                              <SelectTrigger data-testid="select-drink-section">
+                                <SelectValue placeholder="Select section" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="not_specified">Not Specified</SelectItem>
+                              {menuSections.map((section, idx) => (
+                                <SelectItem key={idx} value={section}>
+                                  {section}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
+                  />
+                  <FormField
+                    control={createForm.control}
+                    name="style"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Style</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Dry, Boozy"
+                            disabled={createDrinkPending}
+                            data-testid="input-drink-style"
+                            {...field}
+                            value={field.value ?? ""}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={createForm.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="A classic martini with a twist..."
+                          rows={2}
+                          disabled={createDrinkPending}
+                          data-testid="input-drink-description"
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={createForm.control}
+                  name="recipe"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Recipe / Instructions</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="2 oz gin, 0.5 oz dry vermouth, stir with ice..."
+                          rows={3}
+                          disabled={createDrinkPending}
+                          data-testid="input-drink-recipe"
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={createForm.control}
+                    name="baseSpirit"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Base Spirit</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Gin"
+                            disabled={createDrinkPending}
+                            data-testid="input-drink-base"
+                            {...field}
+                            value={field.value ?? ""}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={createForm.control}
+                    name="temperature"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Temperature</FormLabel>
+                        <Select
+                          value={field.value || "not_specified"}
+                          onValueChange={(value) =>
+                            field.onChange(value === "not_specified" ? "" : value)
+                          }
+                          disabled={createDrinkPending}
+                        >
+                          <FormControl>
+                            <SelectTrigger data-testid="select-drink-temperature">
+                              <SelectValue placeholder="Select temperature" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="not_specified">Not Specified</SelectItem>
+                            <SelectItem value="hot">Hot</SelectItem>
+                            <SelectItem value="cold">Cold</SelectItem>
+                            <SelectItem value="room_temp">Room Temperature</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <DrinkBoolField control={createForm.control} name="isMocktail" label="Non-Alcoholic" testId="switch-drink-mocktail" disabled={createDrinkPending} />
+                  <DrinkBoolField control={createForm.control} name="canBeMocktail" label="Mocktail Available" testId="switch-drink-can-be-mocktail" disabled={createDrinkPending} />
+                  <DrinkBoolField control={createForm.control} name="isStirred" label="Stirred" testId="switch-drink-stirred" disabled={createDrinkPending} />
+                  <DrinkBoolField control={createForm.control} name="isShaken" label="Shaken" testId="switch-drink-shaken" disabled={createDrinkPending} />
+                  <DrinkBoolField control={createForm.control} name="isActive" label="Active" testId="switch-drink-active" disabled={createDrinkPending} />
+                  <DrinkBoolField control={createForm.control} name="isOutOfStock" label="Out of Stock" testId="switch-drink-out-of-stock" disabled={createDrinkPending} />
+                  <FormField
+                    control={createForm.control}
+                    name="sortOrder"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm">Sort Order</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            disabled={createDrinkPending}
+                            data-testid="input-drink-order"
+                            value={field.value ?? 0}
+                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={createForm.control}
+                  name="ingredientIds"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ingredients</FormLabel>
+                      <div className="rounded-md border p-3">
+                        {ingredientsLoading ? (
+                          <div className="space-y-2">
+                            {[1, 2, 3].map((row) => (
+                              <Skeleton key={row} className="h-5 w-full" />
+                            ))}
+                          </div>
+                        ) : ingredients.length > 0 ? (
+                          <div className="max-h-48 overflow-y-auto space-y-2">
+                            {ingredients.map((ingredient) => {
+                              const ids = field.value ?? [];
+                              const checked = ids.includes(ingredient.id);
+                              return (
+                                <label key={ingredient.id} className="flex items-center gap-2 text-sm">
+                                  <Checkbox
+                                    checked={checked}
+                                    onCheckedChange={(c) =>
+                                      field.onChange(
+                                        c
+                                          ? [...ids, ingredient.id]
+                                          : ids.filter((id) => id !== ingredient.id),
+                                      )
+                                    }
+                                  />
+                                  <span>{ingredient.name}</span>
+                                  {ingredient.onHand <= 0 && (
+                                    <Badge variant="destructive" className="text-[10px]">Out</Badge>
+                                  )}
+                                </label>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">Add ingredients in Inventory to assign them.</p>
+                        )}
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <Button
+                  type="submit"
+                  disabled={createDrinkPending}
+                  data-testid="button-create-drink"
+                >
+                  {createDrinkPending ? "Creating..." : "Create Drink"}
+                </Button>
+                {!menus || menus.length === 0 ? (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Please create a menu first before adding drinks
+                  </p>
+                ) : null}
+              </form>
+            </Form>
           </CardContent>
         </Card>
 
@@ -725,11 +830,10 @@ export default function DrinksPage() {
                   setSelectedDrinks(new Set());
                   setSectionFilter("all");
                   setLocalDrinks([]);
-                  setNewDrink(prev => ({
-                    ...prev,
-                    menuId: value,
-                    sortOrder: getNextSortOrder(value),
-                  }));
+                  // Mirror the manage-menu selection into the create form so a
+                  // new drink defaults to the menu the bartender is viewing.
+                  createForm.setValue("menuId", value);
+                  createForm.setValue("sortOrder", getNextSortOrder(value));
                 }}
                 disabled={menusLoading || !menus || menus.length === 0}
               >
@@ -926,257 +1030,278 @@ export default function DrinksPage() {
               </DialogDescription>
             </DialogHeader>
             {editingDrink && (
-              <form
-                onSubmit={handleUpdateDrink}
-              >
-                <div className="space-y-4">
+              <Form {...editForm}>
+                <form onSubmit={handleUpdateDrink}>
+                  <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-drink-name">Drink Name</Label>
-                        <Input
-                          id="edit-drink-name"
-                          value={editingDrink.name}
-                          onChange={(e) => setEditingDrink({ ...editingDrink, name: e.target.value })}
-                          placeholder="Midnight Martini"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-drink-menu">Menu</Label>
-                        <Select
-                          value={editingDrink.menuId || "not_specified"}
-                          onValueChange={(value) => {
-                            const nextMenuId = value === "not_specified" ? "" : value;
-                            const targetMenu = menus?.find(m => m.id === nextMenuId);
-                            const targetSections = targetMenu?.sections || [];
-
-                            setEditingDrink(prev => {
-                              if (!prev) return prev;
-                              const shouldResetSection = prev.section && !targetSections.includes(prev.section);
-                              const nextSection = shouldResetSection ? "" : prev.section;
-                              return {
-                                ...prev,
-                                menuId: nextMenuId,
-                                section: nextSection,
-                                sortOrder: nextMenuId ? getNextSortOrder(nextMenuId) : prev.sortOrder,
-                              };
-                            });
-                          }}
-                        >
-                          <SelectTrigger id="edit-drink-menu" data-testid="select-edit-drink-menu">
-                            <SelectValue placeholder="Select menu" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="not_specified">Not Specified</SelectItem>
-                            {(menus || []).map(menu => (
-                              <SelectItem key={menu.id} value={menu.id}>
-                                {menu.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-drink-section">Section</Label>
-                        {(() => {
-                          const drinkMenu = menus?.find(m => m.id === editingDrink.menuId);
-                          const menuSections = drinkMenu?.sections || [];
-                          const currentSection = editingDrink.section;
-                          const allSections = currentSection && !menuSections.includes(currentSection)
-                            ? [currentSection, ...menuSections]
-                            : menuSections;
-                          return (
+                      <FormField
+                        control={editForm.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Drink Name <span className="text-destructive">*</span></FormLabel>
+                            <FormControl>
+                              <Input placeholder="Midnight Martini" {...field} value={field.value ?? ""} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={editForm.control}
+                        name="menuId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Menu <span className="text-destructive">*</span></FormLabel>
                             <Select
-                              value={editingDrink.section || "not_specified"}
-                              onValueChange={(value) => setEditingDrink({ ...editingDrink, section: value === "not_specified" ? "" : value })}
+                              value={field.value || "not_specified"}
+                              onValueChange={(value) => {
+                                const nextMenuId = value === "not_specified" ? "" : value;
+                                field.onChange(nextMenuId);
+                                // Reset section if the new menu doesn't contain it.
+                                const targetMenu = menus?.find((m) => m.id === nextMenuId);
+                                const targetSections = targetMenu?.sections || [];
+                                const currentSection = editForm.getValues("section");
+                                if (currentSection && !targetSections.includes(currentSection)) {
+                                  editForm.setValue("section", "");
+                                }
+                                if (nextMenuId) {
+                                  editForm.setValue("sortOrder", getNextSortOrder(nextMenuId));
+                                }
+                              }}
                             >
-                              <SelectTrigger id="edit-drink-section" data-testid="select-edit-drink-section">
-                                <SelectValue placeholder="Select section" />
-                              </SelectTrigger>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-edit-drink-menu">
+                                  <SelectValue placeholder="Select menu" />
+                                </SelectTrigger>
+                              </FormControl>
                               <SelectContent>
                                 <SelectItem value="not_specified">Not Specified</SelectItem>
-                                {allSections.map((section, idx) => (
-                                  <SelectItem key={idx} value={section}>
-                                    {section}
-                                    {currentSection === section && !menuSections.includes(section) && " (legacy)"}
+                                {(menus || []).map((menu) => (
+                                  <SelectItem key={menu.id} value={menu.id}>
+                                    {menu.name}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={editForm.control}
+                        name="section"
+                        render={({ field }) => {
+                          const editMenuId = editForm.watch("menuId");
+                          const drinkMenu = menus?.find((m) => m.id === editMenuId);
+                          const menuSections = drinkMenu?.sections || [];
+                          const currentSection = field.value || "";
+                          const allSections = currentSection && !menuSections.includes(currentSection)
+                            ? [currentSection, ...menuSections]
+                            : menuSections;
+                          return (
+                            <FormItem>
+                              <FormLabel>Section <span className="text-destructive">*</span></FormLabel>
+                              <Select
+                                value={currentSection || "not_specified"}
+                                onValueChange={(value) =>
+                                  field.onChange(value === "not_specified" ? "" : value)
+                                }
+                              >
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-edit-drink-section">
+                                    <SelectValue placeholder="Select section" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="not_specified">Not Specified</SelectItem>
+                                  {allSections.map((section, idx) => (
+                                    <SelectItem key={idx} value={section}>
+                                      {section}
+                                      {currentSection === section && !menuSections.includes(section) && " (legacy)"}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
                           );
-                        })()}
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-drink-style">Style</Label>
-                      <Input
-                        id="edit-drink-style"
-                        value={editingDrink.style || ""}
-                        onChange={(e) => setEditingDrink({ ...editingDrink, style: e.target.value })}
-                        placeholder="Dry, Boozy"
+                        }}
                       />
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-drink-description">Description</Label>
-                      <Textarea
-                        id="edit-drink-description"
-                        value={editingDrink.description || ""}
-                        onChange={(e) => setEditingDrink({ ...editingDrink, description: e.target.value })}
-                        placeholder="A classic martini with a twist..."
-                        rows={2}
-                      />
-                    </div>
+                    <FormField
+                      control={editForm.control}
+                      name="style"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Style</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Dry, Boozy" {...field} value={field.value ?? ""} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-drink-recipe">Recipe / Instructions</Label>
-                      <Textarea
-                        id="edit-drink-recipe"
-                        value={editingDrink.recipe || ""}
-                        onChange={(e) => setEditingDrink({ ...editingDrink, recipe: e.target.value })}
-                        placeholder="2 oz gin, 0.5 oz dry vermouth, stir with ice..."
-                        rows={3}
-                      />
-                    </div>
+                    <FormField
+                      control={editForm.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder="A classic martini with a twist..."
+                              rows={2}
+                              {...field}
+                              value={field.value ?? ""}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={editForm.control}
+                      name="recipe"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Recipe / Instructions</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder="2 oz gin, 0.5 oz dry vermouth, stir with ice..."
+                              rows={3}
+                              {...field}
+                              value={field.value ?? ""}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-drink-base">Base Spirit</Label>
-                        <Input
-                          id="edit-drink-base"
-                          value={editingDrink.baseSpirit || ""}
-                          onChange={(e) => setEditingDrink({ ...editingDrink, baseSpirit: e.target.value })}
-                          placeholder="Gin"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-drink-temperature">Temperature</Label>
-                        <Select
-                          value={editingDrink.temperature || "not_specified"}
-                          onValueChange={(value) => setEditingDrink({ ...editingDrink, temperature: value === "not_specified" ? "" : value })}
-                        >
-                          <SelectTrigger id="edit-drink-temperature">
-                            <SelectValue placeholder="Select temperature" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="not_specified">Not Specified</SelectItem>
-                            <SelectItem value="hot">Hot</SelectItem>
-                            <SelectItem value="cold">Cold</SelectItem>
-                            <SelectItem value="room_temp">Room Temperature</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          id="edit-drink-mocktail"
-                          checked={editingDrink.isMocktail}
-                          onCheckedChange={(checked) => setEditingDrink({ ...editingDrink, isMocktail: checked })}
-                        />
-                        <Label htmlFor="edit-drink-mocktail" className="text-sm">Non-Alcoholic</Label>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          id="edit-drink-can-be-mocktail"
-                          checked={editingDrink.canBeMocktail}
-                          onCheckedChange={(checked) => setEditingDrink({ ...editingDrink, canBeMocktail: checked })}
-                        />
-                        <Label htmlFor="edit-drink-can-be-mocktail" className="text-sm">Mocktail Available</Label>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          id="edit-drink-stirred"
-                          checked={editingDrink.isStirred}
-                          onCheckedChange={(checked) => setEditingDrink({ ...editingDrink, isStirred: checked })}
-                        />
-                        <Label htmlFor="edit-drink-stirred" className="text-sm">Stirred</Label>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          id="edit-drink-shaken"
-                          checked={editingDrink.isShaken}
-                          onCheckedChange={(checked) => setEditingDrink({ ...editingDrink, isShaken: checked })}
-                        />
-                        <Label htmlFor="edit-drink-shaken" className="text-sm">Shaken</Label>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          id="edit-drink-active"
-                          checked={editingDrink.isActive}
-                          onCheckedChange={(checked) => setEditingDrink({ ...editingDrink, isActive: checked })}
-                        />
-                        <Label htmlFor="edit-drink-active" className="text-sm">Active</Label>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          id="edit-drink-out-of-stock"
-                          checked={editingDrink.isOutOfStock}
-                          onCheckedChange={(checked) => setEditingDrink({ ...editingDrink, isOutOfStock: checked })}
-                        />
-                        <Label htmlFor="edit-drink-out-of-stock" className="text-sm">Out of Stock</Label>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Ingredients</Label>
-                      <div className="rounded-md border p-3">
-                        {ingredientsLoading ? (
-                          <div className="space-y-2">
-                            {[1, 2, 3].map((row) => (
-                              <Skeleton key={row} className="h-5 w-full" />
-                            ))}
-                          </div>
-                        ) : ingredients.length > 0 ? (
-                          <div className="max-h-48 overflow-y-auto space-y-2">
-                            {ingredients.map((ingredient) => (
-                              <label key={ingredient.id} className="flex items-center gap-2 text-sm">
-                                <Checkbox
-                                  checked={editingDrink.ingredientIds.includes(ingredient.id)}
-                                  onCheckedChange={(checked) => {
-                                    setEditingDrink((prev) => {
-                                      if (!prev) return prev;
-                                      return {
-                                        ...prev,
-                                        ingredientIds: checked
-                                          ? [...prev.ingredientIds, ingredient.id]
-                                          : prev.ingredientIds.filter((id) => id !== ingredient.id),
-                                      };
-                                    });
-                                  }}
-                                />
-                                <span>{ingredient.name}</span>
-                                {ingredient.onHand <= 0 && (
-                                  <Badge variant="destructive" className="text-[10px]">Out</Badge>
-                                )}
-                              </label>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-sm text-muted-foreground">Add ingredients in Inventory to assign them.</p>
+                      <FormField
+                        control={editForm.control}
+                        name="baseSpirit"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Base Spirit</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Gin" {...field} value={field.value ?? ""} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
                         )}
-                      </div>
+                      />
+                      <FormField
+                        control={editForm.control}
+                        name="temperature"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Temperature</FormLabel>
+                            <Select
+                              value={field.value || "not_specified"}
+                              onValueChange={(value) =>
+                                field.onChange(value === "not_specified" ? "" : value)
+                              }
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select temperature" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="not_specified">Not Specified</SelectItem>
+                                <SelectItem value="hot">Hot</SelectItem>
+                                <SelectItem value="cold">Cold</SelectItem>
+                                <SelectItem value="room_temp">Room Temperature</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </div>
-                </div>
 
-                <div className="flex justify-end gap-2 pt-4 border-t mt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setEditingDrink(null)}
-                    disabled={updateDrinkPending}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={updateDrinkPending || !editingDrink.name.trim()}
-                  >
-                    {updateDrinkPending ? "Updating..." : "Update Drink"}
-                  </Button>
-                </div>
-              </form>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <DrinkBoolField control={editForm.control} name="isMocktail" label="Non-Alcoholic" testId="switch-edit-drink-mocktail" />
+                      <DrinkBoolField control={editForm.control} name="canBeMocktail" label="Mocktail Available" testId="switch-edit-drink-can-be-mocktail" />
+                      <DrinkBoolField control={editForm.control} name="isStirred" label="Stirred" testId="switch-edit-drink-stirred" />
+                      <DrinkBoolField control={editForm.control} name="isShaken" label="Shaken" testId="switch-edit-drink-shaken" />
+                      <DrinkBoolField control={editForm.control} name="isActive" label="Active" testId="switch-edit-drink-active" />
+                      <DrinkBoolField control={editForm.control} name="isOutOfStock" label="Out of Stock" testId="switch-edit-drink-out-of-stock" />
+                    </div>
+
+                    <FormField
+                      control={editForm.control}
+                      name="ingredientIds"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Ingredients</FormLabel>
+                          <div className="rounded-md border p-3">
+                            {ingredientsLoading ? (
+                              <div className="space-y-2">
+                                {[1, 2, 3].map((row) => (
+                                  <Skeleton key={row} className="h-5 w-full" />
+                                ))}
+                              </div>
+                            ) : ingredients.length > 0 ? (
+                              <div className="max-h-48 overflow-y-auto space-y-2">
+                                {ingredients.map((ingredient) => {
+                                  const ids = field.value ?? [];
+                                  const checked = ids.includes(ingredient.id);
+                                  return (
+                                    <label key={ingredient.id} className="flex items-center gap-2 text-sm">
+                                      <Checkbox
+                                        checked={checked}
+                                        onCheckedChange={(c) =>
+                                          field.onChange(
+                                            c
+                                              ? [...ids, ingredient.id]
+                                              : ids.filter((id) => id !== ingredient.id),
+                                          )
+                                        }
+                                      />
+                                      <span>{ingredient.name}</span>
+                                      {ingredient.onHand <= 0 && (
+                                        <Badge variant="destructive" className="text-[10px]">Out</Badge>
+                                      )}
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">Add ingredients in Inventory to assign them.</p>
+                            )}
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-4 border-t mt-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setEditingDrink(null)}
+                      disabled={updateDrinkPending}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={updateDrinkPending}
+                      data-testid="button-update-drink"
+                    >
+                      {updateDrinkPending ? "Updating..." : "Update Drink"}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
             )}
           </DialogContent>
         </Dialog>

@@ -968,24 +968,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return parsed;
   };
 
-  // POST /api/import/menus - Import menus from CSV
+  // Execute an import (or preview of one) for a given entity type. Used by
+  // all four /api/import/* endpoints. When ?dryRun=true is passed, validates
+  // and returns a sample without touching the DB.
+  type RowResult<T> = { rowNum: number; data: T } | { rowNum: number; error: string };
+  async function executeImport<T>(
+    req: import("express").Request,
+    res: Response,
+    parsed: { headers: string[]; rows: string[][] },
+    buildRow: (obj: Record<string, string>) => T | string,
+    create: (data: T) => Promise<unknown>,
+  ): Promise<void> {
+    const results: RowResult<T>[] = parsed.rows.map((row, i) => {
+      const built = buildRow(rowToObject(parsed.headers, row));
+      return typeof built === "string"
+        ? { rowNum: i + 2, error: built }
+        : { rowNum: i + 2, data: built };
+    });
+
+    if (req.query.dryRun === "true") {
+      const errors = results
+        .filter((r): r is { rowNum: number; error: string } => "error" in r)
+        .map((r) => `Row ${r.rowNum}: ${r.error}`);
+      const valid = results.filter(
+        (r): r is { rowNum: number; data: T } => "data" in r,
+      );
+      res.json({
+        preview: true,
+        totalRows: results.length,
+        validRows: valid.length,
+        errors,
+        sample: valid.slice(0, 5).map((r) => r.data),
+      });
+      return;
+    }
+
+    let imported = 0;
+    const errors: string[] = [];
+    for (const r of results) {
+      if ("error" in r) {
+        errors.push(`Row ${r.rowNum}: ${r.error}`);
+        continue;
+      }
+      try {
+        await create(r.data);
+        imported += 1;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Unknown error";
+        errors.push(`Row ${r.rowNum}: ${message}`);
+      }
+    }
+    res.json({ imported, errors });
+  }
+
+  // POST /api/import/menus[?dryRun=true] - Import (or preview) menus from CSV
   app.post("/api/import/menus", requireAuth, async (req, res) => {
     try {
       const parsed = parseImportPayload(req.body, res);
       if (!parsed) return;
-      const { headers, rows } = parsed;
-      const imported: any[] = [];
-      const errors: string[] = [];
-
-      for (let i = 0; i < rows.length; i++) {
-        const obj = rowToObject(headers, rows[i]);
-        try {
-          if (!obj.slug || !obj.name) {
-            errors.push(`Row ${i + 2}: slug and name are required`);
-            continue;
-          }
-
-          const menu = await storage.createMenu({
+      await executeImport(
+        req,
+        res,
+        parsed,
+        (obj) => {
+          if (!obj.slug || !obj.name) return "slug and name are required";
+          return {
             slug: obj.slug,
             name: obj.name,
             description: obj.description || null,
@@ -997,38 +1044,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
             menuTitleColor: obj.menuTitleColor || null,
             typography: obj.typography || null,
             sections: obj.sections ? obj.sections.split("|").filter(Boolean) : [],
-          });
-          imported.push(menu);
-        } catch (err: any) {
-          errors.push(`Row ${i + 2}: ${err.message || "Unknown error"}`);
-        }
-      }
-
-      res.json({ imported: imported.length, errors });
+          };
+        },
+        (data) => storage.createMenu(data),
+      );
     } catch (error) {
       console.error("Error importing menus:", error);
       res.status(500).json({ error: "Failed to import menus" });
     }
   });
 
-  // POST /api/import/drinks - Import drinks from CSV
+  // POST /api/import/drinks[?dryRun=true] - Import (or preview) drinks from CSV
   app.post("/api/import/drinks", requireAuth, async (req, res) => {
     try {
       const parsed = parseImportPayload(req.body, res);
       if (!parsed) return;
-      const { headers, rows } = parsed;
-      const imported: any[] = [];
-      const errors: string[] = [];
-
-      for (let i = 0; i < rows.length; i++) {
-        const obj = rowToObject(headers, rows[i]);
-        try {
+      await executeImport(
+        req,
+        res,
+        parsed,
+        (obj) => {
           if (!obj.menuId || !obj.name || !obj.section) {
-            errors.push(`Row ${i + 2}: menuId, name, and section are required`);
-            continue;
+            return "menuId, name, and section are required";
           }
-
-          const drink = await storage.createDrink({
+          return {
             menuId: obj.menuId,
             name: obj.name,
             section: obj.section,
@@ -1044,89 +1083,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
             isActive: obj.isActive !== "false",
             isOutOfStock: obj.isOutOfStock === "true",
             sortOrder: parseInt(obj.sortOrder) || 0,
-          });
-          imported.push(drink);
-        } catch (err: any) {
-          errors.push(`Row ${i + 2}: ${err.message || "Unknown error"}`);
-        }
-      }
-
-      res.json({ imported: imported.length, errors });
+          };
+        },
+        (data) => storage.createDrink(data),
+      );
     } catch (error) {
       console.error("Error importing drinks:", error);
       res.status(500).json({ error: "Failed to import drinks" });
     }
   });
 
-  // POST /api/import/ingredients - Import ingredients from CSV
+  // POST /api/import/ingredients[?dryRun=true] - Import (or preview) ingredients
   app.post("/api/import/ingredients", requireAuth, async (req, res) => {
     try {
       const parsed = parseImportPayload(req.body, res);
       if (!parsed) return;
-      const { headers, rows } = parsed;
-      const imported: any[] = [];
-      const errors: string[] = [];
-
-      for (let i = 0; i < rows.length; i++) {
-        const obj = rowToObject(headers, rows[i]);
-        try {
-          if (!obj.name || !obj.unit) {
-            errors.push(`Row ${i + 2}: name and unit are required`);
-            continue;
-          }
-
-          const ingredient = await storage.createIngredient({
+      await executeImport(
+        req,
+        res,
+        parsed,
+        (obj) => {
+          if (!obj.name || !obj.unit) return "name and unit are required";
+          return {
             name: obj.name,
             category: obj.category || null,
             unit: obj.unit,
             onHand: parseInt(obj.onHand) || 0,
             parLevel: parseInt(obj.parLevel) || 0,
             isActive: obj.isActive !== "false",
-          });
-          imported.push(ingredient);
-        } catch (err: any) {
-          errors.push(`Row ${i + 2}: ${err.message || "Unknown error"}`);
-        }
-      }
-
-      res.json({ imported: imported.length, errors });
+          };
+        },
+        (data) => storage.createIngredient(data),
+      );
     } catch (error) {
       console.error("Error importing ingredients:", error);
       res.status(500).json({ error: "Failed to import ingredients" });
     }
   });
 
-  // POST /api/import/orders - Import orders from CSV
+  // POST /api/import/orders[?dryRun=true] - Import (or preview) orders from CSV
   app.post("/api/import/orders", requireAuth, async (req, res) => {
     try {
       const parsed = parseImportPayload(req.body, res);
       if (!parsed) return;
-      const { headers, rows } = parsed;
-      const imported: any[] = [];
-      const errors: string[] = [];
-
-      for (let i = 0; i < rows.length; i++) {
-        const obj = rowToObject(headers, rows[i]);
-        try {
-          if (!obj.drinkId || !obj.menuId) {
-            errors.push(`Row ${i + 2}: drinkId and menuId are required`);
-            continue;
-          }
-
-          const order = await storage.createOrder({
+      await executeImport(
+        req,
+        res,
+        parsed,
+        (obj) => {
+          if (!obj.drinkId || !obj.menuId) return "drinkId and menuId are required";
+          return {
             drinkId: obj.drinkId,
             menuId: obj.menuId,
             guestName: obj.guestName || null,
             comments: obj.comments || null,
             asMocktail: obj.asMocktail === "true",
-          });
-          imported.push(order);
-        } catch (err: any) {
-          errors.push(`Row ${i + 2}: ${err.message || "Unknown error"}`);
-        }
-      }
-
-      res.json({ imported: imported.length, errors });
+          };
+        },
+        (data) => storage.createOrder(data),
+      );
     } catch (error) {
       console.error("Error importing orders:", error);
       res.status(500).json({ error: "Failed to import orders" });
