@@ -41,16 +41,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <div className="flex w-full min-h-svh flex-1">
         <AppSidebar onLogout={logout} />
         <div className="flex flex-col flex-1 min-h-0">
-          <header className="flex items-center justify-between p-4 border-b">
-            <div className="flex items-center gap-4">
+          <header className="flex items-center justify-between px-4 py-2 border-b">
+            <div className="flex items-center gap-3">
               <SidebarTrigger data-testid="button-sidebar-toggle" />
-              <h1 className="font-serif text-2xl md:text-3xl font-bold text-foreground">
-                Bar Flores Dashboard
+              <h1 className="font-serif text-lg md:text-xl font-semibold text-foreground">
+                Bar Flores
               </h1>
             </div>
             <Link href="/">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="ghost"
                 size="sm"
                 data-testid="button-back-home"
               >

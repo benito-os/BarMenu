@@ -26,7 +26,15 @@ Preferred communication style: Simple, everyday language.
 - **Schema Design**: `menus`, `drinks`, and `orders` tables with UUID primary keys and cascade delete for relationships. Includes fields for drink characteristics (e.g., `isMocktail`, `temperature`, `canBeMocktail`) and menu theming (`heroImageUrl`, `backgroundColor`, `accentColor`, `typography`).
 
 ### Authentication and Authorization
-- Basic session-based authentication for the dashboard (`admin` username with a configurable password) for internal use, not production-grade security. The public-facing menu operates without authentication.
+- Session-based authentication for the dashboard, single `admin` user.
+- `DASHBOARD_PASSWORD` and `SESSION_SECRET` are read from Replit Secrets only — there are no source-code fallbacks. The server fails fast at boot in production if either is missing.
+- Password comparison uses `crypto.timingSafeEqual` to avoid timing leaks.
+- Sessions are persisted in Postgres via `connect-pg-simple` (`session` table, expired rows pruned every 15 min) so they survive Replit container restarts.
+- `/api/auth/login` is rate-limited (10 attempts per IP per 15 min) via `express-rate-limit`; successful logins do not consume budget.
+- All admin endpoints (mutations on menus/drinks/ingredients/orders/settings, all `/api/import/*`, all `/api/export/*`, all `/api/templates/*`, `/api/barcode/lookup`, admin reads like `/api/drinks/all` and `/api/orders/queue`) enforce auth via a `requireAuth` middleware.
+- Public endpoints (no auth required): `GET /api/menus`, `GET /api/menus/:slug`, `GET /api/drinks?menuId=...`, `GET /api/drinks/:id`, `POST /api/orders`, `GET /api/orders/:id`, `GET /api/orders/by-ids?ids=...`, `GET /api/settings` (branding only), and `/api/auth/*`.
+- Session cookies are `httpOnly`, `secure` in production, and `sameSite: "lax"` (dashboard and API are same-origin).
+- Client `HttpError` carries the response status; a 401 from any query or mutation redirects to `/dashboard-login` instead of leaving the UI in an error state.
 
 ### System Design Choices
 - **UI/UX**: Emphasis on premium design, dynamic theming for menus (custom hero images, colors, typography), and clear visual feedback.
@@ -99,3 +107,11 @@ Preferred communication style: Simple, everyday language.
 - **Build Tools**: Vite, esbuild, TypeScript, PostCSS with Autoprefixer.
 - **Session Management**: connect-pg-simple (for Express sessions).
 - **Third-Party Services**: Google Fonts (Playfair Display, Inter, Roboto, Open Sans, Lora).
+
+## Operational Notes
+
+- **Bundle layout**: All `/dashboard/*` pages are lazy-loaded via `React.lazy`. Guest pages (`/`, `/menu/:slug`, `/dashboard-login`) are eager. Inventory (barcode scanner) and Analytics (recharts) ship as their own chunks (~116KB and ~104KB gzipped respectively) and don't reach guests.
+- **Polling**: The queue refetches every 5s; analytics every 10s. `OrderStatusBanner` makes a single `/api/orders/by-ids` batch request per cycle regardless of how many orders the guest is tracking.
+- **CSV imports**: Capped at 2MB payload and 5000 rows (enforced both at `express.json` and via `csvImportSchema`).
+- **Request logging**: Method/path/status/duration only — response bodies are not captured (they leaked session info and order details in earlier versions).
+- **Database**: At current scale (single-digit menus, ~50 drinks, ~20 orders) the Postgres planner correctly prefers sequential scans for every query. Secondary indexes on `orders`, `drinks.menu_id`, etc. should be added when `orders` crosses ~5–10k rows; until then they'd add write overhead without read benefit.

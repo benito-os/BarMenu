@@ -1,16 +1,23 @@
 import { useState, useMemo } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAnalytics } from "@/hooks/useAnalytics";
+import { useMenus } from "@/hooks/useMenus";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { AlertCircle } from "lucide-react";
 
+const ALL_MENUS = "__all__";
+
 export default function AnalyticsPage() {
-  const { analytics, analyticsLoading } = useAnalytics(true);
+  const { menus, menusLoading } = useMenus(true);
+  const [selectedMenuId, setSelectedMenuId] = useState<string>(ALL_MENUS);
+  const menuIdParam = selectedMenuId === ALL_MENUS ? undefined : selectedMenuId;
+  const { analytics, analyticsLoading } = useAnalytics(menuIdParam, true);
   const [filterMode, setFilterMode] = useState<"all" | "never-made" | "least-ordered">("all");
 
   const filteredAnalytics = useMemo(() => {
@@ -41,7 +48,25 @@ export default function AnalyticsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <Select
+                value={selectedMenuId}
+                onValueChange={setSelectedMenuId}
+                disabled={menusLoading}
+              >
+                <SelectTrigger className="w-[220px]" data-testid="select-analytics-menu">
+                  <SelectValue placeholder="All menus" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL_MENUS}>All menus</SelectItem>
+                  {menus.map((menu) => (
+                    <SelectItem key={menu.id} value={menu.id}>
+                      {menu.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
               <Button
                 variant={filterMode === "all" ? "default" : "outline"}
                 onClick={() => setFilterMode("all")}

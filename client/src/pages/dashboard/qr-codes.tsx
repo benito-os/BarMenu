@@ -18,7 +18,7 @@ export default function QRCodesPage() {
   const { settings } = useSettings();
   const { toast } = useToast();
 
-  const [selectedMenuId, setSelectedMenuId] = useState<string>("HOME");
+  const [selectedMenuId, setSelectedMenuId] = useState<string>("");
   const [qrSize, setQrSize] = useState<number>(256);
   const [qrFgColor, setQrFgColor] = useState<string>("#1a1a1a");
   const [qrBgColor, setQrBgColor] = useState<string>("#ffffff");
@@ -26,8 +26,9 @@ export default function QRCodesPage() {
 
   const baseUrl = window.location.origin;
 
+  // Seed with the active menu once menus load (without overriding a user choice).
   useEffect(() => {
-    if (selectedMenuId === "HOME" && defaultMenu) {
+    if (!selectedMenuId && defaultMenu) {
       setSelectedMenuId(defaultMenu.id);
     }
   }, [defaultMenu, selectedMenuId]);
