@@ -92,6 +92,27 @@ export function useMenus(enabled = true) {
     },
   });
 
+  const duplicateMenuMutation = useMutation({
+    mutationFn: async (menuId: string): Promise<Menu> => {
+      const response = await apiRequest("POST", `/api/menus/${menuId}/duplicate`);
+      return response.json();
+    },
+    onSuccess: (copy) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/menus"] });
+      toast({
+        title: "Menu Duplicated",
+        description: `Created "${copy.name}" — edit it under Menus`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to duplicate menu",
+        variant: "destructive",
+      });
+    },
+  });
+
   return {
     menus: menus || [],
     menusLoading,
@@ -103,5 +124,7 @@ export function useMenus(enabled = true) {
     updateMenuPending: updateMenuMutation.isPending,
     deleteMenu: deleteMenuMutation.mutate,
     deleteMenuPending: deleteMenuMutation.isPending,
+    duplicateMenu: duplicateMenuMutation.mutate,
+    duplicateMenuPending: duplicateMenuMutation.isPending,
   };
 }

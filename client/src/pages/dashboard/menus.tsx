@@ -34,7 +34,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Trash2, Pencil, QrCode, Plus, X } from "lucide-react";
+import { GripVertical, Trash2, Pencil, QrCode, Plus, X, Copy } from "lucide-react";
 import { ImageUploader } from "@/components/ImageUploader";
 import { ColorPicker } from "@/components/ColorPicker";
 
@@ -54,6 +54,8 @@ export default function MenusPage() {
     updateMenu,
     updateMenuPending,
     deleteMenu,
+    duplicateMenu,
+    duplicateMenuPending,
   } = useMenus(true);
 
   // Create menu form
@@ -512,6 +514,16 @@ export default function MenusPage() {
                       >
                         <Pencil className="w-4 h-4 mr-2" />
                         Edit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => duplicateMenu(menu.id)}
+                        disabled={duplicateMenuPending}
+                        data-testid={`button-duplicate-menu-${menu.id}`}
+                      >
+                        <Copy className="w-4 h-4 mr-2" />
+                        Duplicate
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>

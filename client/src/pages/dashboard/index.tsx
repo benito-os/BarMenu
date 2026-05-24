@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useOrders } from "@/hooks/useOrders";
@@ -13,27 +13,176 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Clock, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, MessageSquare, Leaf, Trash2, Play, Ban, RotateCcw } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Clock, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, MessageSquare, Leaf, Trash2, Play, Ban, RotateCcw, Pencil, Check, X, Volume2, VolumeX, Keyboard } from "lucide-react";
 import type { OrderWithDrink } from "@shared/validation";
+
+const ALERT_PREF_KEY = "barflores_queue_alerts";
+const ORIGINAL_TITLE = "Bar Flores";
 
 export default function QueuePage() {
   const { toast } = useToast();
-  const { 
-    queue, 
-    queueLoading, 
-    markInProgress, 
-    markServed, 
-    inProgressPending, 
+  const {
+    queue,
+    queueLoading,
+    markInProgress,
+    markServed,
+    inProgressPending,
     servedPending,
     batchUpdate,
     batchUpdatePending,
     clearServed,
-    clearServedPending
+    clearServedPending,
+    editDetails,
+    editDetailsPending,
   } = useOrders(true);
   const { settings } = useSettings();
   const [selectedOrder, setSelectedOrder] = useState<OrderWithDrink | null>(null);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [editingDetails, setEditingDetails] = useState(false);
+  const [detailsDraft, setDetailsDraft] = useState<{
+    guestName: string;
+    comments: string;
+    asMocktail: boolean;
+  }>({ guestName: "", comments: "", asMocktail: false });
+  const [alertsEnabled, setAlertsEnabled] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return localStorage.getItem(ALERT_PREF_KEY) !== "off";
+  });
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const previousPendingCountRef = useRef<number | null>(null);
+
+  // Pending count = orders awaiting bartender action (excludes served).
+  const pendingCount = queue.filter(
+    (o) => o.status === "requested" || o.status === "in_progress",
+  ).length;
+
+  // Audio + tab-title notification when the pending queue grows.
+  useEffect(() => {
+    const prev = previousPendingCountRef.current;
+    previousPendingCountRef.current = pendingCount;
+
+    // Skip the very first render — we don't want to alert on initial load.
+    if (prev === null) return;
+
+    if (pendingCount > prev && alertsEnabled) {
+      try {
+        const AudioCtx =
+          (window as unknown as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext })
+            .AudioContext ||
+          (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        if (AudioCtx) {
+          const ctx = new AudioCtx();
+          // Pleasant two-note chime (E5 then G5).
+          [
+            { freq: 659.25, start: 0 },
+            { freq: 783.99, start: 0.15 },
+          ].forEach(({ freq, start }) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = "sine";
+            osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0.0001, ctx.currentTime + start);
+            gain.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + start + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + start + 0.25);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(ctx.currentTime + start);
+            osc.stop(ctx.currentTime + start + 0.3);
+          });
+        }
+      } catch {
+        // Audio is best-effort; don't surface errors.
+      }
+    }
+  }, [pendingCount, alertsEnabled]);
+
+  // Tab title badge so the bartender can leave the tab in the background.
+  useEffect(() => {
+    document.title = pendingCount > 0 ? `(${pendingCount}) ${ORIGINAL_TITLE}` : ORIGINAL_TITLE;
+    return () => {
+      document.title = ORIGINAL_TITLE;
+    };
+  }, [pendingCount]);
+
+  const toggleAlerts = () => {
+    setAlertsEnabled((prev) => {
+      const next = !prev;
+      localStorage.setItem(ALERT_PREF_KEY, next ? "on" : "off");
+      return next;
+    });
+  };
+
+  const startEditDetails = (order: OrderWithDrink) => {
+    setDetailsDraft({
+      guestName: order.guestName ?? "",
+      comments: order.comments ?? "",
+      asMocktail: order.asMocktail,
+    });
+    setEditingDetails(true);
+  };
+
+  const saveEditDetails = () => {
+    if (!selectedOrder) return;
+    editDetails({
+      orderId: selectedOrder.id,
+      data: {
+        guestName: detailsDraft.guestName.trim() === "" ? null : detailsDraft.guestName.trim(),
+        comments: detailsDraft.comments.trim() === "" ? null : detailsDraft.comments.trim(),
+        asMocktail: detailsDraft.asMocktail,
+      },
+    });
+    setEditingDetails(false);
+  };
+
+  // Reset edit state when the drawer closes or order changes.
+  useEffect(() => {
+    if (!selectedOrder) setEditingDetails(false);
+  }, [selectedOrder]);
+
+  // Keyboard shortcuts: s = start oldest requested, d = serve oldest in-progress,
+  // ? = show help. Skip when a text input has focus or the detail drawer is open
+  // so typing into Edit form / search inputs doesn't accidentally fire actions.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const inEditableField =
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable);
+      if (inEditableField) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      if (e.key === "?" || (e.shiftKey && e.key === "/")) {
+        e.preventDefault();
+        setShowShortcuts((prev) => !prev);
+        return;
+      }
+      if (e.key === "s" || e.key === "S") {
+        const oldest = queue
+          .filter((o) => o.status === "requested")
+          .sort((a, b) => new Date(a.requestedAt).getTime() - new Date(b.requestedAt).getTime())[0];
+        if (oldest) {
+          e.preventDefault();
+          markInProgress(oldest.id);
+        }
+      } else if (e.key === "d" || e.key === "D") {
+        const oldest = queue
+          .filter((o) => o.status === "in_progress")
+          .sort((a, b) => new Date(a.requestedAt).getTime() - new Date(b.requestedAt).getTime())[0];
+        if (oldest) {
+          e.preventDefault();
+          markServed(oldest.id);
+        }
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [queue, markInProgress, markServed]);
 
   // 86 toggle mutation for marking drinks out of stock
   const toggleStockMutation = useMutation({
@@ -383,13 +532,47 @@ export default function QueuePage() {
         <Card>
           <CardHeader>
             <div className="flex flex-col gap-4">
-              <div>
-                <CardTitle className="text-2xl">Live Order Queue</CardTitle>
-                <CardDescription>
-                  Live view of drink requests - auto-refreshes every 5 seconds
-                </CardDescription>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <CardTitle className="text-2xl">Live Order Queue</CardTitle>
+                  <CardDescription>
+                    Live view of drink requests — auto-refreshes every 5 seconds
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={toggleAlerts}
+                    title={alertsEnabled ? "Disable new-order chime" : "Enable new-order chime"}
+                    data-testid="button-toggle-alerts"
+                  >
+                    {alertsEnabled ? (
+                      <Volume2 className="w-4 h-4" />
+                    ) : (
+                      <VolumeX className="w-4 h-4 text-muted-foreground" />
+                    )}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setShowShortcuts((prev) => !prev)}
+                    title="Keyboard shortcuts (press ?)"
+                    data-testid="button-shortcuts-help"
+                  >
+                    <Keyboard className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
-              
+
+              {showShortcuts && (
+                <div className="rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground space-y-1">
+                  <div><kbd className="px-1.5 py-0.5 bg-background border rounded">S</kbd> Start oldest requested order</div>
+                  <div><kbd className="px-1.5 py-0.5 bg-background border rounded">D</kbd> Serve oldest in-progress order</div>
+                  <div><kbd className="px-1.5 py-0.5 bg-background border rounded">?</kbd> Toggle this help</div>
+                </div>
+              )}
+
               {/* Bulk Actions */}
               {queue.length > 0 && (
                 <div className="flex flex-wrap gap-2">
@@ -640,19 +823,110 @@ export default function QueuePage() {
                     )}
                   </div>
 
-                  {selectedOrder.guestName && (
-                    <div>
-                      <h3 className="font-semibold mb-2">Guest Name</h3>
-                      <p className="text-muted-foreground">{selectedOrder.guestName}</p>
-                    </div>
-                  )}
-
-                  {selectedOrder.comments && (
-                    <div>
-                      <h3 className="font-semibold mb-2">Special Requests</h3>
-                      <p className="text-muted-foreground bg-muted/50 p-3 rounded-md">{selectedOrder.comments}</p>
-                    </div>
-                  )}
+                  {/* Editable guest details block. Edit is gated on pre-served
+                      orders since "served"/"cancelled" are final states. */}
+                  {(() => {
+                    const isFinal = selectedOrder.status === "served" || selectedOrder.status === "cancelled";
+                    if (editingDetails) {
+                      return (
+                        <div className="space-y-3 rounded-md border p-3">
+                          <div className="space-y-2">
+                            <Label htmlFor="edit-guest-name">Guest name</Label>
+                            <Input
+                              id="edit-guest-name"
+                              value={detailsDraft.guestName}
+                              onChange={(e) =>
+                                setDetailsDraft((prev) => ({ ...prev, guestName: e.target.value }))
+                              }
+                              placeholder="Optional"
+                              data-testid="input-edit-guest-name"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="edit-comments">Special requests</Label>
+                            <Textarea
+                              id="edit-comments"
+                              value={detailsDraft.comments}
+                              onChange={(e) =>
+                                setDetailsDraft((prev) => ({ ...prev, comments: e.target.value }))
+                              }
+                              placeholder="Notes for the bartender"
+                              rows={2}
+                              data-testid="input-edit-comments"
+                            />
+                          </div>
+                          {selectedOrder.drinkCanBeMocktail && (
+                            <div className="flex items-center gap-2">
+                              <Checkbox
+                                id="edit-mocktail"
+                                checked={detailsDraft.asMocktail}
+                                onCheckedChange={(checked) =>
+                                  setDetailsDraft((prev) => ({
+                                    ...prev,
+                                    asMocktail: checked === true,
+                                  }))
+                                }
+                                data-testid="checkbox-edit-mocktail"
+                              />
+                              <Label htmlFor="edit-mocktail" className="cursor-pointer">
+                                As mocktail
+                              </Label>
+                            </div>
+                          )}
+                          <div className="flex gap-2 justify-end">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setEditingDetails(false)}
+                              data-testid="button-cancel-edit-details"
+                            >
+                              <X className="w-4 h-4 mr-1" />
+                              Cancel
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={saveEditDetails}
+                              disabled={editDetailsPending}
+                              data-testid="button-save-edit-details"
+                            >
+                              <Check className="w-4 h-4 mr-1" />
+                              {editDetailsPending ? "Saving..." : "Save"}
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-semibold">Guest details</h3>
+                          {!isFinal && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => startEditDetails(selectedOrder)}
+                              data-testid="button-edit-details"
+                            >
+                              <Pencil className="w-3.5 h-3.5 mr-1" />
+                              Edit
+                            </Button>
+                          )}
+                        </div>
+                        <div className="text-sm space-y-2">
+                          <div>
+                            <span className="text-muted-foreground">Name: </span>
+                            <span>{selectedOrder.guestName || "—"}</span>
+                          </div>
+                          {selectedOrder.comments && (
+                            <div className="bg-muted/50 p-3 rounded-md">
+                              <span className="text-muted-foreground">Special requests: </span>
+                              {selectedOrder.comments}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {selectedOrder.drinkRecipe && (
                     <div>
