@@ -76,17 +76,15 @@ export function SplashScreen({
               transition={{ duration: 0.5, delay: 0.4 }}
               className="text-center space-y-3"
             >
-              <h1 
-                className="text-3xl md:text-4xl font-serif font-bold"
-                style={{ color: "#C9A962" }}
+              <h1
+                className="font-headline text-3xl md:text-4xl font-bold text-primary"
                 data-testid="splash-title"
               >
                 Bar Flores
               </h1>
               {welcomeMessage && (
-                <p 
-                  className="text-lg max-w-sm px-4"
-                  style={{ color: "#C9A962", opacity: 0.8 }}
+                <p
+                  className="font-body text-lg max-w-sm px-4 text-primary/80"
                   data-testid="splash-message"
                 >
                   {welcomeMessage}
@@ -103,8 +101,7 @@ export function SplashScreen({
               {[0, 1, 2].map((i) => (
                 <motion.span
                   key={i}
-                  className="w-2 h-2 rounded-full"
-                  style={{ backgroundColor: "#C9A962" }}
+                  className="w-2 h-2 rounded-full bg-primary"
                   animate={{
                     scale: [1, 1.2, 1],
                     opacity: [0.5, 1, 0.5],
