@@ -124,6 +124,11 @@ export const settingsUpdateSchema = z
     bodyFont: z.string().min(1),
     qrDotStyle: z.string().min(1),
     qrEyeStyle: z.string().min(1),
+    // 0 disables the per-IP guest order rate limit entirely; otherwise
+    // caps at this many orders per IP per rolling hour. Capped at 1000
+    // so a typo can't accidentally disable rate limiting via a huge
+    // value (anything that large is effectively unlimited anyway).
+    orderRateLimitPerHour: z.number().int().min(0).max(1000),
   })
   .partial()
   .strict()

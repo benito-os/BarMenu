@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Clock, Save, Palette, Upload, Trash2, Type, QrCode } from "lucide-react";
+import { Clock, Save, Palette, Upload, Trash2, Type, QrCode, ShieldCheck } from "lucide-react";
 import { FONT_PRESETS, QR_STYLES } from "@shared/schema";
 
 export default function SettingsPage() {
@@ -34,7 +34,10 @@ export default function SettingsPage() {
   const [bodyFont, setBodyFont] = useState("inter");
   const [qrDotStyle, setQrDotStyle] = useState("dots");
   const [qrEyeStyle, setQrEyeStyle] = useState("rounded");
-  
+
+  // Anti-spam state
+  const [orderRateLimitPerHour, setOrderRateLimitPerHour] = useState(10);
+
   useEffect(() => {
     if (settings) {
       setWarningMinutes(settings.waitingWarningMinutes);
@@ -45,6 +48,7 @@ export default function SettingsPage() {
       setBodyFont(settings.bodyFont || "inter");
       setQrDotStyle(settings.qrDotStyle || "dots");
       setQrEyeStyle(settings.qrEyeStyle || "rounded");
+      setOrderRateLimitPerHour(settings.orderRateLimitPerHour ?? 10);
     }
   }, [settings]);
 
@@ -91,12 +95,20 @@ export default function SettingsPage() {
     });
   };
 
-  const hasBrandingChanges = 
+  const hasBrandingChanges =
     welcomeMessage !== (settings?.welcomeMessage || "") ||
     headlineFont !== (settings?.headlineFont || "playfair") ||
     bodyFont !== (settings?.bodyFont || "inter") ||
     qrDotStyle !== (settings?.qrDotStyle || "dots") ||
     qrEyeStyle !== (settings?.qrEyeStyle || "rounded");
+
+  // Anti-spam handlers
+  const handleSaveAntiSpam = () => {
+    updateSettings({ orderRateLimitPerHour });
+  };
+  const hasAntiSpamChanges =
+    orderRateLimitPerHour !== (settings?.orderRateLimitPerHour ?? 10);
+  const antiSpamValid = orderRateLimitPerHour >= 0 && orderRateLimitPerHour <= 1000;
 
   return (
     <DashboardLayout>
@@ -372,6 +384,70 @@ export default function SettingsPage() {
                   >
                     <Save className="w-4 h-4 mr-2" />
                     {updateSettingsPending ? "Saving..." : "Save Branding"}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Anti-spam */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5" />
+                Anti-spam
+              </CardTitle>
+              <CardDescription>
+                Throttle guest order placement by client IP. Useful on a public
+                site to prevent flooding from random visitors.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <div className="space-y-2 max-w-md">
+                  <Label htmlFor="orderRateLimit">
+                    Max orders per IP per hour
+                  </Label>
+                  <Input
+                    id="orderRateLimit"
+                    type="number"
+                    min={0}
+                    max={1000}
+                    value={orderRateLimitPerHour}
+                    onChange={(e) =>
+                      setOrderRateLimitPerHour(parseInt(e.target.value) || 0)
+                    }
+                    disabled={settingsLoading}
+                    data-testid="input-order-rate-limit"
+                    className="w-32"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Default <strong>10</strong>. Set to <strong>0</strong> to
+                    disable the limit entirely (e.g., on a private network where
+                    spam isn't a concern). Capped at 1000 — anything larger is
+                    effectively unlimited.
+                  </p>
+                </div>
+
+                {!antiSpamValid && (
+                  <p className="text-sm text-destructive">
+                    Rate limit must be between 0 and 1000.
+                  </p>
+                )}
+
+                <div className="flex justify-end">
+                  <Button
+                    onClick={handleSaveAntiSpam}
+                    disabled={
+                      !hasAntiSpamChanges ||
+                      !antiSpamValid ||
+                      updateSettingsPending ||
+                      settingsLoading
+                    }
+                    data-testid="button-save-anti-spam"
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    {updateSettingsPending ? "Saving..." : "Save Anti-spam"}
                   </Button>
                 </div>
               </div>

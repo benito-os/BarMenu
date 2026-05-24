@@ -493,9 +493,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     menuId: z.string().optional(),
   });
 
+  // In-memory order placement log keyed by client IP. Stores timestamps of
+  // recent successful orders so the rate-limit middleware can count
+  // requests in the rolling window. Cleaned up opportunistically on each
+  // hit and via a periodic sweep below.
+  const orderHitsByIp = new Map<string, number[]>();
+  const RATE_WINDOW_MS = 60 * 60 * 1000;
+
+  // Periodically prune IPs that haven't ordered in over an hour. Prevents
+  // unbounded growth from drive-by traffic. Interval is unref'd so it
+  // doesn't block process exit.
+  setInterval(() => {
+    const cutoff = Date.now() - RATE_WINDOW_MS;
+    Array.from(orderHitsByIp.entries()).forEach(([ip, hits]) => {
+      const fresh = hits.filter((t: number) => t > cutoff);
+      if (fresh.length === 0) orderHitsByIp.delete(ip);
+      else orderHitsByIp.set(ip, fresh);
+    });
+  }, 5 * 60 * 1000).unref?.();
+
+  // Tiny TTL cache around storage.getSettings so the rate limit can read
+  // its threshold per request without hammering Postgres.
+  let cachedSettings: { value: Awaited<ReturnType<typeof storage.getSettings>>; fetchedAt: number } | null = null;
+  const SETTINGS_TTL_MS = 30 * 1000;
+  const getCachedSettings = async () => {
+    if (cachedSettings && Date.now() - cachedSettings.fetchedAt < SETTINGS_TTL_MS) {
+      return cachedSettings.value;
+    }
+    const value = await storage.getSettings();
+    cachedSettings = { value, fetchedAt: Date.now() };
+    return value;
+  };
+
   // POST /api/orders - Create new order (guest requests drink)
   app.post("/api/orders", async (req, res) => {
     try {
+      // Per-IP rate limit. orderRateLimitPerHour = 0 disables.
+      const currentSettings = await getCachedSettings();
+      const limit = currentSettings.orderRateLimitPerHour;
+      if (limit > 0) {
+        const ip = req.ip ?? req.socket.remoteAddress ?? "unknown";
+        const now = Date.now();
+        const cutoff = now - RATE_WINDOW_MS;
+        const hits = (orderHitsByIp.get(ip) ?? []).filter((t) => t > cutoff);
+        if (hits.length >= limit) {
+          return res.status(429).json({
+            error: `Too many orders from this device in the last hour. Try again later.`,
+            retryAfterSeconds: Math.ceil((hits[0] + RATE_WINDOW_MS - now) / 1000),
+          });
+        }
+        // Record this attempt — even if validation fails below, the request
+        // counts. Otherwise an attacker could send invalid bodies forever.
+        hits.push(now);
+        orderHitsByIp.set(ip, hits);
+      }
+
       const validatedData = validate(
         publicOrderCreateSchema,
         req.body,
@@ -728,6 +780,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!payload) return;
 
       const settings = await storage.updateSettings(payload);
+      // Bust the TTL cache so the new rate limit (and any other tunable)
+      // takes effect on the very next request instead of after ~30s.
+      cachedSettings = null;
       res.json(settings);
     } catch (error) {
       console.error("Error updating settings:", error);

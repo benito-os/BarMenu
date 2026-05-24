@@ -42,6 +42,7 @@ export function useSettings() {
     bodyFont: "inter",
     qrDotStyle: "dots",
     qrEyeStyle: "rounded",
+    orderRateLimitPerHour: 10,
     updatedAt: new Date(),
   };
 
