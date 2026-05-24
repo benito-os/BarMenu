@@ -117,6 +117,11 @@ export const settings = pgTable("settings", {
   bodyFont: text("body_font").default("inter"),
   qrDotStyle: text("qr_dot_style").default("dots"),
   qrEyeStyle: text("qr_eye_style").default("rounded"),
+  // Anti-spam: max guest orders per IP per hour for POST /api/orders.
+  // 0 disables the limit entirely. Default 10 covers a real bar party
+  // (one person, ten drinks an hour is already excessive) without
+  // throttling legitimate use.
+  orderRateLimitPerHour: integer("order_rate_limit_per_hour").notNull().default(10),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 

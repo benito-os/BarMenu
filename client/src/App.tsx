@@ -11,6 +11,7 @@ import { useApplyBrandSettings } from "@/hooks/useApplyBrandSettings";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import MenuDetail from "@/pages/menu-detail";
+import About from "@/pages/about";
 import DashboardLogin from "@/pages/dashboard-login";
 
 // Lazy-load the dashboard pages so guests never download admin code.
@@ -30,6 +31,7 @@ function Router() {
       <Switch>
         <Route path="/" component={Landing} />
         <Route path="/menu/:slug" component={MenuDetail} />
+        <Route path="/about" component={About} />
         <Route path="/dashboard-login" component={DashboardLogin} />
         <Route path="/dashboard/analytics" component={AnalyticsPage} />
         <Route path="/dashboard/menus" component={MenusPage} />

@@ -169,6 +169,22 @@ export default function Landing() {
           </div>
         )}
       </div>
+
+      {/* Public footer with a discoverable About link. Curious guests and
+          forkers landing on the site can find the project's source from
+          here without having to know the /about URL. */}
+      <footer className="border-t mt-8">
+        <div className="max-w-7xl mx-auto px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground font-body">
+          <span>© {new Date().getFullYear()} Bar Flores</span>
+          <Link
+            href="/about"
+            className="hover:text-foreground transition-colors"
+            data-testid="link-about"
+          >
+            About this project
+          </Link>
+        </div>
+      </footer>
     </div>
   );
 }
