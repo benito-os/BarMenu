@@ -779,8 +779,16 @@ export default function DrinksPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Manage Drinks Section */}
-        <Card>
+        {/* Manage Drinks Section. The card carries a top stripe in the
+            currently-selected menu's accent color so the admin can see the
+            brand context of what they're editing — same visual cue guests
+            see on the corresponding menu page. */}
+        <Card
+          className="overflow-hidden border-t-4"
+          style={{
+            borderTopColor: selectedMenu?.accentColor || "transparent",
+          }}
+        >
           <CardHeader>
             <CardTitle className="text-xl">Manage Drinks</CardTitle>
             <CardDescription>

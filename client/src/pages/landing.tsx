@@ -104,19 +104,35 @@ export default function Landing() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {menus?.map((menu) => (
               <Link key={menu.id} href={`/menu/${menu.slug}`}>
-                <Card 
-                  className="hover-elevate active-elevate-2 cursor-pointer transition-all h-full"
+                {/* 4px left stripe in the menu's accent color so each card
+                    carries the same identity its detail page has. Falls back
+                    to transparent when the admin hasn't set an accent. */}
+                <Card
+                  className="hover-elevate active-elevate-2 cursor-pointer transition-all h-full border-l-4"
+                  style={{ borderLeftColor: menu.accentColor || "transparent" }}
                   data-testid={`card-menu-${menu.slug}`}
                 >
                   <CardHeader className="space-y-3">
                     <div className="flex items-start justify-between gap-2">
-                      <CardTitle className="font-headline text-2xl text-foreground">
+                      <CardTitle
+                        className="font-headline text-2xl"
+                        style={{ color: menu.menuTitleColor || undefined }}
+                      >
                         {menu.name}
                       </CardTitle>
                       {menu.isActive && (
-                        <Badge 
-                          variant="default" 
+                        // When the menu has an accent color, tint the badge
+                        // with it (assumes accent has enough contrast against
+                        // white text — the admin's choice). Otherwise use the
+                        // default primary-coloured badge.
+                        <Badge
+                          variant={menu.accentColor ? undefined : "default"}
                           className="shrink-0"
+                          style={
+                            menu.accentColor
+                              ? { backgroundColor: menu.accentColor, color: "#fff" }
+                              : undefined
+                          }
                           data-testid="badge-active-tonight"
                         >
                           Active Tonight
