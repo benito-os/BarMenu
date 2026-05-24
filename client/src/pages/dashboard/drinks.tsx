@@ -37,7 +37,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Trash2, Pencil, CheckCircle2, AlertCircle, Ban, Undo2, Copy } from "lucide-react";
+import { GripVertical, Trash2, Pencil, CheckCircle2, AlertCircle, Ban, Undo2, Copy, Plus } from "lucide-react";
 
 // Small wrapper for the boolean switch rows so we don't repeat the same
 // FormField + Switch + Label boilerplate six times per form.
@@ -81,6 +81,7 @@ export default function DrinksPage() {
   const [localDrinks, setLocalDrinks] = useState<DrinkAvailability[]>([]);
   const [sectionFilter, setSectionFilter] = useState<string>("all");
   const [editingDrink, setEditingDrink] = useState<DrinkAvailability | null>(null);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   // Create form values. These match InsertDrink so the resolver / submit
   // payload line up exactly with the schema in shared/validation.
@@ -338,93 +339,87 @@ export default function DrinksPage() {
         onClick={() => toggleDrinkSelection(drink.id)}
         data-testid={`drink-item-${drink.id}`}
       >
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex-1 min-w-0">
-              <CardTitle className="font-serif text-lg line-clamp-1">{drink.name}</CardTitle>
-              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                {drink.section && (
-                  <Badge variant="secondary" className="text-xs">{drink.section}</Badge>
-                )}
-                {!drink.isActive && (
-                  <Badge variant="outline" className="text-xs">Inactive</Badge>
-                )}
-                {drink.isOutOfStock && (
-                  <Badge variant="destructive" className="text-xs">Out of stock</Badge>
-                )}
-                {drink.missingIngredients.length > 0 && (
-                  <Badge variant="secondary" className="text-xs">Missing ingredients</Badge>
-                )}
-              </div>
-            </div>
-            <Checkbox
-              checked={selectedDrinks.has(drink.id)}
-              onCheckedChange={() => {
-                toggleDrinkSelection(drink.id);
-              }}
-              onClick={(e) => e.stopPropagation()}
-              data-testid={`checkbox-drink-${drink.id}`}
-            />
+        {/* Single compact row. Description / style / spirit / temp badges
+            removed from this view — they're still in the queue Sheet and
+            the edit dialog. Only state badges that need bartender attention
+            (out-of-stock / missing / inactive) remain. */}
+        <div className="flex items-center gap-2 p-2.5">
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing p-1 shrink-0"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <GripVertical className="w-4 h-4 text-muted-foreground" />
           </div>
-        </CardHeader>
-        <CardContent className="pb-3">
-          {drink.description && (
-            <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-              {drink.description}
-            </p>
-          )}
-          <div className="flex flex-wrap gap-2">
-            {drink.style && (
-              <Badge variant="outline" className="text-xs">{drink.style}</Badge>
+          <Checkbox
+            checked={selectedDrinks.has(drink.id)}
+            onCheckedChange={() => toggleDrinkSelection(drink.id)}
+            onClick={(e) => e.stopPropagation()}
+            data-testid={`checkbox-drink-${drink.id}`}
+            className="shrink-0"
+          />
+          <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
+            <span className="font-serif text-sm md:text-base truncate">{drink.name}</span>
+            {drink.section && (
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{drink.section}</Badge>
             )}
-            {drink.baseSpirit && (
-              <Badge variant="outline" className="text-xs">{drink.baseSpirit}</Badge>
+            {!drink.isActive && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0">Inactive</Badge>
             )}
-            {drink.temperature && (
-              <Badge variant="outline" className="text-xs">{drink.temperature}</Badge>
+            {drink.isOutOfStock && (
+              <Badge variant="destructive" className="text-[10px] px-1.5 py-0">86</Badge>
             )}
-            {drink.isMocktail && (
-              <Badge variant="outline" className="text-xs">Non-Alcoholic</Badge>
-            )}
-            {drink.canBeMocktail && (
-              <Badge variant="outline" className="text-xs">Mocktail Available</Badge>
-            )}
-            {drink.isStirred && (
-              <Badge variant="outline" className="text-xs">Stirred</Badge>
-            )}
-            {drink.isShaken && (
-              <Badge variant="outline" className="text-xs">Shaken</Badge>
+            {drink.missingIngredients.length > 0 && (
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Missing</Badge>
             )}
           </div>
-          <div className="flex gap-2 mt-3 pt-3 border-t">
+          <div className="flex items-center gap-1 shrink-0">
             <Button
-              variant="outline"
-              size="sm"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
               onClick={(e) => {
                 e.stopPropagation();
                 setEditingDrink(drink);
               }}
               data-testid={`button-edit-drink-${drink.id}`}
+              title="Edit"
             >
-              <Pencil className="w-3 h-3 mr-1" />
-              Edit
+              <Pencil className="w-4 h-4" />
             </Button>
             <Button
-              variant="outline"
-              size="sm"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
               onClick={(e) => {
                 e.stopPropagation();
                 duplicateDrink(drink.id);
               }}
               disabled={duplicateDrinkPending}
               data-testid={`button-duplicate-drink-${drink.id}`}
+              title="Duplicate"
             >
-              <Copy className="w-3 h-3 mr-1" />
-              Duplicate
+              <Copy className="w-4 h-4" />
             </Button>
             <Button
-              variant="outline"
-              size="sm"
+              variant={drink.isOutOfStock ? "secondary" : "ghost"}
+              size="icon"
+              className="h-8 w-8"
+              onClick={(e) => {
+                e.stopPropagation();
+                updateDrink({ ...drink, isOutOfStock: !drink.isOutOfStock });
+              }}
+              disabled={updateDrinkPending}
+              data-testid={`button-86-drink-${drink.id}`}
+              title={drink.isOutOfStock ? "Restock" : "86 this drink"}
+            >
+              {drink.isOutOfStock ? <Undo2 className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-destructive"
               onClick={(e) => {
                 e.stopPropagation();
                 if (confirm(`Delete "${drink.name}"? This cannot be undone.`)) {
@@ -433,43 +428,12 @@ export default function DrinksPage() {
               }}
               disabled={bulkDeletePending}
               data-testid={`button-delete-drink-${drink.id}`}
+              title="Delete"
             >
-              <Trash2 className="w-3 h-3 mr-1" />
-              Delete
+              <Trash2 className="w-4 h-4" />
             </Button>
-            <Button
-              variant={drink.isOutOfStock ? "default" : "outline"}
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                updateDrink({ ...drink, isOutOfStock: !drink.isOutOfStock });
-              }}
-              disabled={updateDrinkPending}
-              data-testid={`button-86-drink-${drink.id}`}
-            >
-              {drink.isOutOfStock ? (
-                <>
-                  <Undo2 className="w-3 h-3 mr-1" />
-                  Restock
-                </>
-              ) : (
-                <>
-                  <Ban className="w-3 h-3 mr-1" />
-                  86
-                </>
-              )}
-            </Button>
-            <div className="flex-1" />
-            <div
-              {...attributes}
-              {...listeners}
-              className="cursor-grab active:cursor-grabbing p-1"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <GripVertical className="w-4 h-4 text-muted-foreground" />
-            </div>
           </div>
-        </CardContent>
+        </div>
       </Card>
     );
   }
@@ -484,6 +448,7 @@ export default function DrinksPage() {
       menuId,
       sortOrder: getNextSortOrder(menuId),
     });
+    setCreateDialogOpen(false);
   });
 
   const handleUpdateDrink = editForm.handleSubmit((data) => {
@@ -497,15 +462,26 @@ export default function DrinksPage() {
   return (
     <DashboardLayout>
       <div className="p-4 md:p-6 max-w-full space-y-4">
-        {/* Create Drink Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xl">Create New Drink</CardTitle>
-            <CardDescription>
-              Add a new drink to one of your menus
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+        {/* Create Drink — button triggers the form inside a Dialog so the
+            list view isn't pushed below a 700px-tall form on every load. */}
+        <div className="flex justify-end">
+          <Button
+            onClick={() => setCreateDialogOpen(true)}
+            disabled={!menus || menus.length === 0}
+            data-testid="button-open-create-drink"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Drink
+          </Button>
+        </div>
+        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Create New Drink</DialogTitle>
+              <DialogDescription>
+                Add a new drink to one of your menus
+              </DialogDescription>
+            </DialogHeader>
             <Form {...createForm}>
               <form onSubmit={handleCreateDrink} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -800,8 +776,8 @@ export default function DrinksPage() {
                 ) : null}
               </form>
             </Form>
-          </CardContent>
-        </Card>
+          </DialogContent>
+        </Dialog>
 
         {/* Manage Drinks Section */}
         <Card>

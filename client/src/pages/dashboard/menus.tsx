@@ -41,6 +41,7 @@ import { ColorPicker } from "@/components/ColorPicker";
 export default function MenusPage() {
   const [editingMenu, setEditingMenu] = useState<Menu | null>(null);
   const [newSectionInput, setNewSectionInput] = useState<string>("");
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   // Get base URL for QR codes
   const baseUrl = window.location.origin;
@@ -131,6 +132,7 @@ export default function MenusPage() {
       ...data,
       sections: cleanedSections,
     });
+    setCreateDialogOpen(false);
 
     menuForm.reset();
   };
@@ -190,15 +192,26 @@ export default function MenusPage() {
   return (
     <DashboardLayout>
       <div className="p-4 md:p-6 max-w-full space-y-4">
-        {/* Create Menu Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xl">Create New Menu</CardTitle>
-            <CardDescription>
-              Add a new cocktail menu to your collection
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+        {/* Create Menu — button triggers the form inside a Dialog so the
+            existing menus aren't pushed below a large form on every load. */}
+        <div className="flex justify-end">
+          <Button
+            onClick={() => setCreateDialogOpen(true)}
+            disabled={menusLoading}
+            data-testid="button-open-create-menu"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Menu
+          </Button>
+        </div>
+        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+          <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Create New Menu</DialogTitle>
+              <DialogDescription>
+                Add a new cocktail menu to your collection
+              </DialogDescription>
+            </DialogHeader>
             {menusLoading ? (
               <div className="space-y-4">
                 <Skeleton className="h-10 w-full" />
@@ -464,8 +477,8 @@ export default function MenusPage() {
                 </form>
               </Form>
             )}
-          </CardContent>
-        </Card>
+          </DialogContent>
+        </Dialog>
 
         {/* Manage Menus Section */}
         <Card>
@@ -483,82 +496,66 @@ export default function MenusPage() {
                 ))}
               </div>
             ) : menus && menus.length > 0 ? (
-              <div className="space-y-4">
+              <div className="space-y-2">
                 {menus.map((menu) => (
                   <div
                     key={menu.id}
-                    className="flex items-center justify-between p-4 border rounded-md"
+                    className="flex items-center gap-2 px-3 py-2 border rounded-md"
                     data-testid={`menu-item-${menu.id}`}
                   >
-                    <div className="flex-1">
-                      <h3 className="font-serif text-lg font-semibold">{menu.name}</h3>
-                      <p className="text-sm text-muted-foreground">{menu.description}</p>
-                      <p className="text-xs text-muted-foreground mt-1">Slug: {menu.slug}</p>
+                    <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
+                      <span className="font-serif text-sm md:text-base truncate">{menu.name}</span>
+                      <span className="text-xs text-muted-foreground font-mono">/{menu.slug}</span>
                       {menu.sections && menu.sections.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          <span className="text-xs text-muted-foreground">Sections:</span>
-                          {menu.sections.map((section, idx) => (
-                            <Badge key={idx} variant="outline" className="text-xs">
-                              {section}
-                            </Badge>
-                          ))}
-                        </div>
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                          {menu.sections.length} section{menu.sections.length === 1 ? "" : "s"}
+                        </Badge>
+                      )}
+                      {!menu.isActive && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">Inactive</Badge>
                       )}
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Switch
+                        checked={menu.isActive}
+                        onCheckedChange={(checked) => {
+                          toggleMenu({ id: menu.id, isActive: checked });
+                        }}
+                        disabled={menusLoading}
+                        data-testid={`switch-menu-active-${menu.id}`}
+                        aria-label={menu.isActive ? "Active" : "Inactive"}
+                      />
                       <Button
-                        variant="outline"
-                        size="sm"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
                         onClick={() => setEditingMenu(menu)}
                         data-testid={`button-edit-menu-${menu.id}`}
+                        title="Edit"
                       >
-                        <Pencil className="w-4 h-4 mr-2" />
-                        Edit
+                        <Pencil className="w-4 h-4" />
                       </Button>
                       <Button
-                        variant="outline"
-                        size="sm"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
                         onClick={() => duplicateMenu(menu.id)}
                         disabled={duplicateMenuPending}
                         data-testid={`button-duplicate-menu-${menu.id}`}
+                        title="Duplicate"
                       >
-                        <Copy className="w-4 h-4 mr-2" />
-                        Duplicate
+                        <Copy className="w-4 h-4" />
                       </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            data-testid={`button-delete-menu-${menu.id}`}
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Delete
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Menu</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete "{menu.name}"? This action will also delete all associated drinks and cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => deleteMenu(menu.id)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
                       <Dialog>
                         <DialogTrigger asChild>
-                          <Button variant="outline" size="sm" data-testid={`button-qr-${menu.id}`}>
-                            <QrCode className="w-4 h-4 mr-2" />
-                            QR Code
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            data-testid={`button-qr-${menu.id}`}
+                            title="QR Code"
+                          >
+                            <QrCode className="w-4 h-4" />
                           </Button>
                         </DialogTrigger>
                         <DialogContent className="sm:max-w-md">
@@ -583,20 +580,36 @@ export default function MenusPage() {
                           </div>
                         </DialogContent>
                       </Dialog>
-                      <div className="flex items-center gap-2">
-                        <Label htmlFor={`menu-active-${menu.id}`} className="text-sm">
-                          {menu.isActive ? "Active" : "Inactive"}
-                        </Label>
-                        <Switch
-                          id={`menu-active-${menu.id}`}
-                          checked={menu.isActive}
-                          onCheckedChange={(checked) => {
-                            toggleMenu({ id: menu.id, isActive: checked });
-                          }}
-                          disabled={menusLoading}
-                          data-testid={`switch-menu-active-${menu.id}`}
-                        />
-                      </div>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive"
+                            data-testid={`button-delete-menu-${menu.id}`}
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Menu</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete "{menu.name}"? This action will also delete all associated drinks and cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteMenu(menu.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </div>
                 ))}
