@@ -19,8 +19,12 @@ declare module 'express-session' {
   }
 }
 
-// Body parsers must come before session middleware
+// Body parsers must come before session middleware.
+// 2MB limit is sized for CSV imports (the largest legitimate payload); the
+// csvImportSchema in shared/validation enforces the same ceiling at the
+// application layer with a clean error message.
 app.use(express.json({
+  limit: "2mb",
   verify: (req, _res, buf) => {
     req.rawBody = buf;
   }
@@ -65,34 +69,25 @@ app.use(session({
     secure: process.env.NODE_ENV === "production",
     httpOnly: true,
     maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    // "lax" is sufficient because the dashboard and the API are same-origin.
+    // "none" was wider than needed and only meaningful for cross-site requests
+    // we don't make.
+    sameSite: "lax",
   }
 }));
 
+// Request logger. Logs method/path/status/duration only — response bodies are
+// not captured because they leak sensitive data (session info, order details,
+// settings) into logs and can be retrieved from the response in a debugger if
+// needed.
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
-
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
 
   res.on("finish", () => {
-    const duration = Date.now() - start;
     if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
-      log(logLine);
+      const duration = Date.now() - start;
+      log(`${req.method} ${path} ${res.statusCode} in ${duration}ms`);
     }
   });
 

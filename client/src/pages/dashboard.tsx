@@ -248,7 +248,10 @@ export default function Dashboard() {
     remove: removeSection,
   } = useFieldArray({
     control: menuForm.control,
-    name: "sections",
+    // react-hook-form's useFieldArray is typed for arrays of objects; "sections"
+    // is a string[] so we cast to satisfy the FieldArrayPath constraint. Runtime
+    // behavior is unchanged.
+    name: "sections" as never,
   });
 
   // Create menu mutation
@@ -1467,7 +1470,7 @@ export default function Dashboard() {
                         </div>
                         <Button
                           type="button"
-                          onClick={() => appendSection("")}
+                          onClick={() => appendSection("" as never)}
                           variant="secondary"
                           size="sm"
                           disabled={createMenuMutation.isPending}

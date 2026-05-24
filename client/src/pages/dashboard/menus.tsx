@@ -80,7 +80,10 @@ export default function MenusPage() {
     remove: removeSection,
   } = useFieldArray<InsertMenu>({
     control: menuForm.control,
-    name: "sections",
+    // react-hook-form's useFieldArray is typed for arrays of objects; "sections"
+    // is a string[] so we cast to satisfy the FieldArrayPath constraint. Runtime
+    // behavior is unchanged.
+    name: "sections" as never,
   });
 
   // Sensors for section reordering
@@ -294,7 +297,7 @@ export default function MenusPage() {
                       </div>
                       <Button
                         type="button"
-                        onClick={() => appendSection("")}
+                        onClick={() => appendSection("" as never)}
                         variant="secondary"
                         size="sm"
                         disabled={createMenuPending}
