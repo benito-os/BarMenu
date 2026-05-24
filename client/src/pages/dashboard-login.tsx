@@ -19,16 +19,20 @@ export default function DashboardLogin() {
     mutationFn: async ({ username, password }: { username: string; password: string }) => {
       return apiRequest("POST", "/api/auth/login", { username, password });
     },
-    onSuccess: async () => {
+    onSuccess: () => {
       toast({
         title: "Login Successful",
         description: "Welcome to the dashboard",
       });
-      await queryClient.invalidateQueries({ queryKey: ["/api/auth/check"] });
-      // Small delay to ensure session is established
-      setTimeout(() => {
-        setLocation("/dashboard");
-      }, 100);
+      // Seed the auth cache with the truth we already know — the server just
+      // confirmed the session. Previously we called invalidateQueries here,
+      // but this page has no observer on /api/auth/check, so invalidation only
+      // marked the entry stale; the next page (DashboardLayout) would then
+      // read the stale "not authenticated" value, bounce back to login, and
+      // only sync after a second click. setQueryData fixes the race
+      // synchronously and lets us drop the 100ms setTimeout hack.
+      queryClient.setQueryData(["/api/auth/check"], { isAuthenticated: true });
+      setLocation("/dashboard");
     },
     onError: (error: any) => {
       toast({
