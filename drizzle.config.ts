@@ -11,4 +11,9 @@ export default defineConfig({
   dbCredentials: {
     url: process.env.DATABASE_URL,
   },
+  // The `session` table is created and managed by connect-pg-simple at
+  // runtime (see server/index.ts). It isn't in shared/schema.ts, so
+  // drizzle-kit would otherwise propose dropping it on every push and
+  // log every active dashboard user out. Exclude it from drizzle's view.
+  tablesFilter: ["!session"],
 });
