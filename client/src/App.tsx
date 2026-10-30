@@ -20,6 +20,7 @@ const QueuePage = lazy(() => import("@/pages/dashboard/index"));
 const AnalyticsPage = lazy(() => import("@/pages/dashboard/analytics"));
 const MenusPage = lazy(() => import("@/pages/dashboard/menus"));
 const DrinksPage = lazy(() => import("@/pages/dashboard/drinks"));
+const RecipesPage = lazy(() => import("@/pages/dashboard/recipes"));
 const InventoryPage = lazy(() => import("@/pages/dashboard/inventory"));
 const QRCodesPage = lazy(() => import("@/pages/dashboard/qr-codes"));
 const SettingsPage = lazy(() => import("@/pages/dashboard/settings"));
@@ -36,6 +37,7 @@ function Router() {
         <Route path="/dashboard/analytics" component={AnalyticsPage} />
         <Route path="/dashboard/menus" component={MenusPage} />
         <Route path="/dashboard/drinks" component={DrinksPage} />
+        <Route path="/dashboard/recipes" component={RecipesPage} />
         <Route path="/dashboard/inventory" component={InventoryPage} />
         <Route path="/dashboard/qr-codes" component={QRCodesPage} />
         <Route path="/dashboard/settings" component={SettingsPage} />
