@@ -48,9 +48,15 @@ and run your own bar.
 3. In **Tools → Secrets**, set:
    - `SESSION_SECRET` (long random string — `openssl rand -base64 48`)
    - `DASHBOARD_PASSWORD` (your admin password)
-4. Hit **Run**. The schema auto-migrates on first boot (Drizzle), the
-   `session` table is auto-created by `connect-pg-simple`.
-5. Visit `/dashboard-login` and sign in as `admin` with your password.
+4. Open the **Shell** and run `npm run db:push` once to create the tables.
+   (Only the `session` table is auto-created, by `connect-pg-simple`; the
+   app tables are not.) On later **Deploys**, Replit's publish flow diffs the
+   schema for you and asks before applying changes.
+5. Hit **Run**.
+6. Visit `/dashboard-login` and sign in as `admin` with your password.
+
+Step-by-step with screenshots-in-words, plus branding and QR printing:
+[`docs/run-your-own.md`](docs/run-your-own.md).
 
 ### Local dev
 
@@ -122,6 +128,9 @@ This started as a Replit Agent project, so a few things assume Replit:
 Issues and PRs welcome. The codebase has been through a multi-round audit
 (security, perf, UX) so the patterns are reasonably opinionated — try to
 match the existing style. `npm run check` should pass with zero errors.
+
+The most recent audit, with ranked open findings, is in
+[`docs/audit-2026-11.md`](docs/audit-2026-11.md).
 
 ## License
 

@@ -133,7 +133,9 @@ export function OrderStatusBanner() {
   };
 
   return (
-    <div className="mb-8" data-testid="order-status-banner">
+    // role="status" + aria-live so a screen reader hears "In Progress" when
+    // the bartender starts the drink, without stealing focus from the menu.
+    <div className="mb-8" role="status" aria-live="polite" data-testid="order-status-banner">
       <Card className="border-primary/20 bg-primary/5">
         <div className="p-4 md:p-6">
           <div className="flex items-center justify-between mb-4">

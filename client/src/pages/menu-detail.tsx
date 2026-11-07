@@ -11,13 +11,33 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, HttpError } from "@/lib/queryClient";
 import { addTrackedOrder } from "@/lib/orderCookies";
 import { OrderStatusBanner } from "@/components/OrderStatusBanner";
 import type { Menu, DrinkAvailability } from "@shared/validation";
-import { Home, Wine, Sparkles, Glasses, Check, Flame, Snowflake, ThermometerSun, Share2, QrCode } from "lucide-react";
+import { Home, Wine, Sparkles, Glasses, Check, Flame, Snowflake, ThermometerSun, Share2, QrCode, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { BrandedQRCode } from "@/components/BrandedQRCode";
+
+/**
+ * Pull the guest-readable message out of an API failure. The server answers
+ * 4xx with `{ error: "..." }` (rate limit, out of stock, inactive drink) and
+ * apiRequest surfaces the raw body as the error message. Anything we cannot
+ * parse falls back to the generic copy.
+ */
+function orderErrorMessage(error: unknown): string {
+  const fallback = "Couldn't place the order. Please try again.";
+  if (!(error instanceof Error) || !error.message) return fallback;
+  try {
+    const parsed = JSON.parse(error.message) as { error?: unknown };
+    if (typeof parsed.error === "string" && parsed.error.trim()) {
+      return parsed.error;
+    }
+  } catch {
+    // Not JSON; fall through.
+  }
+  return fallback;
+}
 
 export default function MenuDetail() {
   const [, params] = useRoute("/menu/:slug");
@@ -31,15 +51,33 @@ export default function MenuDetail() {
   const [asMocktail, setAsMocktail] = useState(false);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
 
-  const { data: menu, isLoading: menuLoading } = useQuery<Menu>({
+  const {
+    data: menu,
+    isLoading: menuLoading,
+    isError: menuError,
+    error: menuErrorObj,
+    refetch: refetchMenu,
+  } = useQuery<Menu>({
     queryKey: ["/api/menus", slug],
     enabled: !!slug,
   });
 
-  const { data: drinks, isLoading: drinksLoading } = useQuery<DrinkAvailability[]>({
+  const {
+    data: drinks,
+    isLoading: drinksLoading,
+    isError: drinksError,
+    refetch: refetchDrinks,
+  } = useQuery<DrinkAvailability[]>({
     queryKey: [`/api/drinks?menuId=${menu?.id}`],
     enabled: !!menu?.id,
   });
+
+  // A 404 is a real "menu not found"; anything else (network, 5xx) is a
+  // load failure the guest can retry. Keep the two apart so bar wifi
+  // dropping out never reads as "this menu does not exist".
+  const menuMissing =
+    menuError && menuErrorObj instanceof HttpError && menuErrorObj.status === 404;
+  const loadFailed = (menuError && !menuMissing) || drinksError;
 
   const orderMutation = useMutation({
     mutationFn: async ({ 
@@ -93,10 +131,10 @@ export default function MenuDetail() {
         });
       }, 0);
     },
-    onError: () => {
+    onError: (error) => {
       toast({
-        title: "Error",
-        description: "Failed to place order. Please try again.",
+        title: "Order not placed",
+        description: orderErrorMessage(error),
         variant: "destructive",
       });
     },
@@ -184,10 +222,11 @@ export default function MenuDetail() {
                 {menu.name}
               </h1>
             )}
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               size="sm"
               onClick={() => setQrDialogOpen(true)}
+              aria-label={menu ? `Share ${menu.name}` : "Share this menu"}
               data-testid="button-share-menu"
             >
               <Share2 className="w-4 h-4 mr-2" />
@@ -226,7 +265,26 @@ export default function MenuDetail() {
         {/* Order Status Banner - Shows active orders inline */}
         <OrderStatusBanner />
         
-        {isLoading ? (
+        {loadFailed ? (
+          <div className="text-center py-16 space-y-4" role="alert" data-testid="menu-load-error">
+            <p className="text-lg font-medium text-foreground">Couldn't load the menu</p>
+            <p className="text-muted-foreground">
+              Check your connection and try again.
+            </p>
+            <Button
+              variant="outline"
+              className="min-h-11"
+              onClick={() => {
+                if (menuError) refetchMenu();
+                if (drinksError) refetchDrinks();
+              }}
+              data-testid="button-retry-menu"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Try again
+            </Button>
+          </div>
+        ) : isLoading ? (
           <div className="space-y-8">
             <div className="text-center space-y-4">
               <Skeleton className="h-12 w-3/4 mx-auto" />
@@ -370,10 +428,19 @@ export default function MenuDetail() {
                           </CardHeader>
                           
                           <CardContent>
+                            {/* min-h-11 = 44px: the one action a guest takes
+                                on this page, so it gets a full thumb target. */}
                             <Button
-                              className="w-full"
+                              className="w-full min-h-11 text-base"
                               onClick={() => handleOrderClick(drink.id)}
                               disabled={orderMutation.isPending || isOrdered || isUnavailable}
+                              aria-label={
+                                isOrdered
+                                  ? `${drink.name} ordered`
+                                  : isUnavailable
+                                    ? `${drink.name} unavailable`
+                                    : `Request ${drink.name}`
+                              }
                               data-testid={`button-order-${drink.id}`}
                             >
                               {isOrdered ? (
@@ -439,6 +506,9 @@ export default function MenuDetail() {
                 placeholder="e.g., Alex"
                 value={guestName}
                 onChange={(e) => setGuestName(e.target.value)}
+                maxLength={80}
+                autoComplete="given-name"
+                enterKeyHint="next"
               />
             </div>
 
@@ -472,6 +542,7 @@ export default function MenuDetail() {
                 value={comments}
                 onChange={(e) => setComments(e.target.value)}
                 rows={3}
+                maxLength={500}
                 className="resize-none"
               />
             </div>
@@ -479,6 +550,7 @@ export default function MenuDetail() {
           <DialogFooter className="gap-2">
             <Button
               variant="outline"
+              className="min-h-11"
               onClick={() => {
                 setDialogOpen(false);
                 setGuestName("");
@@ -491,6 +563,7 @@ export default function MenuDetail() {
               Cancel
             </Button>
             <Button
+              className="min-h-11"
               onClick={handleOrderSubmit}
               disabled={orderMutation.isPending}
               data-testid="button-confirm-order"

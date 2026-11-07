@@ -166,8 +166,18 @@ async function importMenus(filePath: string) {
   }
 }
 
-// Get file path from command line argument or use default
-const filePath = process.argv[2] || "attached_assets/Pasted--menus-slug-nye-art-deco-name-New-Year-s-Eve-Art-Deco-Menu--1763779460111_1763779460112.txt";
+// The JSON file is the only argument. The old default pointed at a chat
+// dump under attached_assets/ that the public-launch cleanup removed, so a
+// bare invocation now prints usage instead of a confusing ENOENT.
+const filePath = process.argv[2];
+if (!filePath) {
+  console.error("Usage: npx tsx server/import-menus.ts <menus.json>");
+  console.error("");
+  console.error("Expects { \"menus\": [{ slug, name, ..., drinks: [...] }] }.");
+  console.error("Menus whose slug already exists are skipped. For a ready-made");
+  console.error("demo bar, run `npm run seed:demo` instead.");
+  process.exit(2);
+}
 
 importMenus(filePath)
   .then(() => {
