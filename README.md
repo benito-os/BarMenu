@@ -70,6 +70,21 @@ npm run db:push   # Drizzle: apply schema to your DB
 npm run dev       # Vite middleware mode on http://localhost:5000
 ```
 
+### Demo data
+
+A fresh database is empty, so the landing page shows "No menus available".
+To see the app populated, seed the invented demo bar (two menus, nine
+drinks, seven inventory items; no orders, no branding changes):
+
+```bash
+npm run seed:demo            # add; skips rows that already exist
+npm run seed:demo -- --reset # remove the demo rows and add them again
+```
+
+It only ever touches menus whose slug starts with `demo-` and ingredients
+named `Demo ...`, so it is safe to run next to real data. Delete the demo
+menus from `/dashboard/menus` when you are done with them.
+
 ### Production build
 
 ```bash
