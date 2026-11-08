@@ -68,14 +68,24 @@ export default function DashboardLogin() {
               </label>
               <Input
                 id="username"
+                name="username"
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter username"
+                placeholder="admin"
+                autoComplete="username"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 autoFocus
                 disabled={loginMutation.isPending}
+                aria-describedby="username-hint"
                 data-testid="input-username"
               />
+              <p id="username-hint" className="text-xs text-muted-foreground">
+                The username is <code className="bg-muted px-1 rounded">admin</code>. The
+                password is the <code className="bg-muted px-1 rounded">DASHBOARD_PASSWORD</code> secret.
+              </p>
             </div>
             <div className="space-y-2">
               <label htmlFor="password" className="text-sm font-medium">
@@ -83,10 +93,12 @@ export default function DashboardLogin() {
               </label>
               <Input
                 id="password"
+                name="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter password"
+                autoComplete="current-password"
                 disabled={loginMutation.isPending}
                 data-testid="input-password"
               />

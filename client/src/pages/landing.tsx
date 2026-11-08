@@ -8,10 +8,10 @@ import { SplashScreen, useSplashScreen } from "@/components/SplashScreen";
 import { useSettings } from "@/hooks/useSettings";
 import type { Menu } from "@shared/validation";
 import heroImage from "@assets/generated_images/Bar_hero_cocktails_overhead_0be3299c.png";
-import { Calendar, Sparkles } from "lucide-react";
+import { Calendar, Sparkles, RefreshCw } from "lucide-react";
 
 export default function Landing() {
-  const { data: menus, isLoading } = useQuery<Menu[]>({
+  const { data: menus, isLoading, isError, refetch } = useQuery<Menu[]>({
     queryKey: ["/api/menus"],
   });
   const { settings } = useSettings();
@@ -86,7 +86,21 @@ export default function Landing() {
           </p>
         </div>
 
-        {isLoading ? (
+        {isError ? (
+          <div className="text-center py-16 space-y-4" role="alert" data-testid="menus-load-error">
+            <p className="text-lg font-medium text-foreground">Couldn't load the menus</p>
+            <p className="text-muted-foreground">Check your connection and try again.</p>
+            <Button
+              variant="outline"
+              className="min-h-11"
+              onClick={() => refetch()}
+              data-testid="button-retry-menus"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Try again
+            </Button>
+          </div>
+        ) : isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[1, 2, 3, 4].map((i) => (
               <Card key={i}>
@@ -161,7 +175,7 @@ export default function Landing() {
           </div>
         )}
 
-        {!isLoading && menus?.length === 0 && (
+        {!isLoading && !isError && menus?.length === 0 && (
           <div className="text-center py-16">
             <p className="text-muted-foreground text-lg">
               No menus available at the moment. Check back soon!

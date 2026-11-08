@@ -130,6 +130,20 @@
   .font-body {
     font-family: var(--font-body);
   }
+
+  /* Honour the OS "reduce motion" setting for CSS-driven motion (tailwind
+     animate-*, transitions, the elevate hover fades). framer-motion in the
+     splash screen is JS-driven and not covered here. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }
 
 /**

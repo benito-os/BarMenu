@@ -361,13 +361,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PATCH /api/drinks/bulk - Bulk update drinks (activate/deactivate)
   app.patch("/api/drinks/bulk", requireAuth, async (req, res) => {
     try {
-      console.log("Bulk update request body:", req.body);
       const payload = validate(drinkBulkUpdateSchema, req.body, res, "Invalid bulk update payload");
       if (!payload) return;
 
-      console.log(`Updating ${payload.drinkIds.length} drinks, setting isActive to ${payload.isActive}`);
       await storage.bulkUpdateDrinks(payload.drinkIds, payload.isActive);
-      console.log("Bulk update successful");
       res.json({ success: true, updated: payload.drinkIds.length });
     } catch (error) {
       const mappedError = mapStorageError(error);
@@ -574,6 +571,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       res.status(201).json(order);
     } catch (error) {
+      // storage.createOrder re-checks the drink inside the transaction and
+      // throws a StorageError (400) when it was 86'd, deactivated, or lost an
+      // ingredient between the guest's page load and their tap. Surface that
+      // as a 4xx with its message instead of a generic 500 so the guest sees
+      // "Drink is out of stock" rather than "try again".
+      const mapped = mapStorageError(error);
+      if (mapped) return res.status(mapped.status).json(mapped.body);
       console.error("Error creating order:", error);
       res.status(500).json({ error: "Failed to create order" });
     }
@@ -1212,10 +1216,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Barcode is required" });
       }
 
+      // Both upstreams are best-effort. A 5s timeout each keeps a slow or
+      // unreachable API from holding the bartender's request open; the
+      // catch blocks below already fall through to the next source.
+      const LOOKUP_TIMEOUT_MS = 5000;
+
       // Try Open Food Facts API first (free, no API key needed)
       try {
         const response = await fetch(
-          `https://world.openfoodfacts.org/api/v0/product/${encodeURIComponent(barcode)}.json`
+          `https://world.openfoodfacts.org/api/v0/product/${encodeURIComponent(barcode)}.json`,
+          { signal: AbortSignal.timeout(LOOKUP_TIMEOUT_MS) },
         );
         const data = await response.json();
         
@@ -1236,7 +1246,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Try UPC Database API as fallback (limited free tier)
       try {
         const response = await fetch(
-          `https://api.upcitemdb.com/prod/trial/lookup?upc=${encodeURIComponent(barcode)}`
+          `https://api.upcitemdb.com/prod/trial/lookup?upc=${encodeURIComponent(barcode)}`,
+          { signal: AbortSignal.timeout(LOOKUP_TIMEOUT_MS) },
         );
         const data = await response.json();
         

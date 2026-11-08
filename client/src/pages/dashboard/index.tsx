@@ -391,8 +391,9 @@ export default function QueuePage() {
                   }}
                   className="shrink-0"
                 >
-                  <Checkbox 
+                  <Checkbox
                     checked={isSelected}
+                    aria-label={`Select ${order.drinkName}${order.guestName ? ` for ${order.guestName}` : ""}`}
                     data-testid={`mobile-checkbox-${order.id}`}
                   />
                 </div>
@@ -417,16 +418,16 @@ export default function QueuePage() {
               {/* Row 3: Badges */}
               <div className="flex items-center gap-1.5 mt-1.5 ml-6 flex-wrap">
                 {isOutOfStock && (
-                  <Badge variant="destructive" className="text-[10px] px-1.5 py-0" data-testid={`badge-86-${order.id}`}>
-                    <Ban className="w-2.5 h-2.5 mr-0.5" />
+                  <Badge variant="destructive" className="text-xs px-1.5 py-0" data-testid={`badge-86-${order.id}`}>
+                    <Ban className="w-3 h-3 mr-0.5" />
                     86'd
                   </Badge>
                 )}
                 {waitingBadge}
                 {getStatusBadge(order.status)}
                 {order.asMocktail && (
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                    <Leaf className="w-2.5 h-2.5 mr-0.5" />
+                  <Badge variant="outline" className="text-xs px-1.5 py-0">
+                    <Leaf className="w-3 h-3 mr-0.5" />
                     Mocktail
                   </Badge>
                 )}
@@ -459,21 +460,22 @@ export default function QueuePage() {
               
               <div className="flex flex-wrap gap-1 text-xs">
                 {order.drinkBaseSpirit && (
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">{order.drinkBaseSpirit}</Badge>
+                  <Badge variant="outline" className="text-xs px-1.5 py-0">{order.drinkBaseSpirit}</Badge>
                 )}
                 {order.drinkTemperature && order.drinkTemperature !== "Not Specified" && (
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">{order.drinkTemperature}</Badge>
+                  <Badge variant="outline" className="text-xs px-1.5 py-0">{order.drinkTemperature}</Badge>
                 )}
-                {order.drinkIsStirred && <Badge variant="outline" className="text-[10px] px-1.5 py-0">Stirred</Badge>}
-                {order.drinkIsShaken && <Badge variant="outline" className="text-[10px] px-1.5 py-0">Shaken</Badge>}
+                {order.drinkIsStirred && <Badge variant="outline" className="text-xs px-1.5 py-0">Stirred</Badge>}
+                {order.drinkIsShaken && <Badge variant="outline" className="text-xs px-1.5 py-0">Shaken</Badge>}
               </div>
-              
-              {/* Action buttons - stacked for very small screens */}
-              <div className="grid grid-cols-2 gap-1.5 pt-1">
+
+              {/* Action buttons - 2-column grid, 40px tall so a bartender with
+                  wet hands can hit them without looking. */}
+              <div className="grid grid-cols-2 gap-2 pt-1">
                 {order.status === "requested" && (
                   <Button
                     size="sm"
-                    className="h-8 text-xs"
+                    className="h-10 text-sm"
                     onClick={(e) => {
                       e.stopPropagation();
                       markInProgress(order.id);
@@ -488,7 +490,7 @@ export default function QueuePage() {
                 {order.status === "in_progress" && (
                   <Button
                     size="sm"
-                    className="h-8 text-xs"
+                    className="h-10 text-sm"
                     onClick={(e) => {
                       e.stopPropagation();
                       markServed(order.id);
@@ -503,7 +505,7 @@ export default function QueuePage() {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-8 text-xs"
+                  className="h-10 text-sm"
                   onClick={(e) => {
                     e.stopPropagation();
                     setSelectedOrder(order);
@@ -515,7 +517,7 @@ export default function QueuePage() {
                 <Button
                   size="sm"
                   variant={isOutOfStock ? "secondary" : "outline"}
-                  className="h-8 text-xs"
+                  className="h-10 text-sm"
                   onClick={(e) => {
                     e.stopPropagation();
                     toggleStockMutation.mutate({ 
@@ -565,6 +567,8 @@ export default function QueuePage() {
                     size="icon"
                     onClick={toggleAlerts}
                     title={alertsEnabled ? "Disable new-order chime" : "Enable new-order chime"}
+                    aria-label={alertsEnabled ? "Disable new-order chime" : "Enable new-order chime"}
+                    aria-pressed={alertsEnabled}
                     data-testid="button-toggle-alerts"
                   >
                     {alertsEnabled ? (
@@ -578,6 +582,8 @@ export default function QueuePage() {
                     size="icon"
                     onClick={() => setShowShortcuts((prev) => !prev)}
                     title="Keyboard shortcuts (press ?)"
+                    aria-label="Keyboard shortcuts"
+                    aria-expanded={showShortcuts}
                     data-testid="button-shortcuts-help"
                   >
                     <Keyboard className="w-4 h-4" />
@@ -646,9 +652,10 @@ export default function QueuePage() {
                 {/* Mobile view - collapsible cards */}
                 <div className="md:hidden" data-testid="queue-mobile-view">
                   <div className="flex items-center gap-2 mb-3 pb-2 border-b">
-                    <Checkbox 
+                    <Checkbox
                       checked={selectedIds.size === queue.length && queue.length > 0}
                       onCheckedChange={selectAll}
+                      aria-label="Select all orders"
                       data-testid="mobile-checkbox-all"
                     />
                     <span className="text-sm text-muted-foreground">
@@ -666,9 +673,10 @@ export default function QueuePage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-10">
-                          <Checkbox 
+                          <Checkbox
                             checked={selectedIds.size === queue.length && queue.length > 0}
                             onCheckedChange={selectAll}
+                            aria-label="Select all orders"
                             data-testid="checkbox-all"
                           />
                         </TableHead>
@@ -702,9 +710,10 @@ export default function QueuePage() {
                           onClick={() => setSelectedOrder(order)}
                         >
                           <TableCell onClick={(e) => e.stopPropagation()}>
-                            <Checkbox 
+                            <Checkbox
                               checked={selectedIds.has(order.id)}
                               onCheckedChange={() => toggleSelect(order.id)}
+                              aria-label={`Select ${order.drinkName}${order.guestName ? ` for ${order.guestName}` : ""}`}
                               data-testid={`checkbox-${order.id}`}
                             />
                           </TableCell>
@@ -788,6 +797,11 @@ export default function QueuePage() {
                                 disabled={toggleStockMutation.isPending}
                                 data-testid={`button-86-${order.id}`}
                                 title={order.drinkIsOutOfStock ? "Restock drink" : "86 this drink"}
+                                aria-label={
+                                  order.drinkIsOutOfStock
+                                    ? `Restock ${order.drinkName}`
+                                    : `Mark ${order.drinkName} out of stock`
+                                }
                               >
                                 {order.drinkIsOutOfStock ? (
                                   <RotateCcw className="w-4 h-4" />
