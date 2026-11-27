@@ -360,7 +360,7 @@ export default function DrinksPage() {
       <Card
         ref={setNodeRef}
         style={style}
-        className="hover-elevate cursor-pointer border-0 border-b"
+        className="hover-elevate cursor-pointer rounded-lg border-0 border-b"
         onClick={() => toggleDrinkSelection(drink.id)}
         data-testid={`drink-item-${drink.id}`}
       >
@@ -560,7 +560,7 @@ export default function DrinksPage() {
             onClick={() => setCreateDialogOpen(true)}
             disabled={!menus || menus.length === 0}
             data-testid="button-open-create-drink"
-            className={`max-md:!fixed max-md:right-4 max-md:!z-30 max-md:h-12 max-md:rounded-sm max-md:px-5 max-md:shadow-[0_8px_22px_-8px_hsl(var(--ink)/0.6)] max-md:bottom-[calc(var(--mobile-tabbar-h)+0.75rem)] ${selectedDrinks.size > 0 ? "max-md:hidden" : ""}`}
+            className={`max-md:!fixed max-md:right-4 max-md:!z-30 max-md:h-12 max-md:rounded-full max-md:px-5 max-md:shadow-lg max-md:bottom-[calc(var(--mobile-tabbar-h)+0.75rem)] ${selectedDrinks.size > 0 ? "max-md:hidden" : ""}`}
           >
             <Plus className="w-4 h-4 mr-2" />
             Add Drink
@@ -1103,7 +1103,7 @@ export default function DrinksPage() {
                                 items={drinks.map(d => d.id)}
                                 strategy={verticalListSortingStrategy}
                               >
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 md:gap-x-8 border-t">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 md:gap-x-8">
                                   {drinks.map((drink) => (
                                     <SortableDrinkItem key={drink.id} drink={drink} />
                                   ))}

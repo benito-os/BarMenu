@@ -35,7 +35,7 @@ export function StatTiles({
   className?: string;
 }) {
   return (
-    <div role="toolbar" aria-label={ariaLabel} className={cn("grid divide-x divide-border border-y border-border", className)} style={{ gridTemplateColumns: `repeat(${tiles.length}, minmax(0, 1fr))` }}>
+    <div role="toolbar" aria-label={ariaLabel} className={cn("grid gap-2", className)} style={{ gridTemplateColumns: `repeat(${tiles.length}, minmax(0, 1fr))` }}>
       {tiles.map((tile) => {
         const active = tile.id === activeId;
         return (
@@ -46,18 +46,21 @@ export function StatTiles({
             onClick={() => onSelect(tile.id)}
             data-testid={tile.testId}
             className={cn(
-              "min-h-14 px-2.5 py-1.5 text-left transition-colors",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-              active
-                ? "bg-secondary shadow-[inset_0_-3px_0_hsl(var(--brass))]"
-                : "hover:bg-secondary/60",
+              // Soft tablets, no outlines or grid lines. Selected = deeper
+              // wash, ink label and a short brass underline.
+              "relative min-h-14 rounded-xl px-3 py-1.5 text-left transition-colors",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+              active ? "bg-wash-strong" : "bg-wash/60 hover:bg-wash",
             )}
           >
             <span className="block font-serif text-xl font-bold leading-tight tabular-nums lining-nums">{tile.value}</span>
-            <span className={cn("flex items-center gap-1.5 text-[0.6875rem] font-semibold uppercase tracking-[0.12em]", active ? "text-foreground" : "text-muted-foreground")}>
-              <span aria-hidden className={cn("h-2 w-2 rotate-45", TONE_DOT[tile.tone ?? "default"])} />
+            <span className={cn("flex items-center gap-1.5 text-xs", active ? "font-semibold text-foreground" : "font-medium text-muted-foreground")}>
+              <span aria-hidden className={cn("h-2 w-2 rounded-full", TONE_DOT[tile.tone ?? "default"])} />
               {tile.label}
             </span>
+            {active && (
+              <span aria-hidden className="absolute bottom-1 left-3 h-[3px] w-5 rounded-full bg-brass" />
+            )}
           </button>
         );
       })}

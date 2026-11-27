@@ -55,14 +55,13 @@ export default function DashboardLogin() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card variant="framed" className="deco-corners w-full max-w-md">
+      <Card variant="framed" className="w-full max-w-md">
         <CardHeader className="text-center pt-9">
-          {/* Lock set in a brass lozenge, after the logo's deco ring. */}
-          <div className="mx-auto mb-5 flex h-11 w-11 rotate-45 items-center justify-center border border-brass/60 shadow-[inset_0_0_0_3px_hsl(var(--popover)),inset_0_0_0_4px_hsl(var(--brass-bright)/0.5)]">
-            <Lock className="h-5 w-5 -rotate-45 text-brass" />
+          <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-wash">
+            <Lock className="h-5 w-5 text-brass" />
           </div>
           <CardTitle className="text-3xl font-serif">{barName}</CardTitle>
-          <DecoRule double className="mx-auto mt-3 w-40" />
+          <DecoRule className="mx-auto mt-3 w-40" />
           <CardDescription className="smallcaps pt-2 text-brass">Dashboard Login</CardDescription>
         </CardHeader>
         <CardContent className="pb-9">
@@ -88,8 +87,8 @@ export default function DashboardLogin() {
                 data-testid="input-username"
               />
               <p id="username-hint" className="text-xs text-muted-foreground">
-                The username is <code className="bg-muted px-1 rounded-sm text-foreground">admin</code>. The
-                password is the <code className="bg-muted px-1 rounded-sm text-foreground">DASHBOARD_PASSWORD</code> secret.
+                The username is <code className="bg-muted px-1 rounded-md text-foreground">admin</code>. The
+                password is the <code className="bg-muted px-1 rounded-md text-foreground">DASHBOARD_PASSWORD</code> secret.
               </p>
             </div>
             <div className="space-y-2">

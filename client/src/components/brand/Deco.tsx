@@ -24,47 +24,57 @@ export function DecoDiamond({ className, style }: { className?: string; style?: 
 }
 
 /**
- * Horizontal ornament: rule, diamond, rule. `double` stacks two hairlines on
- * each side (used under page titles). Defaults to bright brass; it is
- * decoration only and never carries meaning.
+ * Horizontal ornament: hairline, diamond, hairline. The lines taper to
+ * nothing at their outer ends, so the ornament never reads as a ruled box
+ * edge. Page-level punctuation only (page titles, the splash); section
+ * headings do not get it. Defaults to bright brass; decoration only, never
+ * carries meaning.
  */
 export function DecoRule({
   className,
   style,
-  double = false,
   short = false,
 }: {
   className?: string;
   style?: CSSProperties;
-  double?: boolean;
   /** A short centred ornament (~8rem) instead of full width. */
   short?: boolean;
 }) {
-  const line = double ? (
-    <span className="flex flex-1 flex-col gap-[3px]">
-      <span className="h-px bg-current" />
-      <span className="h-px bg-current opacity-60" />
-    </span>
-  ) : (
-    <span className="h-px flex-1 bg-current" />
-  );
   return (
     <div
       aria-hidden
       className={cn("flex items-center gap-2 text-brass-bright", short && "mx-auto w-32", className)}
       style={style}
     >
-      {line}
+      <span className="h-px flex-1 bg-gradient-to-l from-current to-transparent" />
       <DecoDiamond className="text-current" />
-      {line}
+      <span className="h-px flex-1 bg-gradient-to-r from-current to-transparent" />
     </div>
+  );
+}
+
+/** A hairline that fades out toward `to` ("r" fades rightward). */
+function FadeLine({ to, style }: { to: "l" | "r"; style?: CSSProperties }) {
+  // A colour override arrives as backgroundColor; turn it into the start of
+  // the fade so a menu accent still tints the line.
+  const c = style?.backgroundColor as string | undefined;
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "h-px flex-1",
+        !c && (to === "r" ? "bg-gradient-to-r" : "bg-gradient-to-l"),
+        !c && "from-brass-bright/60 to-transparent",
+      )}
+      style={c ? { backgroundImage: `linear-gradient(to ${to === "r" ? "right" : "left"}, ${c}, transparent)`, opacity: 0.6 } : undefined}
+    />
   );
 }
 
 /**
  * Section heading: letter-spaced small caps in brass, then a hairline that
- * runs to the edge, then an optional count. Use for every list group
- * (inventory categories, recipe letters, menu sections, settings groups).
+ * fades out before the edge, then an optional count. Use for list groups
+ * (inventory categories, drink sections, menu sections).
  */
 export function SectionHeading({
   children,
@@ -80,7 +90,7 @@ export function SectionHeading({
 }: {
   children: ReactNode;
   count?: ReactNode;
-  /** "center": rule, ornament, label, ornament, rule (guest menu sections). */
+  /** "center": fading rule, label, fading rule (guest menu sections). */
   align?: "left" | "center";
   as?: "h2" | "h3" | "h4" | "div";
   className?: string;
@@ -94,14 +104,12 @@ export function SectionHeading({
 }) {
   if (align === "center") {
     return (
-      <Tag id={id} data-testid={testId} className={cn("flex items-center gap-3", className)}>
-        <span aria-hidden className="h-px flex-1 bg-brass-bright/70" style={ruleStyle} />
-        <DecoDiamond className="text-brass-bright" style={ruleStyle ? { color: ruleStyle.backgroundColor } : undefined} />
+      <Tag id={id} data-testid={testId} className={cn("flex items-center gap-4", className)}>
+        <FadeLine to="l" style={ruleStyle} />
         <span className={cn("smallcaps text-center text-brass", labelClassName)} style={style}>
           {children}
         </span>
-        <DecoDiamond className="text-brass-bright" style={ruleStyle ? { color: ruleStyle.backgroundColor } : undefined} />
-        <span aria-hidden className="h-px flex-1 bg-brass-bright/70" style={ruleStyle} />
+        <FadeLine to="r" style={ruleStyle} />
       </Tag>
     );
   }
@@ -110,7 +118,7 @@ export function SectionHeading({
       <span className={cn("smallcaps text-brass", labelClassName)} style={style}>
         {children}
       </span>
-      <span aria-hidden className="h-px flex-1 bg-brass-bright/70" style={ruleStyle} />
+      <FadeLine to="r" style={ruleStyle} />
       {count !== undefined && (
         <span className="text-xs tabular-nums text-muted-foreground">{count}</span>
       )}
@@ -119,13 +127,11 @@ export function SectionHeading({
 }
 
 /**
- * Page masthead: serif title, a double-rule ornament, optional italic line.
- * Used on the landing list, guest menu header, login, 404 and about.
+ * Page masthead: serif title, the tapered ornament, optional italic line.
  */
 export function Masthead({
   title,
   subtitle,
-  eyebrow,
   className,
   titleClassName,
   titleStyle,
@@ -135,7 +141,6 @@ export function Masthead({
 }: {
   title: ReactNode;
   subtitle?: ReactNode;
-  eyebrow?: ReactNode;
   className?: string;
   titleClassName?: string;
   titleStyle?: CSSProperties;
@@ -145,7 +150,6 @@ export function Masthead({
 }) {
   return (
     <div className={cn(align === "center" ? "text-center" : "text-left", className)}>
-      {eyebrow && <p className="smallcaps mb-3 text-brass">{eyebrow}</p>}
       <Tag
         className={cn(
           "font-headline font-bold leading-[1.05] tracking-tight text-foreground",
@@ -156,7 +160,6 @@ export function Masthead({
         {title}
       </Tag>
       <DecoRule
-        double
         className={cn("mt-4", align === "center" ? "mx-auto max-w-[14rem]" : "max-w-[14rem]")}
         style={ruleStyle}
       />

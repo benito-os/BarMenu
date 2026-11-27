@@ -3,12 +3,13 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 
 /**
- * Printed-menu card. Not a grey rounded box:
- * - "ruled" (default): a section on the paper itself, opened by a brass
- *   double rule. Header/content have no side padding so text lines up with
- *   the page, like a section of a printed menu.
- * - "framed": a raised card-stock panel with a brass keyline, for the few
- *   places that need a real container (login, notices).
+ * Paper card. Not a box:
+ * - "ruled" (default): a section on the paper itself, opened by one faint
+ *   hairline that fades at both ends. Header/content have no side padding so
+ *   text lines up with the page, like a section of a printed menu.
+ * - "framed": a sheet of lighter card stock lying on the page: soft corners,
+ *   a warm diffuse shadow, no outline. For the few places that need a real
+ *   container (login, the guest's order ticket).
  */
 const Card = React.forwardRef<
   HTMLDivElement,
@@ -20,8 +21,8 @@ const Card = React.forwardRef<
     className={cn(
       "shadcn-card group/card text-card-foreground",
       variant === "ruled"
-        ? "rule-double bg-transparent"
-        : "keyline rounded-sm bg-popover [&>[data-card-part]]:px-6",
+        ? "rule-fade bg-transparent"
+        : "rounded-2xl bg-popover shadow-md [&>[data-card-part]]:px-6",
       className
     )}
     {...props}

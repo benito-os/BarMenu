@@ -1,5 +1,4 @@
 import { LogOut } from "lucide-react";
-import { DecoRule } from "@/components/brand/Deco";
 import { DASHBOARD_NAV } from "@/lib/dashboardNav";
 import { useSettings } from "@/hooks/useSettings";
 import { Link, useLocation } from "wouter";
@@ -40,10 +39,8 @@ export function AppSidebar({ onLogout }: AppSidebarProps) {
     <Sidebar>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="h-auto flex-col items-start gap-2 px-3 pb-5 pt-6 text-sidebar-foreground">
-            <span className="smallcaps text-brass">Dashboard</span>
-            <span className="font-serif text-xl font-semibold leading-tight">{barName}</span>
-            <DecoRule className="mt-1 w-full" />
+          <SidebarGroupLabel className="h-auto px-3 pb-5 pt-6 font-serif text-xl font-semibold leading-tight text-sidebar-foreground">
+            {barName}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>

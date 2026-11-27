@@ -12,21 +12,24 @@
                             text on cream (2.1:1) and must never carry meaning
    --gold          #D4AF37  the logo's gold; on ink only (splash, 8.2:1) */
 :root {
-  --button-outline: hsl(41 40% 45% / .45);
-  --badge-outline: hsl(41 40% 40% / .35);
+  /* Soft paper: structure comes from tone and spacing, not outlines.
+     --wash is the deeper cream that fills controls (chips, steppers, fields,
+     secondary buttons); --wash-strong marks a selected one. */
+  --wash: 40 46% 87%;               /* #F0E5CF  ink 13.6:1 */
+  --wash-strong: 39 42% 81%;        /* #E3D5B8  ink 12.0:1 */
   --opaque-button-border-intensity: -8;
   /* hover / press veils: warm, not grey */
   --elevate-1: hsl(35 60% 20% / .05);
   --elevate-2: hsl(35 60% 20% / .10);
   --background: 41 51% 93%;         /* paper   #F6F0E3 */
   --foreground: 33 22% 10%;         /* ink     #1F1A14  15.2:1 */
-  --border: 41 38% 72%;             /* hairline #D3C29E (decorative rule) */
+  --border: 40 34% 80%;             /* hairline #DDD1B8 (quiet, decorative) */
   --card: 41 51% 93%;               /* cards sit on the paper itself */
   --card-foreground: 33 22% 10%;
-  --card-border: 41 38% 72%;
+  --card-border: 40 34% 80%;
   --sidebar: 41 47% 88%;            /* raised cream #EFE6D3 */
   --sidebar-foreground: 33 22% 10%;
-  --sidebar-border: 41 38% 72%;
+  --sidebar-border: 40 34% 80%;
   --sidebar-primary: 33 22% 10%;
   --sidebar-primary-foreground: 41 51% 93%;
   --sidebar-accent: 40 44% 84%;     /* #E8DCC4 */
@@ -34,11 +37,11 @@
   --sidebar-ring: 41 65% 29%;
   --popover: 44 58% 96%;            /* lighter card stock #FBF8F0 */
   --popover-foreground: 33 22% 10%;
-  --popover-border: 41 38% 72%;
-  /* Primary action: ink with cream text (15.2:1), brass inner keyline. */
+  --popover-border: 40 34% 80%;
+  /* Primary action: ink with cream text (15.2:1), soft corners. */
   --primary: 33 22% 10%;
   --primary-foreground: 41 51% 93%;
-  --secondary: 41 47% 88%;          /* raised cream #EFE6D3; ink 13.9:1 */
+  --secondary: 40 46% 87%;          /* = --wash; ink 13.6:1 */
   --secondary-foreground: 33 22% 10%;
   --muted: 40 44% 84%;              /* #E8DCC4 */
   --muted-foreground: 34 20% 35%;   /* #6A5B47  5.8:1 paper, 4.8:1 on muted */
@@ -95,15 +98,16 @@
      classes below. */
   --font-headline: var(--font-serif);
   --font-body: var(--font-sans);
-  --radius: .125rem;
-  --shadow-2xs: 0px 2px 0px 0px hsl(0 0% 0% / 0.00);
-  --shadow-xs: 0px 2px 0px 0px hsl(0 0% 0% / 0.00);
-  --shadow-sm: 0px 2px 0px 0px hsl(0 0% 0% / 0.00), 0px 1px 2px -1px hsl(0 0% 0% / 0.00);
-  --shadow: 0px 2px 0px 0px hsl(0 0% 0% / 0.00), 0px 1px 2px -1px hsl(0 0% 0% / 0.00);
-  --shadow-md: 0px 2px 0px 0px hsl(0 0% 0% / 0.00), 0px 2px 4px -1px hsl(0 0% 0% / 0.00);
-  --shadow-lg: 0px 2px 0px 0px hsl(0 0% 0% / 0.00), 0px 4px 6px -1px hsl(0 0% 0% / 0.00);
-  --shadow-xl: 0px 2px 0px 0px hsl(0 0% 0% / 0.00), 0px 8px 10px -1px hsl(0 0% 0% / 0.00);
-  --shadow-2xl: 0px 2px 0px 0px hsl(0 0% 0% / 0.00);
+  --radius: .625rem;
+  /* Warm, low, diffuse: paper lying on paper. Never a hard edge. */
+  --shadow-2xs: 0 1px 1px hsl(var(--ink) / 0.04);
+  --shadow-xs: 0 1px 2px hsl(var(--ink) / 0.05);
+  --shadow-sm: 0 1px 2px hsl(var(--ink) / 0.05), 0 2px 6px -2px hsl(var(--ink) / 0.10);
+  --shadow: 0 1px 2px hsl(var(--ink) / 0.05), 0 4px 12px -4px hsl(var(--ink) / 0.14);
+  --shadow-md: 0 1px 2px hsl(var(--ink) / 0.05), 0 6px 18px -6px hsl(var(--ink) / 0.18);
+  --shadow-lg: 0 2px 4px hsl(var(--ink) / 0.04), 0 14px 36px -12px hsl(var(--ink) / 0.24);
+  --shadow-xl: 0 2px 6px hsl(var(--ink) / 0.05), 0 22px 50px -16px hsl(var(--ink) / 0.30);
+  --shadow-2xl: 0 30px 70px -20px hsl(var(--ink) / 0.35);
   --tracking-normal: 0em;
   --spacing: 0.25rem;
 
@@ -244,80 +248,38 @@
     @apply text-[0.6875rem] font-semibold uppercase leading-none tracking-[0.16em];
   }
 
-  /* A list of entries separated by hairlines, like lines on a menu card.
-     Put it on the parent; children get a rule between them. */
+  /* A list of entries separated by quiet hairlines that fade out at both
+     ends, like the rule between entries on a printed card. Put it on the
+     parent; children get a line between them, never around them. */
   .menu-rows > * + * {
-    border-top: 1px solid hsl(var(--border));
+    border-top: 1px solid transparent;
+    border-image: linear-gradient(
+        to right,
+        transparent,
+        hsl(var(--border)) 14%,
+        hsl(var(--border)) 86%,
+        transparent
+      )
+      1;
   }
 
-  /* Dot leader: <span>Name</span><span class="leader"/><span>4</span>.
-     Fills the gap with brass dots sitting on the text baseline. */
-  .leader {
-    flex: 1 1 1rem;
-    min-width: 1rem;
-    align-self: flex-end;
-    height: 0.5em;
-    margin: 0 0.35rem 0.3em;
-    background-image: radial-gradient(circle, hsl(var(--brass) / 0.55) 0.7px, transparent 1.1px);
-    background-size: 5px 3px;
-    background-repeat: repeat-x;
-    background-position: left bottom;
+  /* One tapered hairline across the top of a block (footers, section
+     breaks). Fades to nothing at both ends instead of stopping hard. */
+  .rule-fade {
+    border-top: 1px solid transparent;
+    border-image: linear-gradient(
+        to right,
+        transparent,
+        hsl(var(--brass-bright) / 0.55) 20%,
+        hsl(var(--brass-bright) / 0.55) 80%,
+        transparent
+      )
+      1;
   }
 
-  /* Printed double rule (two hairlines). */
-  .rule-double {
-    border-top: 3px double hsl(var(--brass) / 0.55);
-  }
-
-  /* Framed surface for the few containers that need one (dialogs, sheets,
-     the login card): a brass hairline with a second line set just inside,
-     like the border on a printed card. */
-  .keyline {
-    border: 1px solid hsl(var(--brass) / 0.45);
-    box-shadow:
-      inset 0 0 0 3px hsl(var(--popover)),
-      inset 0 0 0 4px hsl(var(--brass-bright) / 0.45);
-  }
-  .keyline-paper {
-    border: 1px solid hsl(var(--brass) / 0.45);
-    box-shadow:
-      inset 0 0 0 3px hsl(var(--background)),
-      inset 0 0 0 4px hsl(var(--brass-bright) / 0.45);
-  }
-
-  /* Art-deco corner brackets for hero surfaces only (login, order dialog,
-     masthead). Pure background-image, so it never fights the element's own
-     background colour or padding. */
-  .deco-corners {
-    --deco-c: hsl(var(--brass) / 0.75);
-    --deco-s: 16px;
-    --deco-w: 1.5px;
-    --deco-o: 8px;
-    background-image:
-      linear-gradient(var(--deco-c), var(--deco-c)), linear-gradient(var(--deco-c), var(--deco-c)),
-      linear-gradient(var(--deco-c), var(--deco-c)), linear-gradient(var(--deco-c), var(--deco-c)),
-      linear-gradient(var(--deco-c), var(--deco-c)), linear-gradient(var(--deco-c), var(--deco-c)),
-      linear-gradient(var(--deco-c), var(--deco-c)), linear-gradient(var(--deco-c), var(--deco-c));
-    background-repeat: no-repeat;
-    background-size:
-      var(--deco-s) var(--deco-w), var(--deco-w) var(--deco-s),
-      var(--deco-s) var(--deco-w), var(--deco-w) var(--deco-s),
-      var(--deco-s) var(--deco-w), var(--deco-w) var(--deco-s),
-      var(--deco-s) var(--deco-w), var(--deco-w) var(--deco-s);
-    background-position:
-      top var(--deco-o) left var(--deco-o), top var(--deco-o) left var(--deco-o),
-      top var(--deco-o) right var(--deco-o), top var(--deco-o) right var(--deco-o),
-      bottom var(--deco-o) left var(--deco-o), bottom var(--deco-o) left var(--deco-o),
-      bottom var(--deco-o) right var(--deco-o), bottom var(--deco-o) right var(--deco-o);
-  }
-
-  /* Brass inner keyline on ink buttons. */
-  .btn-ink-keyline {
-    outline: 1px solid hsl(var(--brass-bright) / 0.55);
-    outline-offset: -4px;
-  }
-  .btn-ink-keyline:disabled {
-    outline-color: transparent;
+  /* Soft edge under a sticky bar: a short warm shadow instead of a rule. */
+  .edge-soft {
+    box-shadow: 0 10px 14px -14px hsl(var(--ink) / 0.35);
   }
 }
 
@@ -335,6 +297,10 @@
   .tab-item {
     @apply relative flex h-full w-full flex-col items-center justify-center gap-1 text-[0.6875rem] font-medium leading-none;
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring;
+  }
+  /* The icon sits in a soft pill; the current tab fills it. */
+  .tab-pill {
+    @apply flex h-7 w-14 items-center justify-center rounded-full transition-colors;
   }
 
   /* Hide ugly search cancel button in Chrome until we can style it properly */

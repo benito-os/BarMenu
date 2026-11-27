@@ -79,7 +79,7 @@ export function ShoppingListSheet({ triggerClassName }: { triggerClassName?: str
               </p>
             </div>
           ) : (
-            <ul className="divide-y" data-testid="shopping-list-items">
+            <ul className="menu-rows" data-testid="shopping-list-items">
               {items.map((item) => (
                 <li key={item.name} className="py-3 min-h-11" data-testid={`shopping-item-${item.name}`}>
                   <div className="flex items-baseline justify-between gap-3">

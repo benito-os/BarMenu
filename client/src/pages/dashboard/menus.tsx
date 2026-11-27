@@ -181,7 +181,7 @@ export default function MenusPage() {
         <button
           type="button"
           onClick={onRemove}
-          className="p-1 hover:bg-destructive/20 rounded-sm"
+          className="p-1 hover:bg-destructive/20 rounded-full"
           data-testid={`button-remove-section-${mapping.index}`}
         >
           <X className="w-4 h-4" />
@@ -498,14 +498,20 @@ export default function MenusPage() {
                 ))}
               </div>
             ) : menus && menus.length > 0 ? (
-              <div className="menu-rows border-y">
+              <div className="menu-rows">
                 {menus.map((menu) => (
                   <div
                     key={menu.id}
-                    className="flex items-center gap-2 px-3 py-3 border-l-[3px] border-l-transparent max-md:flex-wrap max-md:p-0 max-md:gap-0 max-md:overflow-hidden"
-                    style={{ borderLeftColor: menu.accentColor ?? undefined }}
+                    className="relative flex items-center gap-2 px-3 py-3 max-md:flex-wrap max-md:p-0 max-md:gap-0 max-md:overflow-hidden"
                     data-testid={`menu-item-${menu.id}`}
                   >
+                    {menu.accentColor && (
+                      <span
+                        aria-hidden
+                        className="absolute left-0 top-3.5 h-6 w-1 rounded-full"
+                        style={{ backgroundColor: menu.accentColor }}
+                      />
+                    )}
                     <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap max-md:px-3 max-md:pt-3 max-md:pb-2 max-md:gap-x-2 max-md:gap-y-1">
                       <span className="font-serif text-lg md:text-xl font-semibold truncate max-md:w-full">{menu.name}</span>
                       <span className="text-xs text-muted-foreground font-mono">/{menu.slug}</span>
@@ -519,7 +525,7 @@ export default function MenusPage() {
                       )}
                     </div>
                     {/* Phone: a full-width action strip, 44px targets */}
-                    <div className="flex items-center gap-1 shrink-0 max-md:w-full max-md:grid max-md:grid-cols-5 max-md:gap-0 max-md:border-t max-md:[&>*]:justify-self-center">
+                    <div className="flex items-center gap-1 shrink-0 max-md:w-full max-md:grid max-md:grid-cols-5 max-md:gap-0 max-md:mb-2 max-md:rounded-xl max-md:bg-wash/50 max-md:[&>*]:justify-self-center">
                       <Switch
                         checked={menu.isActive}
                         onCheckedChange={(checked) => {

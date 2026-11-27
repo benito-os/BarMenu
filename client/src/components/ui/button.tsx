@@ -7,21 +7,20 @@ import { cn } from "@/lib/utils"
 const buttonVariants = cva(
   // ring-2 + offset: a 1px ring vanished against the orange primary fill, so
   // keyboard users could not see which button had focus.
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-sm text-sm font-medium tracking-[0.01em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0" +
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium tracking-[0.01em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0" +
   " hover-elevate active-elevate-2",
   {
     variants: {
       variant: {
-        // Ink with cream text and a brass inner keyline: the "printed" CTA.
+        // Ink with cream text, soft corners and a faint warm shadow.
         default:
-          "bg-primary text-primary-foreground border border-primary btn-ink-keyline disabled:bg-muted disabled:text-muted-foreground disabled:border-muted disabled:opacity-100",
+          "bg-primary text-primary-foreground border border-transparent shadow-sm disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none disabled:opacity-100",
         destructive:
-          "bg-destructive text-destructive-foreground border border-destructive-border",
-        outline:
-          // Transparent on whatever paper it sits on, brass hairline edge.
-          // Inherits the current text color.
-          " border border-[color:var(--button-outline)] hover:border-brass/70",
-        secondary: "border bg-secondary text-secondary-foreground border-secondary-border ",
+          "bg-destructive text-destructive-foreground border border-transparent shadow-sm",
+        // Secondary actions: a soft cream wash, no outline. The fill is what
+        // makes it read as a control; text keeps the current colour.
+        outline: "border border-transparent bg-wash hover:bg-wash-strong",
+        secondary: "border border-transparent bg-wash text-secondary-foreground hover:bg-wash-strong",
         // Add a transparent border so that when someone toggles a border on later, it doesn't shift layout/size.
         ghost: "border border-transparent",
       },

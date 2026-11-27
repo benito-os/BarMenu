@@ -59,7 +59,7 @@ export default function Landing() {
             </h1>
           )}
           {/* Gold on ink: the logo's own colours. Decoration only. */}
-          <DecoRule double className="mx-auto mt-5 mb-5 w-full max-w-[15rem] text-gold" />
+          <DecoRule className="mx-auto mt-5 mb-5 w-full max-w-[15rem] text-gold" />
           <p className="font-headline italic text-xl md:text-2xl text-paper/90 mb-9 max-w-2xl">
             {tagline}
           </p>
@@ -67,10 +67,10 @@ export default function Landing() {
             <Link href={`/menu/${activeMenu.slug}`}>
               <Button
                 size="lg"
-                className="min-h-12 px-8 text-base font-semibold bg-paper text-ink border-paper shadow-[inset_0_0_0_2px_hsl(var(--paper)),inset_0_0_0_3px_hsl(var(--brass)/0.7)] hover:bg-paper"
+                className="min-h-12 rounded-full px-8 text-base font-semibold bg-paper text-ink shadow-lg hover:bg-paper"
                 data-testid="button-view-tonights-menu"
               >
-                View Tonight&rsquo;s Menu
+                View Tonight's Menu
                 <ArrowRight className="w-4 h-4" />
               </Button>
             </Link>
@@ -82,10 +82,9 @@ export default function Landing() {
       <div className="max-w-3xl mx-auto px-5 sm:px-8 py-14 md:py-20">
         <Masthead
           as="h2"
-          eyebrow="The list"
           title="Our Menus"
           titleClassName="text-4xl md:text-5xl"
-          subtitle="Seasonal and event menus, each one its own little card."
+          subtitle="Explore our curated collection of seasonal and event-specific cocktail experiences"
           className="mb-10"
         />
 
@@ -104,7 +103,7 @@ export default function Landing() {
             </Button>
           </div>
         ) : isLoading ? (
-          <div className="menu-rows border-y border-border">
+          <div className="menu-rows">
             {[1, 2, 3].map((i) => (
               <div key={i} className="py-6 space-y-3">
                 <Skeleton className="h-8 w-2/3" />
@@ -113,21 +112,21 @@ export default function Landing() {
             ))}
           </div>
         ) : (
-          // A table of contents, not a grid of cards: each menu is a ruled
-          // entry. The menu's own accent marks its diamond and tonight badge;
-          // its title colour (if set) colours its name.
-          <ul className="menu-rows border-y border-border">
+          // A table of contents, not a grid of cards: entries separated by
+          // fading hairlines. The menu's own accent marks its dot and tonight
+          // badge; its title colour (if set) colours its name.
+          <ul className="menu-rows">
             {menus?.map((menu) => (
               <li key={menu.id}>
                 <Link
                   href={`/menu/${menu.slug}`}
-                  className="group block py-6 md:py-7 hover-elevate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  className="group -mx-3 block rounded-xl px-3 py-6 md:py-7 hover-elevate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   data-testid={`card-menu-${menu.slug}`}
                 >
                   <div className="flex items-start gap-3">
                     <span
                       aria-hidden
-                      className="mt-3 h-2 w-2 shrink-0 rotate-45 bg-brass-bright"
+                      className="mt-3 h-2 w-2 shrink-0 rounded-full bg-brass-bright"
                       style={menu.accentColor ? { backgroundColor: menu.accentColor } : undefined}
                     />
                     <div className="min-w-0 flex-1">
@@ -144,7 +143,7 @@ export default function Landing() {
                           // cream text); otherwise the ember "live" mark.
                           <Badge
                             variant="live"
-                            className="shrink-0 uppercase tracking-[0.12em] text-[0.625rem] translate-y-[-3px]"
+                            className="shrink-0 translate-y-[-3px]"
                             style={
                               menu.accentColor
                                 ? { backgroundColor: menu.accentColor, color: "hsl(var(--paper))" }
@@ -152,7 +151,7 @@ export default function Landing() {
                             }
                             data-testid="badge-active-tonight"
                           >
-                            Tonight
+                            Active Tonight
                           </Badge>
                         )}
                       </div>
@@ -167,7 +166,7 @@ export default function Landing() {
                         className="mt-3 -ml-3 min-h-11 px-3 text-sm font-semibold text-brass group-hover:text-foreground"
                         data-testid={`button-view-menu-${menu.slug}`}
                       >
-                        View menu
+                        View Menu
                         <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
                       </Button>
                     </div>
@@ -190,7 +189,7 @@ export default function Landing() {
       {/* Public footer with a discoverable About link. Curious guests and
           forkers landing on the site can find the project's source from
           here without having to know the /about URL. */}
-      <footer className="rule-double mt-4">
+      <footer className="rule-fade mt-4">
         <div className="max-w-3xl mx-auto px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground font-body">
           <span>© {new Date().getFullYear()} {barName}</span>
           <Link

@@ -41,7 +41,7 @@ export function MobileTabBar({ barName, onLogout }: { barName: string; onLogout:
       <nav
         aria-label="Dashboard"
         data-testid="mobile-tab-bar"
-        className="md:hidden fixed inset-x-0 bottom-0 z-40 border-t-[3px] border-double border-brass/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90"
+        className="md:hidden fixed inset-x-0 bottom-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90 shadow-[0_-8px_24px_-14px_hsl(var(--ink)/0.30)]"
         style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       >
         <ul className="grid grid-cols-5 h-16">
@@ -66,7 +66,9 @@ export function MobileTabBar({ barName, onLogout }: { barName: string; onLogout:
                 secondaryActive ? "text-foreground" : "text-muted-foreground",
               )}
             >
-              <MoreHorizontal className="h-5 w-5" aria-hidden />
+              <span className={cn("tab-pill", secondaryActive && "bg-wash-strong")}>
+                <MoreHorizontal className="h-5 w-5" aria-hidden />
+              </span>
               <span>More</span>
               {secondaryActive && <span className="sr-only">(current page is in More)</span>}
             </button>
@@ -80,12 +82,11 @@ export function MobileTabBar({ barName, onLogout }: { barName: string; onLogout:
           className="px-4 pt-5 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] max-h-[85dvh] overflow-y-auto"
           data-testid="sheet-more"
         >
-          <SheetHeader className="text-left space-y-1">
-            <p className="smallcaps text-brass" aria-hidden>More pages</p>
-            <SheetTitle className="font-serif text-2xl">{barName}</SheetTitle>
+          <SheetHeader className="text-left">
+            <SheetTitle className="font-serif text-xl">{barName}</SheetTitle>
             <SheetDescription className="sr-only">Other dashboard pages</SheetDescription>
           </SheetHeader>
-          <ul className="mt-4 grid grid-cols-3 border-l border-t border-border">
+          <ul className="mt-4 grid grid-cols-3 gap-2">
             {SECONDARY.map((item) => {
               const active = isNavItemActive(location, item.path);
               return (
@@ -96,10 +97,10 @@ export function MobileTabBar({ barName, onLogout }: { barName: string; onLogout:
                     aria-current={active ? "page" : undefined}
                     data-testid={`more-${slug(item.path)}`}
                     className={cn(
-                      "flex h-20 flex-col items-center justify-center gap-1.5 border-b border-r border-border text-sm text-center px-1",
-                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                      "flex h-20 flex-col items-center justify-center gap-1.5 rounded-xl text-sm text-center px-1 transition-colors",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       "[&>svg]:text-brass",
-                      active ? "bg-secondary font-semibold text-foreground shadow-[inset_0_-2px_0_hsl(var(--brass))]" : "hover:bg-secondary/60",
+                      active ? "bg-wash-strong font-semibold text-foreground" : "bg-wash/60 hover:bg-wash",
                     )}
                   >
                     <item.icon className="h-5 w-5" aria-hidden />
@@ -114,7 +115,7 @@ export function MobileTabBar({ barName, onLogout }: { barName: string; onLogout:
               href="/"
               onClick={() => setMoreOpen(false)}
               data-testid="more-guest-home"
-              className="flex min-h-12 items-center justify-center gap-2 rounded-sm border border-[color:var(--button-outline)] text-sm hover:bg-secondary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-wash text-sm transition-colors hover:bg-wash-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <Home className="h-4 w-4" aria-hidden />
               Guest home
@@ -126,7 +127,7 @@ export function MobileTabBar({ barName, onLogout }: { barName: string; onLogout:
                 onLogout();
               }}
               data-testid="more-logout"
-              className="flex min-h-12 items-center justify-center gap-2 rounded-sm border border-[color:var(--button-outline)] text-sm hover:bg-secondary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-wash text-sm transition-colors hover:bg-wash-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <LogOut className="h-4 w-4" aria-hidden />
               Log out
@@ -151,13 +152,13 @@ function TabLink({ item, active, badge }: { item: DashboardNavItem; active: bool
           scrollToTop();
         }
       }}
-      className={cn("tab-item", active ? "text-foreground font-semibold [&_svg]:text-brass" : "text-muted-foreground")}
+      className={cn("tab-item", active ? "text-foreground font-semibold" : "text-muted-foreground")}
     >
-      <span className="relative">
+      <span className={cn("tab-pill relative", active && "bg-wash-strong")}>
         <item.icon className="h-5 w-5" aria-hidden />
         {badge > 0 && (
           <span
-            className="absolute -right-2.5 -top-1.5 min-w-[1.125rem] h-[1.125rem] rounded-full bg-ember px-1 text-[0.6875rem] font-semibold leading-[1.125rem] text-ember-foreground text-center tabular-nums"
+            className="absolute right-1 -top-1.5 min-w-[1.125rem] h-[1.125rem] rounded-full bg-ember px-1 text-[0.6875rem] font-semibold leading-[1.125rem] text-ember-foreground text-center tabular-nums"
             data-testid="mobile-tab-queue-count"
           >
             {badge > 99 ? "99+" : badge}
@@ -166,7 +167,6 @@ function TabLink({ item, active, badge }: { item: DashboardNavItem; active: bool
       </span>
       <span>{item.title}</span>
       {badge > 0 && <span className="sr-only">, {badge} open orders</span>}
-      {active && <span aria-hidden className="absolute -top-[3px] inset-x-5 h-[3px] bg-brass" />}
     </Link>
   );
 }

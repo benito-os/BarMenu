@@ -136,8 +136,8 @@ export function OrderStatusBanner() {
     // role="status" + aria-live so a screen reader hears "In Progress" when
     // the bartender starts the drink, without stealing focus from the menu.
     <div className="mb-8" role="status" aria-live="polite" data-testid="order-status-banner">
-      {/* A ticket: framed card stock, like a bar chit. */}
-      <Card variant="framed" className="deco-corners">
+      {/* A ticket: a sheet of lighter card stock lying on the page. */}
+      <Card variant="framed">
         <div className="px-5 pt-5 pb-4 md:px-7 md:pt-6">
           <div className="flex items-center justify-between gap-3 mb-2">
             <h3 className="font-headline text-xl font-semibold text-foreground flex items-center gap-2">
@@ -187,7 +187,7 @@ export function OrderStatusBanner() {
 
                   <Badge 
                     variant={statusInfo.badge}
-                    className="shrink-0 uppercase tracking-[0.1em] text-[0.6875rem]"
+                    className="shrink-0"
                     data-testid={`order-status-${order.id}`}
                   >
                     {statusInfo.label}
@@ -225,7 +225,7 @@ export function OrderStatusBanner() {
             })}
           </div>
 
-          <p className="text-xs text-muted-foreground mt-3 pt-3 border-t border-border text-center">
+          <p className="text-xs text-muted-foreground mt-3 text-center">
             Order status updates automatically. Completed orders will be removed from this list.
           </p>
         </div>

@@ -13,11 +13,11 @@ export default function NotFound() {
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-background px-6">
       <div className="w-full max-w-md text-center space-y-6">
-        <p className="smallcaps text-brass">No. 404</p>
+        <p className="font-body text-sm text-muted-foreground">404</p>
         <h1 className="font-headline text-4xl md:text-5xl font-bold leading-tight text-foreground">
           That page isn't on the menu
         </h1>
-        <DecoRule double className="mx-auto max-w-[12rem]" />
+        <DecoRule className="mx-auto max-w-[12rem]" />
         <p className="font-headline italic text-lg text-muted-foreground leading-relaxed">
           The link may be out of date, or the menu it pointed to has been
           retired. Tonight's menus are one tap away.

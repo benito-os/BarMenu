@@ -228,7 +228,7 @@ export default function RecipesPage() {
             <p className="text-xs text-muted-foreground" data-testid="text-recipe-count">
               {filtered.length} {filtered.length === 1 ? "recipe" : "recipes"}
             </p>
-            <div className="grid max-md:gap-0 max-md:border-t md:gap-x-8 md:gap-y-2 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid max-md:gap-0 md:gap-x-8 md:gap-y-2 md:grid-cols-2 xl:grid-cols-3">
               {filtered.map((entry) => {
                 const ch = entry.drink.name.trim().charAt(0).toUpperCase();
                 const id = `recipe-letter-${/[A-Z]/.test(ch) ? ch : "num"}`;
@@ -271,11 +271,11 @@ function RecipeCard({
   const bodyId = `recipe-body-${drink.id}`;
 
   return (
-    <Card data-testid={`card-recipe-${drink.id}`} id={anchorId} className="max-md:border-0 max-md:border-b">
+    <Card data-testid={`card-recipe-${drink.id}`} id={anchorId}>
       <CardHeader className="pb-3 space-y-2 max-md:p-0 max-md:space-y-0">
         <button
           type="button"
-          className="md:pointer-events-none flex w-full items-start gap-2 text-left max-md:min-h-14 max-md:px-3 max-md:py-2.5 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="md:pointer-events-none flex w-full items-start gap-2 text-left max-md:min-h-14 max-md:px-3 max-md:py-2.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
           aria-controls={bodyId}
@@ -302,7 +302,7 @@ function RecipeCard({
           />
         </button>
       </CardHeader>
-      <CardContent id={bodyId} className={cn("space-y-3 text-sm max-md:px-3 max-md:pb-4 max-md:pt-3 max-md:border-t max-md:border-dashed max-md:bg-secondary/40", open ? "block" : "hidden md:block")}>
+      <CardContent id={bodyId} className={cn("space-y-3 text-sm max-md:mx-1 max-md:mb-3 max-md:rounded-xl max-md:bg-wash/60 max-md:px-3 max-md:py-3", open ? "block" : "hidden md:block")}>
         {steps.length === 0 ? (
           <p className="text-muted-foreground italic">No recipe recorded.</p>
         ) : steps.length === 1 ? (

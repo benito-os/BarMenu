@@ -220,7 +220,7 @@ export default function MenuDetail() {
       {/* Fixed Header. Takes the menu's own background when it has one, so a
           themed menu never gets a cream band across the top. */}
       <header
-        className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90 border-b border-brass/30"
+        className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90 edge-soft"
         style={menu?.backgroundColor ? { backgroundColor: menu.backgroundColor } : undefined}
       >
         <div className="max-w-5xl mx-auto px-2 sm:px-6 py-1.5">
@@ -274,7 +274,7 @@ export default function MenuDetail() {
               <h2 className="font-headline text-4xl md:text-6xl font-bold">
                 {menu.name}
               </h2>
-              <DecoRule double className="mx-auto mt-4 mb-4 max-w-[14rem] text-gold" />
+              <DecoRule className="mx-auto mt-4 mb-4 max-w-[14rem] text-gold" />
               {menu.description && (
                 <p className="font-headline italic text-lg md:text-xl max-w-2xl mx-auto text-paper/90">
                   {menu.description}
@@ -331,18 +331,13 @@ export default function MenuDetail() {
             {/* Menu masthead - only show if no hero image */}
             {!menu.heroImageUrl && (
               <div className="text-center pt-2">
-                {menu.isActive && (
-                  <p className="smallcaps mb-4 text-brass" style={accentText}>
-                    Tonight&rsquo;s menu
-                  </p>
-                )}
                 <h2 
                   className="font-headline text-[2.75rem] leading-[1.02] md:text-6xl font-bold tracking-tight text-foreground"
                   style={{ color: menuTitleColor }}
                 >
                   {menu.name}
                 </h2>
-                <DecoRule double className="mx-auto mt-5 max-w-[15rem]" style={accentText} />
+                <DecoRule className="mx-auto mt-5 max-w-[15rem]" style={accentText} />
                 {menu.description && (
                   <p className="font-headline italic text-lg md:text-xl leading-snug text-muted-foreground max-w-xl mx-auto mt-5">
                     {menu.description}
@@ -376,7 +371,7 @@ export default function MenuDetail() {
                       // of a row of boxed badges.
                       const descriptors = [
                         drink.style,
-                        drink.temperature === "hot" ? "Hot" : drink.temperature === "cold" ? "Cold" : drink.temperature === "room_temp" ? "Room temp" : null,
+                        drink.temperature === "hot" ? "Hot" : drink.temperature === "cold" ? "Cold" : drink.temperature === "room_temp" ? "Room Temp" : null,
                         drink.isStirred ? "Stirred" : null,
                         drink.isShaken ? "Shaken" : null,
                         drink.baseSpirit,
@@ -388,8 +383,7 @@ export default function MenuDetail() {
                           className="py-5"
                           data-testid={`card-drink-${drink.id}`}
                         >
-                          <div className="flex items-start gap-4">
-                            <div className="min-w-0 flex-1 pt-1">
+                          <div className="min-w-0">
                               <h4 className="font-headline text-[1.375rem] font-semibold leading-tight text-foreground">
                                 {drink.name}
                               </h4>
@@ -403,39 +397,6 @@ export default function MenuDetail() {
                                   ))}
                                 </p>
                               )}
-                            </div>
-                            {/* min-h-11 = 44px: the one action a guest takes
-                                on this page, so it gets a full thumb target. */}
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "shrink-0 min-h-11 min-w-[6.5rem] px-4 text-[0.9375rem] font-semibold",
-                                "border-foreground/80 text-foreground hover:bg-foreground hover:text-background",
-                                isOrdered && "border-success/60 bg-success-soft text-success-soft-foreground disabled:opacity-100",
-                                isUnavailable && !isOrdered && "border-transparent px-0 min-w-0 text-xs uppercase tracking-[0.14em] text-muted-foreground disabled:opacity-100",
-                              )}
-                              onClick={() => handleOrderClick(drink.id)}
-                              disabled={orderMutation.isPending || isOrdered || isUnavailable}
-                              aria-label={
-                                isOrdered
-                                  ? `${drink.name} ordered`
-                                  : isUnavailable
-                                    ? `${drink.name} unavailable`
-                                    : `Request ${drink.name}`
-                              }
-                              data-testid={`button-order-${drink.id}`}
-                            >
-                              {isOrdered ? (
-                                <>
-                                  <Check className="w-4 h-4" />
-                                  Ordered
-                                </>
-                              ) : isUnavailable ? (
-                                "Unavailable"
-                              ) : (
-                                "Request"
-                              )}
-                            </Button>
                           </div>
                           <div>
                             {drink.description && (
@@ -476,6 +437,44 @@ export default function MenuDetail() {
                                 Missing: {drink.missingIngredients.join(", ")}
                               </p>
                             )}
+                            {/* min-h-11 = 44px: the one action a guest takes
+                                on this page, so it gets a full thumb target.
+                                Its own line under the entry, aligned with the
+                                text, so a long list stays calm. */}
+                            <div className="pt-3.5">
+                            <Button
+                              variant="ghost"
+                              className={cn(
+                                // A soft pill tinted with ink at low alpha, so
+                                // it reads on any per-menu background colour.
+                                "min-h-11 rounded-full px-5 text-[0.9375rem] font-semibold text-foreground",
+                                "bg-foreground/[0.07] hover:bg-foreground/[0.12]",
+                                isOrdered && "bg-success-soft text-success-soft-foreground disabled:opacity-100",
+                                isUnavailable && !isOrdered && "bg-transparent px-0 text-muted-foreground disabled:opacity-100",
+                              )}
+                              onClick={() => handleOrderClick(drink.id)}
+                              disabled={orderMutation.isPending || isOrdered || isUnavailable}
+                              aria-label={
+                                isOrdered
+                                  ? `${drink.name} ordered`
+                                  : isUnavailable
+                                    ? `${drink.name} unavailable`
+                                    : `Request ${drink.name}`
+                              }
+                              data-testid={`button-order-${drink.id}`}
+                            >
+                              {isOrdered ? (
+                                <>
+                                  <Check className="w-4 h-4 mr-2" />
+                                  Ordered
+                                </>
+                              ) : isUnavailable ? (
+                                "Unavailable"
+                              ) : (
+                                "Request This Drink"
+                              )}
+                            </Button>
+                            </div>
                           </div>
                         </article>
                       );
@@ -507,13 +506,8 @@ export default function MenuDetail() {
 
       {/* Guest Name Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent data-testid="dialog-guest-name" className="max-w-md deco-corners">
+        <DialogContent data-testid="dialog-guest-name" className="max-w-md">
           <DialogHeader className="text-left">
-            {selectedDrinkId && (
-              <p className="smallcaps text-brass">
-                {drinks?.find(d => d.id === selectedDrinkId)?.name}
-              </p>
-            )}
             <DialogTitle className="text-2xl">Complete Your Order</DialogTitle>
             <DialogDescription>
               Add your details and any special requests for this drink

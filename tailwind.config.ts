@@ -4,16 +4,26 @@ export default {
   content: ["./client/index.html", "./client/src/**/*.{js,jsx,ts,tsx}"],
   theme: {
     extend: {
-      // Printed-menu identity: a card has crisp corners. Everything from
-      // `rounded` to `rounded-2xl` collapses to 1-4px; `rounded-full` stays
-      // for genuinely round things (dots, count badges, the back-to-top pill).
+      // Soft paper: gentle corners everywhere. Controls and tiles sit at
+      // 8-12px, sheets and dialogs higher; `rounded-full` for pills and dots.
       borderRadius: {
-        DEFAULT: "2px",
-        sm: "1px",
-        md: "2px",
-        lg: "3px",
-        xl: "3px",
-        "2xl": "4px",
+        sm: "0.375rem", // 6px  small marks, checkboxes, kbd
+        DEFAULT: "0.5rem", // 8px
+        md: "0.5rem", // 8px  menu items, small controls
+        lg: "var(--radius)", // 10px buttons, fields, chips' tiles
+        xl: "0.875rem", // 14px tiles, rows with a wash, dialogs
+        "2xl": "1.25rem", // 20px sheets, framed cards
+      },
+      // Warm, diffuse, low-opacity shadows (tokens in client/src/index.css).
+      boxShadow: {
+        "2xs": "var(--shadow-2xs)",
+        xs: "var(--shadow-xs)",
+        sm: "var(--shadow-sm)",
+        DEFAULT: "var(--shadow)",
+        md: "var(--shadow-md)",
+        lg: "var(--shadow-lg)",
+        xl: "var(--shadow-xl)",
+        "2xl": "var(--shadow-2xl)",
       },
       colors: {
         // Flat / base colors (regular buttons)
@@ -35,6 +45,12 @@ export default {
           DEFAULT: "hsl(var(--primary) / <alpha-value>)",
           foreground: "hsl(var(--primary-foreground) / <alpha-value>)",
           border: "var(--primary-border)",
+        },
+        // Soft control fills (client/src/index.css): wash = resting,
+        // wash-strong = selected / pressed.
+        wash: {
+          DEFAULT: "hsl(var(--wash) / <alpha-value>)",
+          strong: "hsl(var(--wash-strong) / <alpha-value>)",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary) / <alpha-value>)",

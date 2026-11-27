@@ -12,7 +12,7 @@ import { Home, Github, QrCode, Wine, ChefHat, BarChart3 } from "lucide-react";
 export default function About() {
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90 border-b border-brass/30">
+      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90 edge-soft">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/">
             <Button variant="ghost" size="sm" data-testid="button-back-home">
@@ -116,7 +116,7 @@ export default function About() {
           </div>
         </section>
 
-        <footer className="pt-8 rule-double text-center text-xs text-muted-foreground font-body">
+        <footer className="pt-8 rule-fade text-center text-xs text-muted-foreground font-body">
           Built with React, TypeScript, Drizzle, Tailwind. MIT licensed.
         </footer>
       </main>

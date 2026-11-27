@@ -176,7 +176,7 @@ export function ImageUploader({
     <div className={cn("space-y-2", className)}>
       <Card
         className={cn(
-          "border-2 border-dashed p-6 text-center cursor-pointer transition-colors",
+          "rounded-xl border-2 border-dashed border-border p-6 text-center cursor-pointer transition-colors",
           isUploading ? "opacity-50 pointer-events-none" : "hover-elevate"
         )}
         onDrop={handleDrop}

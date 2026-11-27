@@ -276,7 +276,7 @@ export default function QueuePage() {
     }
     if (minutes >= warningThreshold) {
       return (
-        <Badge className="border-transparent bg-warning text-warning-foreground text-xs tabular-nums" data-testid="badge-wait-warning">
+        <Badge className="bg-warning text-warning-foreground text-xs tabular-nums" data-testid="badge-wait-warning">
           <Clock className="w-3 h-3 mr-1" />
           {display}
         </Badge>
@@ -293,11 +293,11 @@ export default function QueuePage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "requested":
-        return <Badge variant="info" className="uppercase tracking-[0.08em] text-[0.6875rem]">Requested</Badge>;
+        return <Badge variant="info">Requested</Badge>;
       case "in_progress":
-        return <Badge variant="warning" className="uppercase tracking-[0.08em] text-[0.6875rem]">In Progress</Badge>;
+        return <Badge variant="warning">In Progress</Badge>;
       case "served":
-        return <Badge variant="success" className="uppercase tracking-[0.08em] text-[0.6875rem]">Served</Badge>;
+        return <Badge variant="success">Served</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -372,16 +372,17 @@ export default function QueuePage() {
 
     return (
       <div
-        className={`border-b border-border overflow-hidden border-l-[3px] ${isSelected ? "bg-secondary shadow-[inset_0_0_0_1px_hsl(var(--brass)/0.6)]" : ""} ${isOutOfStock ? "!border-l-destructive bg-destructive-soft/50" : ""} ${order.status === "served" ? "opacity-70" : ""}`}
-        style={
-          !isOutOfStock && menuAccent
-            ? { borderLeftColor: menuAccent }
-            : !isOutOfStock
-              ? { borderLeftColor: "transparent" }
-              : undefined
-        }
+        className={`relative overflow-hidden rounded-xl transition-colors ${isSelected ? "bg-wash-strong" : isOutOfStock ? "bg-destructive-soft/60" : ""} ${order.status === "served" ? "opacity-70" : ""}`}
         data-testid={`mobile-order-${order.id}`}
       >
+        {/* Soft marker: the 86'd red wins over the order's menu colour. */}
+        {(isOutOfStock || menuAccent) && (
+          <span
+            aria-hidden
+            className={`absolute left-1 top-3 h-8 w-1 rounded-full ${isOutOfStock ? "bg-destructive" : ""}`}
+            style={!isOutOfStock && menuAccent ? { backgroundColor: menuAccent } : undefined}
+          />
+        )}
         <Collapsible
           open={isExpanded}
           onOpenChange={() => toggleExpand(order.id)}
@@ -401,7 +402,7 @@ export default function QueuePage() {
             </label>
 
             <CollapsibleTrigger
-              className="min-w-0 flex-1 py-2.5 pr-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring rounded-sm"
+              className="min-w-0 flex-1 py-2.5 pr-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring rounded-lg"
               aria-label={`${order.drinkName}${order.guestName ? ` for ${order.guestName}` : ""}, ${isExpanded ? "hide" : "show"} details`}
             >
               <div className="flex items-center gap-1">
@@ -416,7 +417,7 @@ export default function QueuePage() {
               </div>
               <div className="flex items-center gap-1.5 mt-0.5 text-xs text-muted-foreground">
                 <span className="truncate max-w-[7rem]">{order.guestName || "Guest"}</span>
-                <span aria-hidden className="text-brass-bright">&middot;</span>
+                <span aria-hidden>•</span>
                 <span className="shrink-0">{formatTime(order.requestedAt.toString())}</span>
                 {order.comments && <MessageSquare className="w-3 h-3 shrink-0" aria-label="Has notes" />}
               </div>
@@ -456,7 +457,7 @@ export default function QueuePage() {
               )}
               {order.status === "in_progress" && (
                 <Button
-                  className="h-11 min-w-[5.5rem] px-3 text-sm bg-success text-success-foreground border-success hover:bg-success/90"
+                  className="h-11 min-w-[5.5rem] px-3 text-sm bg-success text-success-foreground hover:bg-success/90"
                   onClick={(e) => {
                     e.stopPropagation();
                     markServed(order.id);
@@ -472,10 +473,10 @@ export default function QueuePage() {
           </div>
 
           <CollapsibleContent>
-            <div className="px-3 pb-3 pt-2 border-t border-dashed border-border bg-secondary/50 space-y-2">
+            <div className="mx-2 mb-2 rounded-lg bg-wash/70 px-3 pb-3 pt-2.5 space-y-2">
               {/* Out of stock warning */}
               {isOutOfStock && (
-                <div className="text-xs text-destructive-soft-foreground bg-destructive-soft rounded-sm px-2 py-1.5">
+                <div className="text-xs text-destructive-soft-foreground bg-destructive-soft rounded-md px-2 py-1.5">
                   This drink is out of stock — alert the guest
                 </div>
               )}
@@ -613,10 +614,10 @@ export default function QueuePage() {
               </div>
 
               {showShortcuts && (
-                <div className="rounded-sm border border-brass/30 bg-secondary/60 px-3 py-2 text-xs text-muted-foreground space-y-1">
-                  <div><kbd className="px-1.5 py-0.5 bg-popover border border-brass/40 rounded-sm text-foreground">S</kbd> Start oldest requested order</div>
-                  <div><kbd className="px-1.5 py-0.5 bg-popover border border-brass/40 rounded-sm text-foreground">D</kbd> Serve oldest in-progress order</div>
-                  <div><kbd className="px-1.5 py-0.5 bg-popover border border-brass/40 rounded-sm text-foreground">?</kbd> Toggle this help</div>
+                <div className="rounded-xl bg-wash/70 px-3 py-2 text-xs text-muted-foreground space-y-1">
+                  <div><kbd className="px-1.5 py-0.5 bg-popover rounded-md shadow-xs text-foreground">S</kbd> Start oldest requested order</div>
+                  <div><kbd className="px-1.5 py-0.5 bg-popover rounded-md shadow-xs text-foreground">D</kbd> Serve oldest in-progress order</div>
+                  <div><kbd className="px-1.5 py-0.5 bg-popover rounded-md shadow-xs text-foreground">?</kbd> Toggle this help</div>
                 </div>
               )}
 
@@ -705,7 +706,7 @@ export default function QueuePage() {
                       </button>
                     </p>
                   ) : (
-                    <div className="border-t border-border">
+                    <div className="menu-rows">
                       {visibleQueue.map((order) => (
                         <MobileOrderCard key={order.id} order={order} />
                       ))}
@@ -716,7 +717,7 @@ export default function QueuePage() {
                       while anything is selected. */}
                   {selectedIds.size > 0 && (
                     <div
-                      className="fixed inset-x-0 z-30 border-t border-brass/40 bg-popover/95 px-4 py-2 backdrop-blur"
+                      className="fixed inset-x-0 z-30 bg-popover/95 px-4 py-2 backdrop-blur shadow-[0_-8px_24px_-14px_hsl(var(--ink)/0.30)]"
                       style={{ bottom: "var(--mobile-tabbar-h)" }}
                       data-testid="mobile-bulk-bar"
                     >
@@ -934,7 +935,7 @@ export default function QueuePage() {
                 <div className="mt-6 space-y-6">
                   {/* Out of Stock Alert */}
                   {selectedOrder.drinkIsOutOfStock && (
-                    <div className="text-sm text-destructive-soft-foreground bg-destructive-soft rounded-sm px-3 py-2 flex items-center gap-2">
+                    <div className="text-sm text-destructive-soft-foreground bg-destructive-soft rounded-lg px-3 py-2 flex items-center gap-2">
                       <Ban className="w-4 h-4 shrink-0" />
                       <span>This drink is out of stock — alert the guest</span>
                     </div>
@@ -964,7 +965,7 @@ export default function QueuePage() {
                     const isFinal = selectedOrder.status === "served" || selectedOrder.status === "cancelled";
                     if (editingDetails) {
                       return (
-                        <div className="space-y-3 rounded-sm border border-brass/30 p-3">
+                        <div className="space-y-3 rounded-xl bg-wash/60 p-3">
                           <div className="space-y-2">
                             <Label htmlFor="edit-guest-name">Guest name</Label>
                             <Input
@@ -1053,7 +1054,7 @@ export default function QueuePage() {
                             <span>{selectedOrder.guestName || "—"}</span>
                           </div>
                           {selectedOrder.comments && (
-                            <div className="bg-secondary/70 p-3 rounded-sm border-l-2 border-brass/50">
+                            <div className="bg-wash/70 p-3 rounded-lg">
                               <span className="text-muted-foreground">Special requests: </span>
                               {selectedOrder.comments}
                             </div>
@@ -1097,30 +1098,26 @@ export default function QueuePage() {
                     <h3 className="smallcaps text-brass mb-3">Drink Details</h3>
                     <div className="space-y-2 text-sm">
                       {selectedOrder.drinkStyle && (
-                        <div className="flex items-baseline">
-                          <span className="text-muted-foreground">Style</span>
-                          <span aria-hidden className="leader" />
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Style:</span>
                           <span className="font-medium">{selectedOrder.drinkStyle}</span>
                         </div>
                       )}
                       {selectedOrder.drinkBaseSpirit && (
-                        <div className="flex items-baseline">
-                          <span className="text-muted-foreground">Base Spirit</span>
-                          <span aria-hidden className="leader" />
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Base Spirit:</span>
                           <span className="font-medium">{selectedOrder.drinkBaseSpirit}</span>
                         </div>
                       )}
                       {selectedOrder.drinkTemperature && (
-                        <div className="flex items-baseline">
-                          <span className="text-muted-foreground">Temperature</span>
-                          <span aria-hidden className="leader" />
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Temperature:</span>
                           <span className="font-medium">{selectedOrder.drinkTemperature}</span>
                         </div>
                       )}
                       {selectedOrder.drinkSection && (
-                        <div className="flex items-baseline">
-                          <span className="text-muted-foreground">Section</span>
-                          <span aria-hidden className="leader" />
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Section:</span>
                           <span className="font-medium">{selectedOrder.drinkSection}</span>
                         </div>
                       )}

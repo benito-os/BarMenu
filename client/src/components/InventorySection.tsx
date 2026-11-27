@@ -250,7 +250,7 @@ export function InventorySection({ actions }: { actions?: ReactNode } = {}) {
         </CardHeader>
         <CardContent className="space-y-6 max-md:p-0 max-md:space-y-3">
           {/* Desktop: Always visible form */}
-          <div className="hidden md:block rounded-sm border border-brass/30 bg-secondary/40 p-4 space-y-3">
+          <div className="hidden md:block rounded-xl bg-wash/60 p-4 space-y-3">
             <h3 className="smallcaps text-brass">Add Ingredient</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               <div className="space-y-1">
@@ -536,19 +536,25 @@ export function InventorySection({ actions }: { actions?: ReactNode } = {}) {
                       <SectionHeading as="h3" id={`${group.id}-h`} className="mb-1 px-1 min-h-6" count={group.items.length}>
                         {group.name}
                       </SectionHeading>
-                      <ul className="divide-y border-b">
+                      <ul className="space-y-1">
                         {group.items.map((item) => {
                           const isLow = item.onHand > 0 && item.onHand <= item.parLevel;
                           const isOut = item.onHand <= 0;
                           return (
                             <li
                               key={item.id}
-                              className={`flex items-center gap-1 py-1.5 pl-3 pr-1 border-l-[3px] ${isOut ? "border-l-destructive bg-destructive-soft/45" : isLow ? "border-l-warning bg-warning-soft/40" : "border-l-transparent"}`}
+                              className={`relative flex items-center gap-1 rounded-xl py-1.5 pl-3.5 pr-1 ${isOut ? "bg-destructive-soft/50" : isLow ? "bg-warning-soft/45" : ""}`}
                               data-testid={`mobile-ingredient-${item.id}`}
                             >
+                              {(isOut || isLow) && (
+                                <span
+                                  aria-hidden
+                                  className={`absolute left-1 top-1/2 h-6 w-1 -translate-y-1/2 rounded-full ${isOut ? "bg-destructive" : "bg-warning"}`}
+                                />
+                              )}
                               <button
                                 type="button"
-                                className="min-w-0 flex-1 min-h-11 text-left rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                className="min-w-0 flex-1 min-h-11 text-left rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                 onClick={() => handleEditOpen(item.id)}
                                 aria-label={`Edit ${item.name}`}
                                 data-testid={`mobile-button-edit-ingredient-${item.id}`}
@@ -566,11 +572,12 @@ export function InventorySection({ actions }: { actions?: ReactNode } = {}) {
                               </button>
 
                               {/* Quick stock adjustment (optimistic, silent) */}
-                              <div className="flex shrink-0 items-center">
+                              {/* One soft pill: round -, the count, round +. */}
+                              <div className={`flex shrink-0 items-center rounded-full ${isOut || isLow ? "bg-popover/75" : "bg-wash"}`}>
                                 <Button
                                   size="icon"
-                                  variant="outline"
-                                  className="h-11 w-11 rounded-r-none bg-popover/60"
+                                  variant="ghost"
+                                  className="h-11 w-11 rounded-full hover:bg-wash-strong"
                                   aria-label={`Decrease ${item.name}`}
                                   onClick={() => adjustStock(item.id, -1)}
                                   disabled={item.onHand <= 0}
@@ -579,7 +586,7 @@ export function InventorySection({ actions }: { actions?: ReactNode } = {}) {
                                   <Minus className="h-4 w-4" />
                                 </Button>
                                 <div
-                                  className="flex h-11 min-w-[2.75rem] flex-col items-center justify-center border-y border-[color:var(--button-outline)] bg-popover px-1 leading-none"
+                                  className="flex h-11 min-w-[2.5rem] flex-col items-center justify-center px-0.5 leading-none"
                                   data-testid={`mobile-stock-count-${item.id}`}
                                   aria-live="polite"
                                 >
@@ -589,8 +596,8 @@ export function InventorySection({ actions }: { actions?: ReactNode } = {}) {
                                 </div>
                                 <Button
                                   size="icon"
-                                  variant="outline"
-                                  className="h-11 w-11 rounded-l-none bg-popover/60"
+                                  variant="ghost"
+                                  className="h-11 w-11 rounded-full hover:bg-wash-strong"
                                   aria-label={`Increase ${item.name}`}
                                   onClick={() => adjustStock(item.id, 1)}
                                   data-testid={`mobile-button-increment-${item.id}`}
@@ -622,7 +629,7 @@ export function InventorySection({ actions }: { actions?: ReactNode } = {}) {
                                   <AlertDialogFooter>
                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                                     <AlertDialogAction
-                                      className="bg-destructive text-destructive-foreground border-destructive hover:bg-destructive/90"
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                       onClick={() => handleDelete(item.id)}
                                       data-testid="button-confirm-delete-ingredient-mobile"
                                     >
@@ -712,7 +719,7 @@ export function InventorySection({ actions }: { actions?: ReactNode } = {}) {
                                   <AlertDialogFooter>
                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                                     <AlertDialogAction
-                                      className="bg-destructive text-destructive-foreground border-destructive hover:bg-destructive/90"
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                       onClick={() => handleDelete(item.id)}
                                       data-testid="button-confirm-delete-ingredient"
                                     >
