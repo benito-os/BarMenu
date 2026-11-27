@@ -47,6 +47,9 @@ if (driver === "neon") {
   db = drizzleNeon({ client: neonPool, schema }) as unknown as NodePgDatabase<typeof schema>;
 } else {
   pool = new pg.Pool({ connectionString });
+  // An idle client dropping (Postgres restart) emits 'error'; unhandled, that
+  // would crash the process. Log it and let the pool reconnect on next use.
+  pool.on("error", (err) => console.error("[db] idle client error:", err.message));
   db = drizzlePg({ client: pool, schema });
 }
 

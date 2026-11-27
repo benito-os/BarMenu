@@ -3,9 +3,52 @@ import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import compression from "compression";
+import helmet from "helmet";
 import { pool } from "./db";
+import { shouldCompress } from "./static";
+import { checkSchemaReady, makeHealthz, readVersion } from "./health";
 
 const app = express();
+
+// Health check. Registered before body parsers, session and the request
+// logger so it is cheap, needs no cookie, and stays out of the logs (it is
+// polled). Lives under /api because on a Replit custom domain /healthz is
+// swallowed by the front end before Express sees it.
+app.get(
+  "/api/healthz",
+  makeHealthz({ query: (sql) => pool.query(sql), version: readVersion() }),
+);
+
+// Security headers, production only (dev needs Vite's inline HMR scripts).
+// contentSecurityPolicy is deliberately off: a CSP needs care here (inline
+// theme styles, Google Fonts, object-storage images, external hero image
+// URLs) and a wrong one blanks the menu. Revisit with a report-only policy.
+// helmet 8 defaults, adjusted:
+//  - crossOriginResourcePolicy "cross-origin": the default "same-origin" would
+//    stop other sites and link-preview scrapers embedding our public /objects/*
+//    hero images and QR downloads.
+//  - crossOriginEmbedderPolicy false (helmet's default, stated explicitly):
+//    enabling COEP would block our own page from loading Google Fonts and
+//    external hero images that do not send CORP/CORS headers.
+if (process.env.NODE_ENV === "production") {
+  app.use(
+    helmet({
+      contentSecurityPolicy: false,
+      crossOriginResourcePolicy: { policy: "cross-origin" },
+      crossOriginEmbedderPolicy: false,
+    }),
+  );
+}
+
+// Compress text responses; images/fonts are already compressed.
+app.use(
+  compression({
+    threshold: 1024,
+    filter: (req, res) =>
+      shouldCompress(res.getHeader("Content-Type")) && compression.filter(req, res),
+  }),
+);
 
 declare module 'http' {
   interface IncomingMessage {
@@ -56,7 +99,9 @@ if (process.env.NODE_ENV === "production") {
 // Replit container restarts. The "session" table is created on first run.
 const PgSession = connectPgSimple(session);
 
-app.use(session({
+// Mounted on /api only: static files and /objects/* never read the session, so
+// they skip the Postgres session lookup. (/mcp uses its own bearer token.)
+app.use("/api", session({
   store: new PgSession({
     pool,
     tableName: "session",
@@ -99,6 +144,17 @@ app.use((req, res, next) => {
 
 (async () => {
   const server = await registerRoutes(app);
+
+  // A fork that skipped `npm run db:push` would otherwise boot and 500 on the
+  // first request. Say what is wrong. In development stop; in production keep
+  // serving so /api/healthz still answers and the platform does not crash-loop.
+  const schemaCheck = await checkSchemaReady((sql) => pool.query(sql));
+  if (!schemaCheck.ok) {
+    log(schemaCheck.message);
+    if (process.env.NODE_ENV === "development") {
+      process.exit(1);
+    }
+  }
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route

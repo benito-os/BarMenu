@@ -5,6 +5,7 @@ import { createServer as createViteServer, createLogger } from "vite";
 import { type Server } from "http";
 import viteConfig from "../vite.config";
 import { nanoid } from "nanoid";
+import { staticCacheControl } from "./static";
 
 const viteLogger = createLogger();
 
@@ -76,10 +77,22 @@ export function serveStatic(app: Express) {
     );
   }
 
-  app.use(express.static(distPath));
+  // Hashed /assets/* are immutable; everything else (notably index.html)
+  // must revalidate so a deploy never strands an open tab on a stale shell.
+  // index: false so "/" goes through the fallback below and gets no-cache too.
+  app.use(
+    express.static(distPath, {
+      index: false,
+      setHeaders: (res, filePath) => {
+        const urlPath = "/" + path.relative(distPath, filePath).split(path.sep).join("/");
+        res.setHeader("Cache-Control", staticCacheControl(urlPath));
+      },
+    }),
+  );
 
   // fall through to index.html if the file doesn't exist
   app.use("*", (_req, res) => {
+    res.setHeader("Cache-Control", "no-cache");
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }
