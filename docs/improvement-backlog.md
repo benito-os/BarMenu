@@ -275,7 +275,7 @@ Lesson: a service worker that caches fetches pins old builds. Do not add one.
 
 | # | Decision | Why it is yours |
 |---|----------|-----------------|
-| O1 | Cold start. Autoscale sleeps between uses, so the first scan of the night waits for the app and the database to wake. Options: accept it; point a free uptime pinger at `/api/healthz` (after R1) for the evening; or move to a Reserved VM | Costs money or compute hours |
+| O1 | **Decided 2026-11-27: accept it for now.** Cold start. Autoscale sleeps between uses, so the first scan of the night waits for the app and the database to wake. Options: accept it; point a free uptime pinger at `/api/healthz` (after R1) for the evening; or move to a Reserved VM | Costs money or compute hours |
 | O2 | Run real migrations at start (`drizzle-kit generate` + `migrate()` under an advisory lock) instead of `db:push` | Changes how you publish; removes the manual step for forks |
 | O3 | Dark-room guest mode (audit finding 7) | Design |
 | O4 | Fewer badges on guest drink cards (audit finding 21) | Design |

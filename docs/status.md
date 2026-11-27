@@ -12,8 +12,11 @@
 3. Set `MCP_TOKEN` (24+ characters) in both the workspace secrets and the deployment secrets, then republish. The two lists are separate.
 4. Add the connector in Claude (steps in `docs/mcp.md`).
 5. Set your bar name in Settings, Branding (or upload a logo).
-6. Decide owner decisions O1 to O7 in `docs/improvement-backlog.md`. O1 is cold start: accept it, ping `/api/healthz` on a schedule, or move to a Reserved VM.
-7. Mobile dashboard choices to confirm: which four tabs sit in the tab bar (now Queue, Recipes, Inventory, Drinks), and the floating Add Drink button.
+6. Decide owner decisions O2 to O7 in `docs/improvement-backlog.md`. O1 (cold start) is decided: accept it for now.
+
+## Decided by the owner (2026-11-27)
+- Phone tab bar stays Queue, Recipes, Inventory, Drinks; the rest under More.
+- Visual theme: "printed menu", cream paper and brass, light only, across dashboard and guest pages. Per-menu colours still win on that menu's page.
 
 ## Next: agent
 - Nothing queued beyond what the owner decides above.
