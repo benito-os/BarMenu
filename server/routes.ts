@@ -6,6 +6,7 @@ import { z } from "zod";
 import { isStorageError } from "./errors";
 import { storage } from "./storage";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
+import { registerMcpRoutes } from "./mcp/http";
 import {
   analyticsQuerySchema,
   csvImportSchema,
@@ -112,6 +113,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     skipSuccessfulRequests: true,
     message: { error: "Too many login attempts. Please try again in 15 minutes." },
   });
+
+  // MCP endpoint for AI assistants. Off unless MCP_TOKEN is set; see docs/mcp.md.
+  registerMcpRoutes(app, storage);
 
   // POST /api/auth/login - Dashboard login
   app.post("/api/auth/login", loginRateLimit, async (req, res) => {

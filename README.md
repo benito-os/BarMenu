@@ -92,6 +92,14 @@ npm run build   # Vite for client + esbuild for server
 npm run start
 ```
 
+## Chat with your bar (MCP)
+
+Set `MCP_TOKEN` and the app exposes an MCP endpoint, so Claude (or any MCP
+client) can answer "what can I make tonight?", log the bottles you bought,
+build a shopping list, and save new drink ideas as hidden drafts. It cannot
+delete anything or touch orders. Setup and the tool list are in
+[`docs/mcp.md`](docs/mcp.md).
+
 ## Project layout
 
 ```
@@ -123,7 +131,7 @@ The admin dashboard exposes most knobs you'll want to tune:
 - **Rate limit** — anti-spam threshold for guest order placement
 
 For env vars (`DATABASE_URL`, `SESSION_SECRET`, `DASHBOARD_PASSWORD`,
-object-storage paths) see `.env.example`.
+object-storage paths, `MCP_TOKEN`) see `.env.example`.
 
 ## Forking notes
 
@@ -142,10 +150,12 @@ This started as a Replit Agent project, so a few things assume Replit:
 
 Issues and PRs welcome. The codebase has been through a multi-round audit
 (security, perf, UX) so the patterns are reasonably opinionated — try to
-match the existing style. `npm run check` should pass with zero errors.
+match the existing style. `npm run check` and `npm test` should both pass.
 
 The most recent audit, with ranked open findings, is in
 [`docs/audit-2026-11.md`](docs/audit-2026-11.md).
+The ordered list of what to improve next, written as self-contained tasks,
+is in [`docs/improvement-backlog.md`](docs/improvement-backlog.md).
 
 ## License
 
