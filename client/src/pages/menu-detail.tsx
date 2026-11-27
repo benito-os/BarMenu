@@ -16,7 +16,8 @@ import { addTrackedOrder } from "@/lib/orderCookies";
 import { OrderStatusBanner } from "@/components/OrderStatusBanner";
 import type { Menu, DrinkAvailability } from "@shared/validation";
 import { Home, Wine, Sparkles, Glasses, Check, Flame, Snowflake, ThermometerSun, Share2, QrCode, RefreshCw } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { ensureFontLoaded } from "@/hooks/useApplyBrandSettings";
 import { BrandedQRCode } from "@/components/BrandedQRCode";
 
 /**
@@ -68,6 +69,13 @@ export default function MenuDetail() {
   });
   const menu = menuData?.menu;
   const drinks = menuData?.drinks;
+
+  // Only the two default font families ship in index.html; a menu themed
+  // with another preset has to ask for its stylesheet.
+  const menuTypography = menu?.typography;
+  useEffect(() => {
+    ensureFontLoaded(menuTypography);
+  }, [menuTypography]);
 
   // A 404 is a real "menu not found"; anything else (network, 5xx) is a
   // load failure the guest can retry. Keep the two apart so bar wifi
