@@ -9,17 +9,19 @@ export interface TrackedOrder {
   timestamp: number;
 }
 
+export const MAX_TRACKED_ORDERS = 10;
+
 /**
- * Get all tracked order IDs from cookies
+ * Pure: parse the tracked orders out of a raw `document.cookie` string.
+ * Returns [] when the cookie is missing or malformed.
  */
-export function getTrackedOrders(): TrackedOrder[] {
-  if (typeof document === "undefined") return [];
-  
-  const cookies = document.cookie.split(";");
-  const orderCookie = cookies.find((c) => c.trim().startsWith(ORDER_COOKIE_NAME + "="));
-  
+export function parseTrackedOrders(cookieString: string): TrackedOrder[] {
+  const orderCookie = cookieString
+    .split(";")
+    .find((c) => c.trim().startsWith(ORDER_COOKIE_NAME + "="));
+
   if (!orderCookie) return [];
-  
+
   try {
     const value = orderCookie.split("=")[1];
     const decoded = decodeURIComponent(value);
@@ -30,21 +32,32 @@ export function getTrackedOrders(): TrackedOrder[] {
   }
 }
 
+/** Pure: encode orders as the cookie value (without name or attributes). */
+export function serializeTrackedOrders(orders: TrackedOrder[]): string {
+  return encodeURIComponent(JSON.stringify(orders));
+}
+
+/** Pure: put a new order first and keep only the newest MAX_TRACKED_ORDERS. */
+export function pruneTrackedOrders(existing: TrackedOrder[], added: TrackedOrder): TrackedOrder[] {
+  return [added, ...existing].slice(0, MAX_TRACKED_ORDERS);
+}
+
+/**
+ * Get all tracked order IDs from cookies
+ */
+export function getTrackedOrders(): TrackedOrder[] {
+  if (typeof document === "undefined") return [];
+  return parseTrackedOrders(document.cookie);
+}
+
 /**
  * Add a new order to tracked orders in cookies
  */
 export function addTrackedOrder(order: TrackedOrder): void {
   if (typeof document === "undefined") return;
   
-  const existingOrders = getTrackedOrders();
-  
-  // Add new order to the beginning of the array
-  const updatedOrders = [order, ...existingOrders];
-  
-  // Keep only the last 10 orders to prevent cookie size issues
-  const trimmedOrders = updatedOrders.slice(0, 10);
-  
-  saveTrackedOrders(trimmedOrders);
+  // Newest first, capped to prevent cookie size issues
+  saveTrackedOrders(pruneTrackedOrders(getTrackedOrders(), order));
 }
 
 /**
@@ -74,7 +87,7 @@ export function clearTrackedOrders(): void {
 function saveTrackedOrders(orders: TrackedOrder[]): void {
   if (typeof document === "undefined") return;
   
-  const encoded = encodeURIComponent(JSON.stringify(orders));
+  const encoded = serializeTrackedOrders(orders);
   document.cookie = `${ORDER_COOKIE_NAME}=${encoded}; path=/; max-age=${COOKIE_MAX_AGE}; samesite=lax`;
   
   // Dispatch custom event to notify components that orders have changed
