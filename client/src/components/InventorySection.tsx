@@ -23,6 +23,7 @@ export function InventorySection() {
     createIngredientPending, 
     updateIngredient, 
     updateIngredientPending,
+    adjustStock,
     deleteIngredient,
     deleteIngredientPending
   } = useIngredients();
@@ -452,17 +453,13 @@ export function InventorySection() {
                             <Button
                               size="icon"
                               variant="outline"
-                              className="h-8 w-8"
-                              onClick={() => {
-                                updateIngredient({
-                                  id: item.id,
-                                  onHand: Math.max(0, item.onHand - 1),
-                                });
-                              }}
-                              disabled={updateIngredientPending || item.onHand <= 0}
+                              className="h-11 w-11"
+                              aria-label={`Decrease ${item.name}`}
+                              onClick={() => adjustStock(item.id, -1)}
+                              disabled={item.onHand <= 0}
                               data-testid={`mobile-button-decrement-${item.id}`}
                             >
-                              <Minus className="h-3 w-3" />
+                              <Minus className="h-4 w-4" />
                             </Button>
                             <div 
                               className="min-w-[3.5rem] text-center font-medium text-sm px-1"
@@ -473,17 +470,12 @@ export function InventorySection() {
                             <Button
                               size="icon"
                               variant="outline"
-                              className="h-8 w-8"
-                              onClick={() => {
-                                updateIngredient({
-                                  id: item.id,
-                                  onHand: item.onHand + 1,
-                                });
-                              }}
-                              disabled={updateIngredientPending}
+                              className="h-11 w-11"
+                              aria-label={`Increase ${item.name}`}
+                              onClick={() => adjustStock(item.id, 1)}
                               data-testid={`mobile-button-increment-${item.id}`}
                             >
-                              <Plus className="h-3 w-3" />
+                              <Plus className="h-4 w-4" />
                             </Button>
                           </div>
 

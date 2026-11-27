@@ -132,8 +132,8 @@
   }
 
   /* Honour the OS "reduce motion" setting for CSS-driven motion (tailwind
-     animate-*, transitions, the elevate hover fades). framer-motion in the
-     splash screen is JS-driven and not covered here. */
+     animate-*, transitions, the elevate hover fades, the splash screen
+     keyframes). */
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,

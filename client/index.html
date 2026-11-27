@@ -8,14 +8,15 @@
     <meta name="description" content="Bar Flores - Experimental cocktail menus crafted with passion. Explore our curated seasonal and event-specific drink experiences." />
     <meta name="theme-color" content="#0a0a0a" />
     <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <title>Bar Flores - Experimental Cocktail Menus</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <!-- Inter + Playfair Display are the defaults. Roboto, Open Sans, Lora are
-         loaded so the headlineFont/bodyFont presets in Settings actually
-         render. All four headline + body options can now be selected without
-         silently falling back to the browser default. -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:wght@400;500;600;700&family=Open+Sans:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700;900&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Only the two default families load here (Inter body, Playfair Display
+         headline). Other presets (Roboto, Open Sans, Lora) are injected on
+         demand by useApplyBrandSettings.ts when Settings or a menu picks them. -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
   </head>
   <body>
     <div id="root"></div>

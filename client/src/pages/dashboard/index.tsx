@@ -745,9 +745,9 @@ export default function QueuePage() {
                           </TableCell>
                           <TableCell className="text-sm max-w-[200px]">
                             {order.comments ? (
-                              <span className="flex items-center gap-1 text-muted-foreground">
-                                <MessageSquare className="w-3 h-3 shrink-0" />
-                                <span className="truncate">{order.comments}</span>
+                              <span className="flex items-start gap-1 text-muted-foreground" title={order.comments}>
+                                <MessageSquare className="w-3 h-3 shrink-0 mt-0.5" />
+                                <span className="line-clamp-2 break-words">{order.comments}</span>
                               </span>
                             ) : "-"}
                           </TableCell>

@@ -4,6 +4,8 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useApplyBrandSettings } from "@/hooks/useApplyBrandSettings";
 
 // Eager-load the public/guest pages — they're the highest-traffic entry points
@@ -26,9 +28,19 @@ const QRCodesPage = lazy(() => import("@/pages/dashboard/qr-codes"));
 const SettingsPage = lazy(() => import("@/pages/dashboard/settings"));
 const ImportExportPage = lazy(() => import("@/pages/dashboard/import-export"));
 
+function RouteFallback() {
+  return (
+    <div className="p-4 md:p-6 space-y-4" aria-busy="true" aria-label="Loading">
+      <Skeleton className="h-8 w-48" />
+      <Skeleton className="h-32 w-full" />
+      <Skeleton className="h-32 w-full" />
+    </div>
+  );
+}
+
 function Router() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<RouteFallback />}>
       <Switch>
         <Route path="/" component={Landing} />
         <Route path="/menu/:slug" component={MenuDetail} />
@@ -56,7 +68,9 @@ function BrandedApp() {
   return (
     <TooltipProvider>
       <Toaster />
-      <Router />
+      <ErrorBoundary>
+        <Router />
+      </ErrorBoundary>
     </TooltipProvider>
   );
 }

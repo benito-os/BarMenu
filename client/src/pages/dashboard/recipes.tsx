@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Search } from "lucide-react";
 import type { DrinkAvailability } from "@shared/validation";
 
@@ -38,6 +40,7 @@ export default function RecipesPage() {
   const { menus, menusLoading } = useMenus(true);
   const { ingredients } = useIngredients();
   const [search, setSearch] = useState("");
+  const [makeableOnly, setMakeableOnly] = useState(false);
   const [selectedMenuId, setSelectedMenuId] = useState<string>(ALL_MENUS);
 
   // Same query key as useDrinks so the cache is shared with the Drinks page.
@@ -84,12 +87,13 @@ export default function RecipesPage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return entries;
-    return entries.filter(({ drink, ingredientNames }) =>
-      [drink.name, drink.recipe, drink.baseSpirit, drink.style, drink.section, ...ingredientNames]
-        .some((field) => field?.toLowerCase().includes(q)),
-    );
-  }, [entries, search]);
+    return entries.filter(({ drink, ingredientNames }) => {
+      if (makeableOnly && !drink.isMakeable) return false;
+      if (!q) return true;
+      return [drink.name, drink.recipe, drink.baseSpirit, drink.style, drink.section, ...ingredientNames]
+        .some((field) => field?.toLowerCase().includes(q));
+    });
+  }, [entries, search, makeableOnly]);
 
   return (
     <DashboardLayout>
@@ -126,6 +130,15 @@ export default function RecipesPage() {
               ))}
             </SelectContent>
           </Select>
+          <div className="flex items-center gap-2 min-h-11">
+            <Switch
+              id="recipes-makeable-only"
+              checked={makeableOnly}
+              onCheckedChange={setMakeableOnly}
+              data-testid="switch-recipe-makeable"
+            />
+            <Label htmlFor="recipes-makeable-only" className="whitespace-nowrap">Can make now</Label>
+          </div>
         </div>
 
         {drinksLoading ? (
@@ -137,7 +150,11 @@ export default function RecipesPage() {
         ) : filtered.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center text-muted-foreground">
-              {entries.length === 0 ? "No drinks yet." : "No recipes match your search."}
+              {entries.length === 0
+                ? "No drinks yet."
+                : makeableOnly
+                  ? "Nothing matches that can be made right now. Turn off \"Can make now\" or restock ingredients."
+                  : "No recipes match your search."}
             </CardContent>
           </Card>
         ) : (
@@ -192,6 +209,14 @@ function RecipeCard({ entry }: { entry: RecipeEntry }) {
           <p className="text-xs text-muted-foreground">
             <span className="font-medium text-foreground">Inventory: </span>
             {ingredientNames.join(", ")}
+          </p>
+        )}
+
+        {!drink.isMakeable && (drink.missingIngredients.length > 0 || drink.isOutOfStock) && (
+          <p className="text-xs text-destructive" data-testid={`text-missing-${drink.id}`}>
+            {drink.missingIngredients.length > 0
+              ? `Missing: ${drink.missingIngredients.join(", ")}`
+              : "Marked out of stock"}
           </p>
         )}
 

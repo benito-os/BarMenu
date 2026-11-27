@@ -51,33 +51,30 @@ export default function MenuDetail() {
   const [asMocktail, setAsMocktail] = useState(false);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
 
+  // One request for the menu and its drinks. Short staleTime plus refetch on
+  // focus so a guest who reopens their phone sees a drink that was 86'd
+  // meanwhile (the global default is Infinity / no refetch on focus).
   const {
-    data: menu,
-    isLoading: menuLoading,
+    data: menuData,
+    isLoading,
     isError: menuError,
     error: menuErrorObj,
     refetch: refetchMenu,
-  } = useQuery<Menu>({
-    queryKey: ["/api/menus", slug],
+  } = useQuery<{ menu: Menu; drinks: DrinkAvailability[] }>({
+    queryKey: ["/api/menus", slug, "full"],
     enabled: !!slug,
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
   });
-
-  const {
-    data: drinks,
-    isLoading: drinksLoading,
-    isError: drinksError,
-    refetch: refetchDrinks,
-  } = useQuery<DrinkAvailability[]>({
-    queryKey: [`/api/drinks?menuId=${menu?.id}`],
-    enabled: !!menu?.id,
-  });
+  const menu = menuData?.menu;
+  const drinks = menuData?.drinks;
 
   // A 404 is a real "menu not found"; anything else (network, 5xx) is a
   // load failure the guest can retry. Keep the two apart so bar wifi
   // dropping out never reads as "this menu does not exist".
   const menuMissing =
     menuError && menuErrorObj instanceof HttpError && menuErrorObj.status === 404;
-  const loadFailed = (menuError && !menuMissing) || drinksError;
+  const loadFailed = menuError && !menuMissing;
 
   const orderMutation = useMutation({
     mutationFn: async ({ 
@@ -174,8 +171,6 @@ export default function MenuDetail() {
         ...allDrinkSections.filter(section => !menu.sections.includes(section)).sort() // Additional sections not in menu.sections
       ]
     : allDrinkSections.sort();
-
-  const isLoading = menuLoading || drinksLoading;
 
   if (!slug) {
     return (
@@ -275,8 +270,7 @@ export default function MenuDetail() {
               variant="outline"
               className="min-h-11"
               onClick={() => {
-                if (menuError) refetchMenu();
-                if (drinksError) refetchDrinks();
+                refetchMenu();
               }}
               data-testid="button-retry-menu"
             >

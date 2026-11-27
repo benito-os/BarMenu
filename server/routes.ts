@@ -7,6 +7,17 @@ import { isStorageError } from "./errors";
 import { storage } from "./storage";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { registerMcpRoutes } from "./mcp/http";
+import { buildShoppingList } from "./shopping-list";
+import {
+  MAX_CSV_ROWS,
+  buildDrinkRow,
+  buildIngredientRow,
+  buildMenuRow,
+  buildOrderRow,
+  parseCSV,
+  rowToObject,
+  toCSVRow,
+} from "./csv";
 import {
   analyticsQuerySchema,
   csvImportSchema,
@@ -30,8 +41,6 @@ import {
   orderStatusUpdateSchema,
   settingsUpdateSchema,
 } from "@shared/validation";
-
-const MAX_CSV_ROWS = 5000;
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const respondValidationError = (
@@ -197,6 +206,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(menu);
     } catch (error) {
       console.error("Error fetching menu:", error);
+      res.status(500).json({ error: "Failed to fetch menu" });
+    }
+  });
+
+  // GET /api/menus/:slug/full - Menu plus its active drinks in one request, so
+  // the guest menu page does not wait on two chained calls.
+  app.get("/api/menus/:slug/full", async (req, res) => {
+    try {
+      const params = validate(menuSlugSchema, req.params, res, "Invalid menu slug");
+      if (!params) return;
+      const menu = await storage.getMenuBySlug(params.slug);
+
+      if (!menu) {
+        return res.status(404).json({ error: "Menu not found" });
+      }
+
+      const drinks = await storage.getDrinksWithAvailability(menu.id, false);
+      res.json({ menu, drinks });
+    } catch (error) {
+      console.error("Error fetching full menu:", error);
       res.status(500).json({ error: "Failed to fetch menu" });
     }
   });
@@ -484,6 +513,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching availability alerts:", error);
       res.status(500).json({ error: "Failed to fetch availability alerts" });
+    }
+  });
+
+  // GET /api/shopping-list - Ingredients at or below par, drink-blockers first
+  app.get("/api/shopping-list", requireAuth, async (_req, res) => {
+    try {
+      const [ingredients, alerts] = await Promise.all([
+        storage.getIngredients(),
+        storage.getActiveMenuDrinkAlerts(),
+      ]);
+      const items = buildShoppingList(ingredients, alerts);
+      res.json({ count: items.length, items });
+    } catch (error) {
+      console.error("Error building shopping list:", error);
+      res.status(500).json({ error: "Failed to build shopping list" });
     }
   });
 
@@ -800,21 +844,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ============ EXPORT ENDPOINTS ============
   
-  // Helper to escape CSV field values
-  const escapeCSV = (value: unknown): string => {
-    if (value === null || value === undefined) return "";
-    const str = String(value);
-    if (str.includes(",") || str.includes('"') || str.includes("\n")) {
-      return `"${str.replace(/"/g, '""')}"`;
-    }
-    return str;
-  };
-
-  // Helper to convert array to CSV row
-  const toCSVRow = (values: unknown[]): string => {
-    return values.map(escapeCSV).join(",");
-  };
-
   // GET /api/export/menus - Export all menus as CSV
   app.get("/api/export/menus", requireAuth, async (req, res) => {
     try {
@@ -967,50 +996,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ============ IMPORT ENDPOINTS ============
   
-  // Helper to parse CSV
-  const parseCSV = (csvText: string): { headers: string[]; rows: string[][] } => {
-    const lines = csvText.split(/\r?\n/).filter(line => line.trim());
-    if (lines.length === 0) return { headers: [], rows: [] };
-    
-    const parseRow = (line: string): string[] => {
-      const result: string[] = [];
-      let current = "";
-      let inQuotes = false;
-      
-      for (let i = 0; i < line.length; i++) {
-        const char = line[i];
-        if (char === '"') {
-          if (inQuotes && line[i + 1] === '"') {
-            current += '"';
-            i++;
-          } else {
-            inQuotes = !inQuotes;
-          }
-        } else if (char === "," && !inQuotes) {
-          result.push(current.trim());
-          current = "";
-        } else {
-          current += char;
-        }
-      }
-      result.push(current.trim());
-      return result;
-    };
-    
-    const headers = parseRow(lines[0]).map(h => h.replace(" (REQUIRED)", "").trim());
-    const rows = lines.slice(1).map(parseRow);
-    return { headers, rows };
-  };
-
-  // Helper to convert row to object based on headers
-  const rowToObject = (headers: string[], row: string[]): Record<string, string> => {
-    const obj: Record<string, string> = {};
-    headers.forEach((header, index) => {
-      obj[header] = row[index] || "";
-    });
-    return obj;
-  };
-
   // Validate the import payload (size limit via zod) and parse the CSV.
   // Also enforces a row cap so a multi-million-row CSV can't tie up the loop.
   const parseImportPayload = (
@@ -1093,22 +1078,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req,
         res,
         parsed,
-        (obj) => {
-          if (!obj.slug || !obj.name) return "slug and name are required";
-          return {
-            slug: obj.slug,
-            name: obj.name,
-            description: obj.description || null,
-            isActive: obj.isActive === "true",
-            heroImageUrl: obj.heroImageUrl || null,
-            backgroundColor: obj.backgroundColor || null,
-            accentColor: obj.accentColor || null,
-            sectionHeaderColor: obj.sectionHeaderColor || null,
-            menuTitleColor: obj.menuTitleColor || null,
-            typography: obj.typography || null,
-            sections: obj.sections ? obj.sections.split("|").filter(Boolean) : [],
-          };
-        },
+        buildMenuRow,
         (data) => storage.createMenu(data),
       );
     } catch (error) {
@@ -1126,28 +1096,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req,
         res,
         parsed,
-        (obj) => {
-          if (!obj.menuId || !obj.name || !obj.section) {
-            return "menuId, name, and section are required";
-          }
-          return {
-            menuId: obj.menuId,
-            name: obj.name,
-            section: obj.section,
-            description: obj.description || null,
-            recipe: obj.recipe || null,
-            style: obj.style || null,
-            temperature: obj.temperature || null,
-            isMocktail: obj.isMocktail === "true",
-            canBeMocktail: obj.canBeMocktail === "true",
-            isStirred: obj.isStirred === "true",
-            isShaken: obj.isShaken === "true",
-            baseSpirit: obj.baseSpirit || null,
-            isActive: obj.isActive !== "false",
-            isOutOfStock: obj.isOutOfStock === "true",
-            sortOrder: parseInt(obj.sortOrder) || 0,
-          };
-        },
+        buildDrinkRow,
         (data) => storage.createDrink(data),
       );
     } catch (error) {
@@ -1165,17 +1114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req,
         res,
         parsed,
-        (obj) => {
-          if (!obj.name || !obj.unit) return "name and unit are required";
-          return {
-            name: obj.name,
-            category: obj.category || null,
-            unit: obj.unit,
-            onHand: parseInt(obj.onHand) || 0,
-            parLevel: parseInt(obj.parLevel) || 0,
-            isActive: obj.isActive !== "false",
-          };
-        },
+        buildIngredientRow,
         (data) => storage.createIngredient(data),
       );
     } catch (error) {
@@ -1193,16 +1132,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req,
         res,
         parsed,
-        (obj) => {
-          if (!obj.drinkId || !obj.menuId) return "drinkId and menuId are required";
-          return {
-            drinkId: obj.drinkId,
-            menuId: obj.menuId,
-            guestName: obj.guestName || null,
-            comments: obj.comments || null,
-            asMocktail: obj.asMocktail === "true",
-          };
-        },
+        buildOrderRow,
         (data) => storage.createOrder(data),
       );
     } catch (error) {

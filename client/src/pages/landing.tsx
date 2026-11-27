@@ -29,7 +29,6 @@ export default function Landing() {
       <SplashScreen 
         show={showSplash} 
         onComplete={dismissSplash}
-        duration={2500}
       />
       {/* Hero Section */}
       <div className="relative h-[60vh] w-full overflow-hidden">
