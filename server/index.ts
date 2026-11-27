@@ -4,8 +4,17 @@ import connectPgSimple from "connect-pg-simple";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { pool } from "./db";
+import { securityHeaders } from "./security-headers";
 
 const app = express();
+app.disable("x-powered-by");
+
+// Replit puts exactly one proxy in front of the app in every environment (the workspace preview too), so req.ip
+// is the real client only with trust proxy = 1. Without it every visitor shares one rate-limit bucket.
+app.set("trust proxy", 1);
+
+// Security headers first, so every answer carries them (server/security-headers.ts).
+app.use(securityHeaders());
 
 declare module 'http' {
   interface IncomingMessage {
@@ -30,11 +39,6 @@ app.use(express.json({
   }
 }));
 app.use(express.urlencoded({ extended: false }));
-
-// Trust proxy for production (Replit uses a proxy)
-if (process.env.NODE_ENV === "production") {
-  app.set("trust proxy", 1);
-}
 
 // In production, secrets must be set in Replit Secrets — fail fast at boot
 // rather than silently running with hardcoded defaults.
@@ -110,21 +114,23 @@ app.use((req, res, next) => {
   }
 
   // Error middleware must come after Vite/static serving
-  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
-    const status = err?.status || err?.statusCode || 500;
-    const message = err?.message || "Internal Server Error";
-
-    log(
-      `error status=${status} path=${req.path} stack=${
-        err?.stack || "<no-stack>"
-      }`,
-    );
+  app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+    const raw = Number(err?.status ?? err?.statusCode);
+    const status = Number.isInteger(raw) && raw >= 400 && raw <= 599 ? raw : 500;
+    // Only errors marked for the caller (http-errors `expose`: body-parser, express) keep their message. A 500's
+    // message can carry SQL and bound values; another library's 4xx can carry ids. Raw request bodies
+    // (err.body, set by body-parser) are never logged.
+    const exposed = status < 500 && err?.expose === true;
+    log(`error status=${status} path=${req.path} type=${err?.type ?? err?.name ?? "unknown"}${status >= 500 ? ` stack=${err?.stack || "<no-stack>"}` : ""}`);
 
     if (res.headersSent) {
-      return;
+      return next(err);
     }
 
-    res.status(status).json({ message });
+    if (status >= 500) {
+      return res.status(status).json({ message: "Internal Server Error" });
+    }
+    res.status(status).json({ message: exposed ? err?.message || "Bad Request" : "Request failed" });
   });
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
