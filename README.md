@@ -65,7 +65,9 @@ git clone https://github.com/benito-os/BarMenu.git
 cd BarMenu
 npm install
 cp .env.example .env
-# Fill in DATABASE_URL (Neon free tier works), SESSION_SECRET, DASHBOARD_PASSWORD
+# Fill in DATABASE_URL (Neon free tier or any local Postgres), SESSION_SECRET, DASHBOARD_PASSWORD
+# A host ending in neon.tech uses the Neon driver; anything else uses node-postgres.
+# Override with DATABASE_DRIVER=neon|pg (see .env.example).
 npm run db:push   # Drizzle: apply schema to your DB
 npm run dev       # Vite middleware mode on http://localhost:5000
 ```
