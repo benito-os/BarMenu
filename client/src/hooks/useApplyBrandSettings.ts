@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useSettings } from "@/hooks/useSettings";
-import { FONT_PRESETS } from "@shared/schema";
+import { FONT_PRESETS, DEFAULT_BAR_NAME } from "@shared/schema";
 
 /** Families already loaded by client/index.html. */
 const DEFAULT_FAMILIES = new Set(["inter", "playfair display"]);
@@ -43,7 +43,16 @@ export function ensureFontLoaded(presetIdOrFamily: string | null | undefined): v
  * mid-session reset (e.g., the user clears the field) reverts immediately.
  */
 export function useApplyBrandSettings(): void {
-  const { settings } = useSettings();
+  const { settings, barName } = useSettings();
+
+  // The static <title> in index.html says "Bar Flores"; follow the setting
+  // once it is known. Only the leading name is swapped, so the rest of the
+  // title stays as authored.
+  useEffect(() => {
+    if (document.title.startsWith(DEFAULT_BAR_NAME) && barName !== DEFAULT_BAR_NAME) {
+      document.title = barName + document.title.slice(DEFAULT_BAR_NAME.length);
+    }
+  }, [barName]);
 
   useEffect(() => {
     const root = document.documentElement;

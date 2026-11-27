@@ -1,7 +1,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Settings, InsertSettings } from "@shared/schema";
+import { DEFAULT_BAR_NAME, type Settings, type InsertSettings } from "@shared/schema";
 
 export function useSettings() {
   const { toast } = useToast();
@@ -36,6 +36,7 @@ export function useSettings() {
     id: "default",
     waitingWarningMinutes: 3,
     waitingUrgentMinutes: 5,
+    barName: null,
     brandingLogoUrl: null,
     welcomeMessage: null,
     headlineFont: "playfair",
@@ -46,8 +47,12 @@ export function useSettings() {
     updatedAt: new Date(),
   };
 
+  const resolved = settings ?? defaultSettings;
+
   return {
-    settings: settings ?? defaultSettings,
+    settings: resolved,
+    // The name to display: the owner's, or the default until they set one.
+    barName: resolved.barName?.trim() || DEFAULT_BAR_NAME,
     settingsLoading,
     updateSettings: updateSettingsMutation.mutate,
     updateSettingsPending: updateSettingsMutation.isPending,

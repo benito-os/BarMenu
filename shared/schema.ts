@@ -111,6 +111,9 @@ export const settings = pgTable("settings", {
   waitingWarningMinutes: integer("waiting_warning_minutes").notNull().default(3),
   waitingUrgentMinutes: integer("waiting_urgent_minutes").notNull().default(5),
   // Branding settings
+  // Display name of the bar. Null means "use the default" (DEFAULT_BAR_NAME);
+  // nullable and additive so existing databases need no backfill.
+  barName: text("bar_name"),
   brandingLogoUrl: text("branding_logo_url"),
   welcomeMessage: text("welcome_message"),
   headlineFont: text("headline_font").default("playfair"),
@@ -132,6 +135,9 @@ export const insertSettingsSchema = createInsertSchema(settings).omit({
 
 export type InsertSettings = z.infer<typeof insertSettingsSchema>;
 export type Settings = typeof settings.$inferSelect;
+
+// Shown wherever the bar's name appears until the owner sets one in Settings.
+export const DEFAULT_BAR_NAME = "Bar Flores";
 
 // Typography preset options
 export const FONT_PRESETS = {

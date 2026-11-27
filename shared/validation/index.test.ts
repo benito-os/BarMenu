@@ -62,3 +62,12 @@ describe("settingsUpdateSchema", () => {
     expect(settingsUpdateSchema.safeParse({ waitingWarningMinutes: 1 }).success).toBe(true);
   });
 });
+
+describe("settingsUpdateSchema barName", () => {
+  it("trims, treats blank as a reset to the default, and caps at 60", () => {
+    expect(settingsUpdateSchema.parse({ barName: "  The Lantern Room " })).toEqual({ barName: "The Lantern Room" });
+    expect(settingsUpdateSchema.parse({ barName: "   " })).toEqual({ barName: null });
+    expect(settingsUpdateSchema.parse({ barName: null })).toEqual({ barName: null });
+    expect(settingsUpdateSchema.safeParse({ barName: "x".repeat(61) }).success).toBe(false);
+  });
+});

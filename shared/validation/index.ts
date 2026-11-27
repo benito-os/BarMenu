@@ -120,6 +120,13 @@ export const settingsUpdateSchema = z
   .object({
     waitingWarningMinutes: z.number().int().min(1),
     waitingUrgentMinutes: z.number().int().min(1),
+    // Null (or blank, from the settings form) resets to the default name.
+    barName: z
+      .string()
+      .trim()
+      .max(60, "Bar name must be 60 characters or fewer")
+      .transform((value) => (value === "" ? null : value))
+      .nullable(),
     brandingLogoUrl: z.string().nullable(),
     welcomeMessage: z.string().nullable(),
     headlineFont: z.string().min(1),

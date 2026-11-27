@@ -3,7 +3,8 @@ import { QRCode } from "react-qrcode-logo";
 import { Button } from "@/components/ui/button";
 import { Download, Share2, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import defaultLogo from "@assets/generated_images/elegant_bf_cocktail_bar_logo.webp";
+import { barLogoDataUrl } from "@/lib/barLogo";
+import { useSettings } from "@/hooks/useSettings";
 
 interface BrandedQRCodeProps {
   url: string;
@@ -39,7 +40,9 @@ export function BrandedQRCode({
   const containerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  const logoImage = customLogoUrl || defaultLogo;
+  const { barName } = useSettings();
+  const logoImage = customLogoUrl || barLogoDataUrl(barName);
+  const fileSlug = barName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "bar";
   const qrStyle = dotStyle === "squares" ? "squares" : "dots";
   const eyeRadius: [{ outer: number; inner: number }, { outer: number; inner: number }, { outer: number; inner: number }] = eyeStyle === "square" 
     ? [{ outer: 0, inner: 0 }, { outer: 0, inner: 0 }, { outer: 0, inner: 0 }]
@@ -72,7 +75,7 @@ export function BrandedQRCode({
         const downloadUrl = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = downloadUrl;
-        link.download = `bar-flores-qr-${slug}.png`;
+        link.download = `${fileSlug}-qr-${slug}.png`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -90,14 +93,14 @@ export function BrandedQRCode({
         variant: "destructive",
       });
     }
-  }, [slug, toast]);
+  }, [slug, fileSlug, toast]);
 
   const shareQRCode = useCallback(async () => {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `Bar Flores - ${menuName}`,
-          text: `Check out the ${menuName} at Bar Flores`,
+          title: `${barName} - ${menuName}`,
+          text: `Check out the ${menuName} at ${barName}`,
           url: url,
         });
         toast({
@@ -111,7 +114,7 @@ export function BrandedQRCode({
     } else {
       await copyToClipboard();
     }
-  }, [url, menuName, toast]);
+  }, [url, menuName, barName, toast]);
 
   const copyToClipboard = useCallback(async () => {
     try {

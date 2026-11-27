@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSettings } from "@/hooks/useSettings";
-import defaultLogo from "@assets/generated_images/elegant_bf_cocktail_bar_logo.webp";
+import { barLogoDataUrl } from "@/lib/barLogo";
 
 interface SplashScreenProps {
   onComplete?: () => void;
@@ -33,12 +33,12 @@ export function SplashScreen({
   duration = 900,
   show = true,
 }: SplashScreenProps) {
-  const { settings } = useSettings();
+  const { settings, barName } = useSettings();
   // "visible" -> "leaving" (fade out) -> "gone" (unmounted)
   const [phase, setPhase] = useState<"visible" | "leaving" | "gone">(show ? "visible" : "gone");
 
-  const logoImage = settings.brandingLogoUrl || defaultLogo;
-  const welcomeMessage = settings.welcomeMessage || "Welcome to Bar Flores";
+  const logoImage = settings.brandingLogoUrl || barLogoDataUrl(barName);
+  const welcomeMessage = settings.welcomeMessage || `Welcome to ${barName}`;
 
   const dismiss = useCallback(() => {
     setPhase((p) => (p === "visible" ? "leaving" : p));
@@ -78,7 +78,7 @@ export function SplashScreen({
         <div className="splash-logo w-48 h-48 md:w-56 md:h-56 flex items-center justify-center">
           <img
             src={logoImage}
-            alt="Bar Flores"
+            alt={barName}
             width={512}
             height={512}
             className="w-full h-full object-contain"
@@ -91,7 +91,7 @@ export function SplashScreen({
             className="font-headline text-3xl md:text-4xl font-bold text-primary"
             data-testid="splash-title"
           >
-            Bar Flores
+            {barName}
           </h1>
           {welcomeMessage && (
             <p

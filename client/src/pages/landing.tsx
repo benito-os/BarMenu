@@ -14,7 +14,7 @@ export default function Landing() {
   const { data: menus, isLoading, isError, refetch } = useQuery<Menu[]>({
     queryKey: ["/api/menus"],
   });
-  const { settings } = useSettings();
+  const { settings, barName } = useSettings();
   const { showSplash, dismissSplash } = useSplashScreen();
 
   const activeMenu = menus?.find(m => m.isActive);
@@ -34,7 +34,7 @@ export default function Landing() {
       <div className="relative h-[60vh] w-full overflow-hidden">
         <img
           src={heroImage}
-          alt="Craft cocktails at Bar Flores"
+          alt={`Craft cocktails at ${barName}`}
           className="absolute inset-0 w-full h-full object-cover"
           decoding="async"
           width={1408}
@@ -49,13 +49,13 @@ export default function Landing() {
           {brandLogo ? (
             <img
               src={brandLogo}
-              alt="Bar Flores"
+              alt={barName}
               className="h-24 md:h-32 lg:h-40 w-auto mb-4 drop-shadow-lg"
               data-testid="landing-brand-logo"
             />
           ) : (
             <h1 className="font-headline text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-4 tracking-tight">
-              Bar Flores
+              {barName}
             </h1>
           )}
           <p className="font-body text-lg md:text-xl text-white/90 mb-8 max-w-2xl">
@@ -190,7 +190,7 @@ export default function Landing() {
           here without having to know the /about URL. */}
       <footer className="border-t mt-8">
         <div className="max-w-7xl mx-auto px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground font-body">
-          <span>© {new Date().getFullYear()} Bar Flores</span>
+          <span>© {new Date().getFullYear()} {barName}</span>
           <Link
             href="/about"
             className="hover:text-foreground transition-colors"

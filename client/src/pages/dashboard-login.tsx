@@ -7,8 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Lock } from "lucide-react";
+import { useSettings } from "@/hooks/useSettings";
 
 export default function DashboardLogin() {
+  const { barName } = useSettings();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [, setLocation] = useLocation();
@@ -57,7 +59,7 @@ export default function DashboardLogin() {
           <div className="mx-auto w-12 h-12 bg-primary rounded-full flex items-center justify-center mb-4">
             <Lock className="w-6 h-6 text-primary-foreground" />
           </div>
-          <CardTitle className="text-3xl font-serif">Bar Flores</CardTitle>
+          <CardTitle className="text-3xl font-serif">{barName}</CardTitle>
           <CardDescription>Dashboard Login</CardDescription>
         </CardHeader>
         <CardContent>

@@ -1,10 +1,12 @@
-// One-off: writes WebP next to the source PNGs in attached_assets/generated_images/
-// and generates the PWA / home-screen icons in client/public/.
+// One-off: writes WebP next to any source PNGs in attached_assets/generated_images/
+// and generates the home-screen icons in client/public/ from the drawn logo
+// mark (client/src/lib/barLogo.ts, text-free variant: phones read these icons
+// from static files, so they cannot follow the bar-name setting).
 // Run: npx tsx scripts/optimize-images.ts
-// (The source PNGs were deleted after the first run; to re-run, restore them from git history.)
 import sharp from "sharp";
 import { existsSync, statSync } from "node:fs";
 import path from "node:path";
+import { barLogoSvg } from "../client/src/lib/barLogo";
 
 const root = path.resolve(import.meta.dirname, "..");
 const dir = path.join(root, "attached_assets", "generated_images");
@@ -13,7 +15,6 @@ const THEME_COLOUR = "#0a0a0a"; // matches <meta name="theme-color"> in client/i
 
 const jobs = [
   { src: "Bar_hero_cocktails_overhead_0be3299c.png", width: 1600, quality: 72 },
-  { src: "elegant_bf_cocktail_bar_logo.png", width: 512, quality: 80 },
 ];
 
 const icons = [
@@ -37,15 +38,13 @@ async function main() {
     console.log(`${job.src}: ${statSync(input).size} B -> ${path.basename(output)} ${info.size} B (${info.width}x${info.height})`);
   }
 
-  // Icons come from the logo WebP: square, 80% of the canvas, on the dark theme colour.
-  const logo = path.join(dir, "elegant_bf_cocktail_bar_logo.webp");
+  const mark = Buffer.from(barLogoSvg("", { plain: true }));
   for (const { name, size } of icons) {
-    const inner = Math.round(size * 0.8);
-    const resized = await sharp(logo)
-      .resize(inner, inner, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
-      .toBuffer();
-    const info = await sharp({ create: { width: size, height: size, channels: 3, background: THEME_COLOUR } })
-      .composite([{ input: resized, gravity: "center" }])
+    // Flatten onto the theme colour so the rounded SVG corners are not
+    // transparent (iOS fills transparency with black, Android with white).
+    const info = await sharp(mark, { density: 300 })
+      .resize(size, size)
+      .flatten({ background: THEME_COLOUR })
       .png({ compressionLevel: 9 })
       .toFile(path.join(publicDir, name));
     console.log(`${name}: ${info.size} B (${info.width}x${info.height})`);
