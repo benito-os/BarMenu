@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SplashScreen, useSplashScreen } from "@/components/SplashScreen";
 import { useSettings } from "@/hooks/useSettings";
 import type { Menu } from "@shared/validation";
-import heroImage from "@assets/generated_images/Bar_hero_cocktails_overhead_0be3299c.png";
+import heroImage from "@assets/generated_images/Bar_hero_cocktails_overhead_0be3299c.webp";
 import { Calendar, Sparkles, RefreshCw } from "lucide-react";
 
 export default function Landing() {
@@ -38,6 +38,8 @@ export default function Landing() {
           alt="Craft cocktails at Bar Flores"
           className="absolute inset-0 w-full h-full object-cover"
           decoding="async"
+          width={1408}
+          height={768}
           fetchPriority="high"
         />
         {/* Dark gradient overlay */}

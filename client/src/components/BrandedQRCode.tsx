@@ -3,7 +3,7 @@ import { QRCode } from "react-qrcode-logo";
 import { Button } from "@/components/ui/button";
 import { Download, Share2, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import defaultLogo from "@assets/generated_images/elegant_bf_cocktail_bar_logo.png";
+import defaultLogo from "@assets/generated_images/elegant_bf_cocktail_bar_logo.webp";
 
 interface BrandedQRCodeProps {
   url: string;

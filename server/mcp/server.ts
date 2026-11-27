@@ -16,6 +16,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { Drink, Ingredient, Menu } from "@shared/schema";
 import type { IStorage } from "../storage";
+import { buildShoppingList, stockStatus } from "../shopping-list";
 
 export interface BarMcpOptions {
   readOnly?: boolean;
@@ -25,14 +26,7 @@ type DrinkWithAvailability = Awaited<
   ReturnType<IStorage["getDrinksWithAvailability"]>
 >[number];
 
-type StockStatus = "out" | "low" | "ok";
-
-/** Same thresholds the Inventory page uses. */
-export function stockStatus(item: Pick<Ingredient, "onHand" | "parLevel">): StockStatus {
-  if (item.onHand <= 0) return "out";
-  if (item.onHand <= item.parLevel) return "low";
-  return "ok";
-}
+export { stockStatus };
 
 const norm = (value: string) => value.trim().toLowerCase().replace(/\s+/g, " ");
 
@@ -270,24 +264,7 @@ export function createBarMcpServer(storage: IStorage, options: BarMcpOptions = {
         storage.getIngredients(),
         storage.getActiveMenuDrinkAlerts(),
       ]);
-      const blocking = new Map<string, string[]>();
-      for (const alert of alerts) {
-        for (const name of alert.missingIngredients) {
-          blocking.set(name, [...(blocking.get(name) ?? []), alert.drinkName]);
-        }
-      }
-      const items = ingredients
-        .filter((item) => item.isActive && stockStatus(item) !== "ok")
-        .map((item) => ({
-          name: item.name,
-          category: item.category,
-          unit: item.unit,
-          onHand: item.onHand,
-          parLevel: item.parLevel,
-          buy: Math.max(1, item.parLevel - item.onHand + 1),
-          blocksDrinks: blocking.get(item.name) ?? [],
-        }))
-        .sort((a, b) => b.blocksDrinks.length - a.blocksDrinks.length || a.name.localeCompare(b.name));
+      const items = buildShoppingList(ingredients, alerts);
       return ok({ count: items.length, items });
     },
   );

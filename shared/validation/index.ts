@@ -71,8 +71,10 @@ export const drinkIngredientSchema = createSelectSchema(drinkIngredients);
 
 export const orderCreateSchema = insertOrderSchema
   .extend({
-    guestName: z.string().min(1).optional(),
-    comments: z.string().optional(),
+    // Caps match orderDetailsUpdateSchema and the client maxLength so the
+    // public endpoint cannot be used to store arbitrarily long text.
+    guestName: z.string().min(1).max(80).optional(),
+    comments: z.string().max(500).optional(),
     asMocktail: z.boolean().optional(),
   })
   .strict();
