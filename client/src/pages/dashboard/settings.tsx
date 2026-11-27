@@ -16,7 +16,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Clock, Save, Palette, Upload, Trash2, Type, QrCode, ShieldCheck } from "lucide-react";
-import { FONT_PRESETS, QR_STYLES } from "@shared/schema";
+import { DEFAULT_BAR_NAME, FONT_PRESETS, QR_STYLES } from "@shared/schema";
+import { barLogoDataUrl } from "@/lib/barLogo";
+import { ChipRow, StickyToolbar, useScrollSpy } from "@/components/dashboard/ChipRow";
+import { scrollToAnchor } from "@/lib/scroll";
+
+const SECTIONS = [
+  { id: "settings-queue", label: "Queue" },
+  { id: "settings-branding", label: "Branding" },
+  { id: "settings-anti-spam", label: "Anti-spam" },
+];
+const BAR_NAME_MAX = 60;
 
 export default function SettingsPage() {
   const { settings, settingsLoading, updateSettings, updateSettingsPending } = useSettings();
@@ -28,6 +38,7 @@ export default function SettingsPage() {
   const [urgentMinutes, setUrgentMinutes] = useState(5);
   
   // Branding settings state
+  const [barNameDraft, setBarNameDraft] = useState("");
   const [brandingLogoUrl, setBrandingLogoUrl] = useState<string | null>(null);
   const [welcomeMessage, setWelcomeMessage] = useState("");
   const [headlineFont, setHeadlineFont] = useState("playfair");
@@ -42,6 +53,7 @@ export default function SettingsPage() {
     if (settings) {
       setWarningMinutes(settings.waitingWarningMinutes);
       setUrgentMinutes(settings.waitingUrgentMinutes);
+      setBarNameDraft(settings.barName ?? "");
       setBrandingLogoUrl(settings.brandingLogoUrl);
       setWelcomeMessage(settings.welcomeMessage || "");
       setHeadlineFont(settings.headlineFont || "playfair");
@@ -87,6 +99,8 @@ export default function SettingsPage() {
 
   const handleSaveBranding = () => {
     updateSettings({
+      // Blank resets to the default name (the server stores null).
+      barName: barNameDraft.trim() || null,
       welcomeMessage: welcomeMessage || null,
       headlineFont,
       bodyFont,
@@ -96,6 +110,7 @@ export default function SettingsPage() {
   };
 
   const hasBrandingChanges =
+    barNameDraft.trim() !== (settings?.barName ?? "").trim() ||
     welcomeMessage !== (settings?.welcomeMessage || "") ||
     headlineFont !== (settings?.headlineFont || "playfair") ||
     bodyFont !== (settings?.bodyFont || "inter") ||
@@ -110,12 +125,29 @@ export default function SettingsPage() {
     orderRateLimitPerHour !== (settings?.orderRateLimitPerHour ?? 10);
   const antiSpamValid = orderRateLimitPerHour >= 0 && orderRateLimitPerHour <= 1000;
 
+  const activeSection = useScrollSpy(SECTIONS.map((x) => x.id));
+  // What the default drawn logo looks like with the name being typed.
+  const previewName = barNameDraft.trim() || DEFAULT_BAR_NAME;
+  const cardPad = "max-md:p-4";
+  const saveBtn = "max-md:w-full max-md:min-h-11";
+
   return (
     <DashboardLayout>
       <div className="p-4 md:p-6 max-w-full">
-        <div className="max-w-4xl mx-auto space-y-6">
+        <div className="max-w-4xl mx-auto space-y-6 max-md:space-y-4">
+          {/* Phone: jump between the settings sections */}
+          <StickyToolbar className="md:hidden py-1 max-md:-mt-4" testId="settings-section-toolbar">
+            <ChipRow
+              ariaLabel="Jump to settings section"
+              testIdPrefix="chip-settings"
+              items={SECTIONS}
+              activeId={activeSection}
+              onSelect={scrollToAnchor}
+            />
+          </StickyToolbar>
+
           {/* Page Header */}
-          <div>
+          <div className="hidden md:block">
             <h1 className="text-3xl font-bold font-serif">Settings</h1>
             <p className="text-muted-foreground mt-2">
               Manage your account and application preferences
@@ -123,9 +155,9 @@ export default function SettingsPage() {
           </div>
 
           {/* Queue Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <Card id="settings-queue">
+            <CardHeader className={cardPad}>
+              <CardTitle className="flex items-center gap-2 max-md:text-xl">
                 <Clock className="w-5 h-5" />
                 Queue Settings
               </CardTitle>
@@ -133,7 +165,7 @@ export default function SettingsPage() {
                 Configure order queue waiting time thresholds
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className={`${cardPad} max-md:pt-0`}>
               <div className="space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="space-y-2">
@@ -196,6 +228,7 @@ export default function SettingsPage() {
                     onClick={handleSaveThresholds}
                     disabled={!hasChanges || !isValid || updateSettingsPending || settingsLoading}
                     data-testid="button-save-thresholds"
+                    className={saveBtn}
                   >
                     <Save className="w-4 h-4 mr-2" />
                     {updateSettingsPending ? "Saving..." : "Save Changes"}
@@ -206,9 +239,9 @@ export default function SettingsPage() {
           </Card>
 
           {/* Branding Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <Card id="settings-branding">
+            <CardHeader className={cardPad}>
+              <CardTitle className="flex items-center gap-2 max-md:text-xl">
                 <Palette className="w-5 h-5" />
                 Branding
               </CardTitle>
@@ -216,8 +249,27 @@ export default function SettingsPage() {
                 Customize your logo, welcome message, and visual identity
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className={`${cardPad} max-md:pt-0`}>
               <div className="space-y-6">
+                {/* Bar name */}
+                <div className="space-y-2">
+                  <Label htmlFor="barName">Bar name</Label>
+                  <Input
+                    id="barName"
+                    value={barNameDraft}
+                    onChange={(e) => setBarNameDraft(e.target.value.slice(0, BAR_NAME_MAX))}
+                    maxLength={BAR_NAME_MAX}
+                    placeholder={DEFAULT_BAR_NAME}
+                    autoComplete="organization"
+                    disabled={settingsLoading}
+                    data-testid="input-bar-name"
+                    aria-describedby="barName-help"
+                  />
+                  <p id="barName-help" className="text-sm text-muted-foreground">
+                    Shown on the landing page, splash, login and QR codes. Leave blank to use the default.
+                  </p>
+                </div>
+
                 {/* Logo Upload */}
                 <div className="space-y-3">
                   <Label>Brand Logo</Label>
@@ -237,7 +289,8 @@ export default function SettingsPage() {
                         <Button
                           variant="destructive"
                           size="icon"
-                          className="absolute -top-2 -right-2 w-6 h-6"
+                          className="absolute -top-2 -right-2 w-6 h-6 max-md:w-9 max-md:h-9 max-md:-top-3 max-md:-right-3"
+                          aria-label="Remove logo"
                           onClick={handleRemoveLogo}
                           data-testid="button-remove-logo"
                         >
@@ -245,8 +298,15 @@ export default function SettingsPage() {
                         </Button>
                       </div>
                     ) : (
-                      <div className="w-20 h-20 rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center">
-                        <Upload className="w-6 h-6 text-muted-foreground/50" />
+                      // No upload: show the default logo drawn from the name, so
+                      // the owner sees it change as they type.
+                      <div className="w-20 h-20 rounded-lg border bg-muted flex items-center justify-center overflow-hidden">
+                        <img
+                          src={barLogoDataUrl(previewName)}
+                          alt={`Default logo for ${previewName}`}
+                          className="w-full h-full object-contain"
+                          data-testid="img-default-logo-preview"
+                        />
                       </div>
                     )}
                     <div>
@@ -279,7 +339,7 @@ export default function SettingsPage() {
                   </p>
                   <Textarea
                     id="welcomeMessage"
-                    placeholder="Welcome to Bar Flores..."
+                    placeholder={`Welcome to ${previewName}...`}
                     value={welcomeMessage}
                     onChange={(e) => setWelcomeMessage(e.target.value)}
                     className="resize-none"
@@ -381,6 +441,7 @@ export default function SettingsPage() {
                     onClick={handleSaveBranding}
                     disabled={!hasBrandingChanges || updateSettingsPending || settingsLoading}
                     data-testid="button-save-branding"
+                    className={saveBtn}
                   >
                     <Save className="w-4 h-4 mr-2" />
                     {updateSettingsPending ? "Saving..." : "Save Branding"}
@@ -391,9 +452,9 @@ export default function SettingsPage() {
           </Card>
 
           {/* Anti-spam */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <Card id="settings-anti-spam">
+            <CardHeader className={cardPad}>
+              <CardTitle className="flex items-center gap-2 max-md:text-xl">
                 <ShieldCheck className="w-5 h-5" />
                 Anti-spam
               </CardTitle>
@@ -402,7 +463,7 @@ export default function SettingsPage() {
                 site to prevent flooding from random visitors.
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className={`${cardPad} max-md:pt-0`}>
               <div className="space-y-6">
                 <div className="space-y-2 max-w-md">
                   <Label htmlFor="orderRateLimit">
@@ -445,6 +506,7 @@ export default function SettingsPage() {
                       settingsLoading
                     }
                     data-testid="button-save-anti-spam"
+                    className={saveBtn}
                   >
                     <Save className="w-4 h-4 mr-2" />
                     {updateSettingsPending ? "Saving..." : "Save Anti-spam"}

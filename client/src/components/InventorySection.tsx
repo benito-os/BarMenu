@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,11 +11,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Boxes, ChevronDown, ClipboardList, Minus, Pencil, Plus, ScanBarcode, Sparkles, Trash2 } from "lucide-react";
+import { Boxes, ClipboardList, Minus, Pencil, Plus, ScanBarcode, Search, Sparkles, Trash2 } from "lucide-react";
 import { useIngredients } from "@/hooks/useIngredients";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
+import { ChipRow, StickyToolbar, useScrollSpy } from "@/components/dashboard/ChipRow";
+import { StatTiles } from "@/components/dashboard/StatTiles";
+import { usePersistentState } from "@/hooks/usePersistentState";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { MOBILE_SHEET_DIALOG } from "@/lib/mobileSheet";
+import { anchorId, scrollToAnchor } from "@/lib/scroll";
 
-export function InventorySection() {
+const UNCATEGORIZED = "Uncategorized";
+
+/**
+ * `actions` renders next to the title on desktop and in the phone action row
+ * (the inventory page passes the Shopping list button).
+ */
+export function InventorySection({ actions }: { actions?: ReactNode } = {}) {
   const { 
     ingredients, 
     ingredientsLoading, 
@@ -30,7 +42,8 @@ export function InventorySection() {
   
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
+  // Remembered per browser so a restock run reopens on "Low".
+  const [statusFilter, setStatusFilter] = usePersistentState<string>("barflores.inventory.status", "all");
   const [editingIngredientId, setEditingIngredientId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
     name: "",
@@ -48,6 +61,10 @@ export function InventorySection() {
     isActive: true,
   });
   const [scannerOpen, setScannerOpen] = useState(false);
+  // `actions` (e.g. the Shopping list sheet) is rendered exactly once, in the
+  // header on desktop or the action row on phones, so its trigger and state
+  // are never duplicated.
+  const isMobile = useIsMobile();
   const [addFormOpen, setAddFormOpen] = useState(false);
 
   const categories = useMemo(() => {
@@ -80,6 +97,30 @@ export function InventorySection() {
     if (summary.total === 0) return 0;
     return Math.round((urgency / summary.total) * 100);
   }, [summary]);
+
+  // Phone list is grouped by category; chips jump between groups.
+  const mobileGroups = useMemo(() => {
+    const groups = new Map<string, typeof filteredItems>();
+    for (const item of filteredItems) {
+      const key = item.category?.trim() || UNCATEGORIZED;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(item);
+    }
+    return Array.from(groups.entries())
+      .sort(([a], [b]) => (a === UNCATEGORIZED ? 1 : b === UNCATEGORIZED ? -1 : a.localeCompare(b)))
+      .map(([name, items]) => ({ name, id: anchorId("inv-cat", name), items: [...items].sort((x, y) => x.name.localeCompare(y.name)) }));
+  }, [filteredItems]);
+  const activeGroupId = useScrollSpy(mobileGroups.map((g) => g.id));
+
+  const resetNewIngredient = () =>
+    setNewIngredient({
+      name: "",
+      category: "",
+      unit: "units",
+      onHand: 0,
+      parLevel: 0,
+      isActive: true,
+    });
 
   const editingIngredient = ingredients.find((ingredient) => ingredient.id === editingIngredientId) || null;
 
@@ -118,14 +159,52 @@ export function InventorySection() {
 
   return (
     <>
-      <div className="flex flex-col gap-2">
-        <h2 className="text-2xl font-serif font-semibold">Inventory</h2>
-        <p className="text-sm text-muted-foreground">
-          Track ingredients, spot low stock early, and manage your bar inventory.
-        </p>
+      <div className="hidden md:flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-2">
+          <h2 className="text-2xl font-serif font-semibold">Inventory</h2>
+          <p className="text-sm text-muted-foreground">
+            Track ingredients, spot low stock early, and manage your bar inventory.
+          </p>
+        </div>
+        {!isMobile && actions}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      {/* Phone: one row of tiles that filter the list, then the actions. */}
+      <div className="md:hidden space-y-3 max-md:!mt-0">
+        <StatTiles
+          ariaLabel="Filter ingredients by stock"
+          activeId={statusFilter}
+          onSelect={(id) => setStatusFilter((prev) => (prev === id && id !== "all" ? "all" : id))}
+          tiles={[
+            { id: "all", label: "All", value: summary.total, testId: "tile-inventory-all" },
+            { id: "low", label: "Low", value: summary.low, tone: "warning", testId: "tile-inventory-low" },
+            { id: "out", label: "Out", value: summary.out, tone: "destructive", testId: "tile-inventory-out" },
+            { id: "healthy", label: "OK", value: summary.healthy, tone: "success", testId: "tile-inventory-healthy" },
+          ]}
+        />
+        <div className="flex gap-2 [&>*]:flex-1 [&>*:last-child]:flex-[1.4]">
+          <Button
+            className="min-h-11"
+            onClick={() => setAddFormOpen(true)}
+            data-testid="button-toggle-add-form"
+          >
+            <Plus className="h-4 w-4 mr-1.5" />
+            Add
+          </Button>
+          <Button
+            variant="outline"
+            className="min-h-11"
+            data-testid="mobile-button-scan-to-add"
+            onClick={() => setScannerOpen(true)}
+          >
+            <ScanBarcode className="h-4 w-4 mr-1.5" />
+            Scan
+          </Button>
+          {isMobile && actions}
+        </div>
+      </div>
+
+      <div className="hidden md:grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Ingredients</CardTitle>
@@ -161,14 +240,14 @@ export function InventorySection() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
+      <Card className="max-md:border-0 max-md:bg-transparent max-md:shadow-none">
+        <CardHeader className="hidden md:flex">
           <CardTitle className="text-xl">Ingredient Inventory</CardTitle>
           <CardDescription>
             Add, update, and manage your bar ingredients.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 max-md:p-0 max-md:space-y-3">
           {/* Desktop: Always visible form */}
           <div className="hidden md:block rounded-lg border p-4 space-y-3">
             <h3 className="text-sm font-semibold">Add Ingredient</h3>
@@ -257,23 +336,18 @@ export function InventorySection() {
             </div>
           </div>
 
-          {/* Mobile: Collapsible form */}
-          <Collapsible open={addFormOpen} onOpenChange={setAddFormOpen} className="md:hidden">
-            <CollapsibleTrigger asChild>
-              <Button 
-                variant="outline" 
-                className="w-full justify-between"
-                data-testid="button-toggle-add-form"
-              >
-                <span className="flex items-center gap-2">
-                  <Plus className="h-4 w-4" />
-                  Add Ingredient
-                </span>
-                <ChevronDown className={`h-4 w-4 transition-transform ${addFormOpen ? "rotate-180" : ""}`} />
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="mt-3">
-              <div className="rounded-lg border p-3 space-y-3">
+          {/* Mobile: add form in a bottom sheet, opened from the action row */}
+          <Sheet open={addFormOpen} onOpenChange={setAddFormOpen}>
+            <SheetContent
+              side="bottom"
+              className="md:hidden rounded-t-2xl px-4 pt-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] max-h-[92dvh] overflow-y-auto"
+              data-testid="sheet-add-ingredient"
+            >
+              <SheetHeader className="text-left mb-4">
+                <SheetTitle>Add ingredient</SheetTitle>
+                <SheetDescription>Name is all you need; set par so low stock shows up.</SheetDescription>
+              </SheetHeader>
+              <div className="space-y-4">
                 <div className="space-y-3">
                   <div className="space-y-1">
                     <Label htmlFor="mobile-ingredient-name" className="text-xs">Name</Label>
@@ -332,6 +406,19 @@ export function InventorySection() {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <Button
+                    variant="outline"
+                    className="min-h-11"
+                    data-testid="mobile-button-sheet-scan"
+                    onClick={() => {
+                      setAddFormOpen(false);
+                      setScannerOpen(true);
+                    }}
+                  >
+                    <ScanBarcode className="h-4 w-4 mr-1" />
+                    Scan instead
+                  </Button>
+                  <Button
+                    className="min-h-11"
                     data-testid="mobile-button-add-ingredient"
                     onClick={() => {
                       if (!newIngredient.name.trim()) return;
@@ -339,34 +426,44 @@ export function InventorySection() {
                         ...newIngredient,
                         category: newIngredient.category.trim() || null,
                       });
-                      setNewIngredient({
-                        name: "",
-                        category: "",
-                        unit: "units",
-                        onHand: 0,
-                        parLevel: 0,
-                        isActive: true,
-                      });
+                      resetNewIngredient();
                       setAddFormOpen(false);
                     }}
                     disabled={createIngredientPending || !newIngredient.name.trim()}
                   >
                     {createIngredientPending ? "Adding..." : "Add"}
                   </Button>
-                  <Button
-                    variant="outline"
-                    data-testid="mobile-button-scan-to-add"
-                    onClick={() => setScannerOpen(true)}
-                  >
-                    <ScanBarcode className="h-4 w-4 mr-1" />
-                    Scan
-                  </Button>
                 </div>
               </div>
-            </CollapsibleContent>
-          </Collapsible>
+            </SheetContent>
+          </Sheet>
 
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          {/* Phone: search + category jump chips stay pinned while counting */}
+          <StickyToolbar className="md:hidden py-2 space-y-1" testId="inventory-mobile-toolbar">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden />
+              <Input
+                type="search"
+                placeholder="Search ingredients"
+                aria-label="Search ingredients"
+                data-testid="mobile-input-search-ingredients"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                className="pl-9"
+              />
+            </div>
+            {mobileGroups.length > 1 && (
+              <ChipRow
+                ariaLabel="Jump to category"
+                testIdPrefix="chip-inventory"
+                items={mobileGroups.map((g) => ({ id: g.id, label: g.name, count: g.items.length }))}
+                activeId={activeGroupId}
+                onSelect={scrollToAnchor}
+              />
+            )}
+          </StickyToolbar>
+
+          <div className="hidden md:flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <Input
               placeholder="Search ingredients"
               data-testid="input-search-ingredients"
@@ -409,122 +506,136 @@ export function InventorySection() {
             </div>
           ) : (
             <>
-              {/* Mobile view - compact card layout */}
-              <div className="md:hidden space-y-2" data-testid="inventory-mobile-view">
+              {/* Mobile view - grouped by category, one 60px row per item */}
+              <div className="md:hidden space-y-5" data-testid="inventory-mobile-view">
                 {filteredItems.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground text-sm">
-                    {ingredients.length === 0 
-                      ? "No ingredients yet. Tap \"Add Ingredient\" above."
-                      : "No ingredients match your filters."}
+                    {ingredients.length === 0
+                      ? "No ingredients yet. Tap \"Add\" above."
+                      : (
+                        <>
+                          No ingredients match your filters.{" "}
+                          <button
+                            type="button"
+                            className="underline underline-offset-2 min-h-11"
+                            onClick={() => {
+                              setSearchTerm("");
+                              setStatusFilter("all");
+                              setCategoryFilter("all");
+                            }}
+                          >
+                            Clear filters
+                          </button>
+                        </>
+                      )}
                   </div>
                 ) : (
-                  filteredItems.map((item) => {
-                    const isLow = item.onHand > 0 && item.onHand <= item.parLevel;
-                    const isOut = item.onHand <= 0;
-                    return (
-                      <div 
-                        key={item.id} 
-                        className={`border rounded-lg p-2 ${isOut ? "border-destructive/50 bg-destructive/5" : isLow ? "border-warning/50 bg-warning/5" : ""}`}
-                        data-testid={`mobile-ingredient-${item.id}`}
-                      >
-                        {/* Row 1: Name + Status Badge */}
-                        <div className="flex items-center justify-between gap-2 mb-1">
-                          <div className="flex-1 min-w-0">
-                            <span className="font-medium text-sm truncate block">{item.name}</span>
-                          </div>
-                          <Badge
-                            variant={isOut ? "destructive" : isLow ? "secondary" : "default"}
-                            className="text-[10px] px-1.5 py-0 h-5 shrink-0"
-                          >
-                            {isOut ? "Out" : isLow ? "Low" : "OK"}
-                          </Badge>
-                        </div>
+                  mobileGroups.map((group) => (
+                    <section key={group.id} id={group.id} aria-labelledby={`${group.id}-h`}>
+                      <h3 id={`${group.id}-h`} className="mb-1.5 flex items-baseline justify-between px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        {group.name}
+                        <span className="font-normal normal-case tracking-normal tabular-nums">{group.items.length}</span>
+                      </h3>
+                      <ul className="divide-y rounded-lg border bg-card overflow-hidden">
+                        {group.items.map((item) => {
+                          const isLow = item.onHand > 0 && item.onHand <= item.parLevel;
+                          const isOut = item.onHand <= 0;
+                          return (
+                            <li
+                              key={item.id}
+                              className={`flex items-center gap-1 py-1.5 pl-3 pr-1 border-l-4 ${isOut ? "border-l-destructive bg-destructive/5" : isLow ? "border-l-warning bg-warning/5" : "border-l-transparent"}`}
+                              data-testid={`mobile-ingredient-${item.id}`}
+                            >
+                              <button
+                                type="button"
+                                className="min-w-0 flex-1 min-h-11 text-left rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                onClick={() => handleEditOpen(item.id)}
+                                aria-label={`Edit ${item.name}`}
+                                data-testid={`mobile-button-edit-ingredient-${item.id}`}
+                              >
+                                <span className="flex items-center gap-1 font-medium text-[0.9375rem] leading-tight">
+                                  <span className="truncate">{item.name}</span>
+                                  <Pencil className="h-3 w-3 shrink-0 text-muted-foreground/60" aria-hidden />
+                                </span>
+                                <span className="mt-0.5 block text-xs text-muted-foreground truncate">
+                                  <span className={isOut ? "text-destructive font-medium" : isLow ? "text-amber-700 font-medium" : ""}>
+                                    {isOut ? "Out" : isLow ? "Low" : "OK"}
+                                  </span>
+                                  {" · "}par {item.parLevel} {item.unit}
+                                </span>
+                              </button>
 
-                        {/* Row 2: Category + Stock info */}
-                        <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
-                          <span className="truncate">{item.category || "Uncategorized"}</span>
-                          <span>Par: {item.parLevel} {item.unit}</span>
-                        </div>
-
-                        {/* Row 3: Quick stock controls + actions */}
-                        <div className="flex items-center justify-between gap-2">
-                          {/* Quick stock adjustment */}
-                          <div className="flex items-center gap-1">
-                            <Button
-                              size="icon"
-                              variant="outline"
-                              className="h-11 w-11"
-                              aria-label={`Decrease ${item.name}`}
-                              onClick={() => adjustStock(item.id, -1)}
-                              disabled={item.onHand <= 0}
-                              data-testid={`mobile-button-decrement-${item.id}`}
-                            >
-                              <Minus className="h-4 w-4" />
-                            </Button>
-                            <div 
-                              className="min-w-[3.5rem] text-center font-medium text-sm px-1"
-                              data-testid={`mobile-stock-count-${item.id}`}
-                            >
-                              {item.onHand} {item.unit}
-                            </div>
-                            <Button
-                              size="icon"
-                              variant="outline"
-                              className="h-11 w-11"
-                              aria-label={`Increase ${item.name}`}
-                              onClick={() => adjustStock(item.id, 1)}
-                              data-testid={`mobile-button-increment-${item.id}`}
-                            >
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                          </div>
-
-                          {/* Edit + Delete actions */}
-                          <div className="flex items-center gap-1">
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-8 w-8"
-                              onClick={() => handleEditOpen(item.id)}
-                              data-testid={`mobile-button-edit-ingredient-${item.id}`}
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
+                              {/* Quick stock adjustment (optimistic, silent) */}
+                              <div className="flex shrink-0 items-center">
                                 <Button
                                   size="icon"
-                                  variant="ghost"
-                                  className="h-8 w-8"
-                                  data-testid={`mobile-button-delete-ingredient-${item.id}`}
-                                  disabled={deleteIngredientPending}
+                                  variant="outline"
+                                  className="h-11 w-11 rounded-r-none"
+                                  aria-label={`Decrease ${item.name}`}
+                                  onClick={() => adjustStock(item.id, -1)}
+                                  disabled={item.onHand <= 0}
+                                  data-testid={`mobile-button-decrement-${item.id}`}
                                 >
-                                  <Trash2 className="h-3.5 w-3.5" />
+                                  <Minus className="h-4 w-4" />
                                 </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete Ingredient</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Are you sure you want to delete "{item.name}"? This action cannot be undone.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => handleDelete(item.id)}
-                                    data-testid="button-confirm-delete-ingredient-mobile"
+                                <div
+                                  className="flex h-11 min-w-[2.75rem] flex-col items-center justify-center border-y bg-background px-1 leading-none"
+                                  data-testid={`mobile-stock-count-${item.id}`}
+                                  aria-live="polite"
+                                >
+                                  <span className="text-base font-semibold tabular-nums">{item.onHand}</span>
+                                  <span className="sr-only"> </span>
+                                  <span className="mt-0.5 max-w-[3.5rem] truncate text-[0.625rem] text-muted-foreground">{item.unit}</span>
+                                </div>
+                                <Button
+                                  size="icon"
+                                  variant="outline"
+                                  className="h-11 w-11 rounded-l-none"
+                                  aria-label={`Increase ${item.name}`}
+                                  onClick={() => adjustStock(item.id, 1)}
+                                  data-testid={`mobile-button-increment-${item.id}`}
+                                >
+                                  <Plus className="h-4 w-4" />
+                                </Button>
+                              </div>
+
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-11 w-9 shrink-0 text-muted-foreground"
+                                    aria-label={`Delete ${item.name}`}
+                                    data-testid={`mobile-button-delete-ingredient-${item.id}`}
+                                    disabled={deleteIngredientPending}
                                   >
-                                    Delete
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Ingredient</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to delete "{item.name}"? This action cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => handleDelete(item.id)}
+                                      data-testid="button-confirm-delete-ingredient-mobile"
+                                    >
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </section>
+                  ))
                 )}
               </div>
 
@@ -631,7 +742,7 @@ export function InventorySection() {
       </Card>
 
       <Dialog open={!!editingIngredient} onOpenChange={(open) => !open && setEditingIngredientId(null)}>
-        <DialogContent>
+        <DialogContent className={MOBILE_SHEET_DIALOG}>
           <DialogHeader>
             <DialogTitle>Edit Ingredient</DialogTitle>
             <DialogDescription>

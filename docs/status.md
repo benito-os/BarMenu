@@ -2,23 +2,27 @@
 **Read this block first (at most 40 lines). Full history below the cut.** Updated 2026-11-27.
 
 ## Now
-- On 2026-11-27 the full `docs/improvement-backlog.md` (waves S, R, T, U) was executed on branch `ccr-90a470fb-rnex9a`. See the commit log on that branch for which tasks landed.
-- The same day an MCP server was added: `server/mcp/`, `docs/mcp.md`, 11 tools. It is off until `MCP_TOKEN` is set.
-- That branch is NOT merged to `main` and NOT deployed. The live app is still the previous build.
+- Branch `ccr-90a470fb-rnex9a` holds, all dated 2026-11-27: the MCP server (`server/mcp/`, `docs/mcp.md`, 11 tools, off until `MCP_TOKEN` is set); every task in `docs/improvement-backlog.md` (waves S, R, T, U); a mobile redesign of the owner dashboard (bottom tab bar, filter tiles, jump chips, bottom-sheet forms); and a bar-name setting with a logo drawn from the name.
+- It is NOT merged to `main` and NOT deployed. The live app is still the previous build.
+- Verified on a local Postgres 16 only: typecheck, 94 tests, production build, phone-sized browser checks.
 
 ## Next: owner only (agents cannot do these)
-1. Review and merge the branch `ccr-90a470fb-rnex9a` into `main`.
-2. Set `MCP_TOKEN` (24+ characters) in both the workspace secrets and the deployment secrets, then republish. The two lists are separate.
-3. Add the connector in Claude (steps in `docs/mcp.md`).
-4. Decide owner decisions O1 to O7 in `docs/improvement-backlog.md`. O1 is cold start: accept it, ping `/api/healthz` on a schedule, or move to a Reserved VM.
-5. If the branch changed the schema, confirm the Drizzle diff when publishing. `git diff main -- shared/schema.ts` shows it.
+1. Review and merge the branch into `main`.
+2. Publish. **The schema changed**: one new nullable column, `settings.bar_name`. Confirm the Drizzle diff when Replit asks; the new build cannot read settings until it is applied.
+3. Set `MCP_TOKEN` (24+ characters) in both the workspace secrets and the deployment secrets, then republish. The two lists are separate.
+4. Add the connector in Claude (steps in `docs/mcp.md`).
+5. Set your bar name in Settings, Branding (or upload a logo).
+6. Decide owner decisions O1 to O7 in `docs/improvement-backlog.md`. O1 is cold start: accept it, ping `/api/healthz` on a schedule, or move to a Reserved VM.
+7. Mobile dashboard choices to confirm: which four tabs sit in the tab bar (now Queue, Recipes, Inventory, Drinks), and the floating Add Drink button.
 
 ## Next: agent
 - Nothing queued beyond what the owner decides above.
 - After the owner publishes, verify the deployed app with `/api/healthz`, then load `/`, a menu page and `/dashboard`.
 
 ## Blockers
-- The MCP server and the new code have not been run against the production (Neon) database. Treat the first publish as untested there.
+- Nothing on the branch has run against the production (Neon) database. Treat the first publish as untested there.
+- Not exercised: the stale-chunk auto-reload (unit tests only), image upload, QR download on a real phone.
+- Known rough edges on mobile: first visit to a dashboard page shows a skeleton without the tab bar; "Clear served" can never appear because the queue endpoint returns open orders only; toasts briefly cover the header.
 
 ## Key paths
 - `docs/improvement-backlog.md`: tasks, ground rules, owner decisions O1 to O7

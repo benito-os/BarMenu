@@ -162,8 +162,8 @@ export default function ImportExportPage() {
   return (
     <DashboardLayout>
       <div className="p-4 md:p-6 max-w-full">
-        <div className="max-w-5xl mx-auto space-y-6">
-          <div>
+        <div className="max-w-5xl mx-auto space-y-6 max-md:space-y-4">
+          <div className="hidden md:block">
             <h1 className="text-3xl font-bold font-serif">Import & Export</h1>
             <p className="text-muted-foreground mt-2">
               Manage your data with CSV imports and exports
@@ -179,20 +179,20 @@ export default function ImportExportPage() {
               resetPending();
             }}
           >
-            <TabsList className="grid w-full grid-cols-4 mb-6">
+            <TabsList className="grid w-full grid-cols-4 mb-6 max-md:mb-4 max-md:h-auto">
               {dataTypes.map((type) => (
-                <TabsTrigger key={type.id} value={type.id} className="flex items-center gap-2" data-testid={`tab-${type.id}`}>
+                <TabsTrigger key={type.id} value={type.id} className="flex items-center gap-2 max-md:flex-col max-md:gap-0.5 max-md:min-h-12 max-md:text-xs" data-testid={`tab-${type.id}`}>
                   <type.icon className="w-4 h-4" />
-                  <span className="hidden sm:inline">{type.label}</span>
+                  <span>{type.label}</span>
                 </TabsTrigger>
               ))}
             </TabsList>
 
             {dataTypes.map((type) => (
-              <TabsContent key={type.id} value={type.id} className="space-y-6">
-                <div className="grid md:grid-cols-2 gap-6">
+              <TabsContent key={type.id} value={type.id} className="space-y-6 max-md:space-y-4">
+                <div className="grid md:grid-cols-2 gap-6 max-md:gap-4">
                   <Card>
-                    <CardHeader>
+                    <CardHeader className="max-md:p-4">
                       <CardTitle className="flex items-center gap-2">
                         <Download className="w-5 h-5" />
                         Export {type.label}
@@ -201,7 +201,7 @@ export default function ImportExportPage() {
                         Download all {type.label.toLowerCase()} as a CSV file
                       </CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-4 max-md:p-4 max-md:pt-0">
                       <p className="text-sm text-muted-foreground">
                         Export your current {type.label.toLowerCase()} data including all fields.
                         The exported file can be used as a backup or to transfer data.
@@ -214,7 +214,7 @@ export default function ImportExportPage() {
                   </Card>
 
                   <Card>
-                    <CardHeader>
+                    <CardHeader className="max-md:p-4">
                       <CardTitle className="flex items-center gap-2">
                         <FileText className="w-5 h-5" />
                         CSV Template
@@ -223,7 +223,7 @@ export default function ImportExportPage() {
                         Download a template with example data
                       </CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-4 max-md:p-4 max-md:pt-0">
                       <p className="text-sm text-muted-foreground">
                         Get a properly formatted template with column headers and example data.
                         Fields marked with "(REQUIRED)" must be filled in.
@@ -237,7 +237,7 @@ export default function ImportExportPage() {
                 </div>
 
                 <Card>
-                  <CardHeader>
+                  <CardHeader className="max-md:p-4">
                     <CardTitle className="flex items-center gap-2">
                       <Upload className="w-5 h-5" />
                       Import {type.label}
@@ -246,7 +246,7 @@ export default function ImportExportPage() {
                       Upload a CSV file to add new {type.label.toLowerCase()} — you'll see a preview before anything is written
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent className="space-y-4 max-md:p-4 max-md:pt-0">
                     <Alert>
                       <Info className="w-4 h-4" />
                       <AlertTitle>Before importing</AlertTitle>
@@ -434,7 +434,7 @@ export default function ImportExportPage() {
                 </Card>
 
                 <Card>
-                  <CardHeader>
+                  <CardHeader className="max-md:p-4">
                     <CardTitle className="flex items-center gap-2">
                       <Icon className="w-5 h-5" />
                       {type.label} Field Reference
@@ -443,7 +443,7 @@ export default function ImportExportPage() {
                       Required and optional fields for {type.label.toLowerCase()}
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="max-md:p-4 max-md:pt-0">
                     <FieldReference type={type.id} />
                   </CardContent>
                 </Card>

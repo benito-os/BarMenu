@@ -37,7 +37,12 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Trash2, Pencil, CheckCircle2, AlertCircle, Ban, Undo2, Copy, Plus } from "lucide-react";
+import { GripVertical, Trash2, Pencil, CheckCircle2, AlertCircle, Ban, Undo2, Copy, Plus, MoreVertical, X } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { ChipRow, StickyToolbar, useScrollSpy } from "@/components/dashboard/ChipRow";
+import { usePersistentState } from "@/hooks/usePersistentState";
+import { MOBILE_SHEET_DIALOG } from "@/lib/mobileSheet";
+import { anchorId, scrollToAnchor } from "@/lib/scroll";
 
 // Small wrapper for the boolean switch rows so we don't repeat the same
 // FormField + Switch + Label boilerplate six times per form.
@@ -76,7 +81,9 @@ function DrinkBoolField({
 }
 
 export default function DrinksPage() {
-  const [selectedMenuId, setSelectedMenuId] = useState<string>("");
+  // Last-used menu is remembered per browser (validated against the menu
+  // list below, so a deleted menu falls back to the default).
+  const [selectedMenuId, setSelectedMenuId] = usePersistentState<string>("barflores.drinks.menu", "");
   const [selectedDrinks, setSelectedDrinks] = useState<Set<string>>(new Set());
   const [localDrinks, setLocalDrinks] = useState<DrinkAvailability[]>([]);
   const [sectionFilter, setSectionFilter] = useState<string>("all");
@@ -132,6 +139,20 @@ export default function DrinksPage() {
     bulkUpdatePending,
   } = useDrinks(selectedMenuId, !!selectedMenuId);
 
+  // Drop a remembered menu that no longer exists.
+  useEffect(() => {
+    if (selectedMenuId && !menusLoading && menus && !menus.some((m) => m.id === selectedMenuId)) {
+      setSelectedMenuId("");
+    }
+  }, [menus, menusLoading, selectedMenuId]);
+
+  // A remembered menu also becomes the create form's default menu.
+  useEffect(() => {
+    if (selectedMenuId && !menusLoading && menus?.some((m) => m.id === selectedMenuId) && !createForm.getValues("menuId")) {
+      createForm.setValue("menuId", selectedMenuId);
+    }
+  }, [selectedMenuId, menusLoading, menus]);
+
   // Set default menu, and seed the create form's menuId once menus load.
   useEffect(() => {
     if (!selectedMenuId && !menusLoading && defaultMenu) {
@@ -148,9 +169,12 @@ export default function DrinksPage() {
   useEffect(() => {
     if (allDrinks) {
       const sorted = [...allDrinks].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-      setLocalDrinks(sorted);
+      // useDrinks returns a fresh [] on every render while the query is
+      // loading or disabled; keep the old empty array then, or this effect
+      // re-renders forever ("Maximum update depth exceeded").
+      setLocalDrinks((prev) => (prev.length === 0 && sorted.length === 0 ? prev : sorted));
     } else if (selectedMenuId) {
-      setLocalDrinks([]);
+      setLocalDrinks((prev) => (prev.length === 0 ? prev : []));
     }
   }, [allDrinks, selectedMenuId]);
 
@@ -343,12 +367,13 @@ export default function DrinksPage() {
             removed from this view — they're still in the queue Sheet and
             the edit dialog. Only state badges that need bartender attention
             (out-of-stock / missing / inactive) remain. */}
-        <div className="flex items-center gap-2 p-2.5">
+        <div className="flex items-center gap-2 p-2.5 max-md:gap-1.5 max-md:py-1 max-md:pr-1">
           <div
             {...attributes}
             {...listeners}
-            className="cursor-grab active:cursor-grabbing p-1 shrink-0"
+            className="cursor-grab active:cursor-grabbing p-1 shrink-0 max-md:-ml-1 max-md:py-3 touch-none"
             onClick={(e) => e.stopPropagation()}
+            aria-label={`Drag to reorder ${drink.name}`}
           >
             <GripVertical className="w-4 h-4 text-muted-foreground" />
           </div>
@@ -358,11 +383,13 @@ export default function DrinksPage() {
             onClick={(e) => e.stopPropagation()}
             data-testid={`checkbox-drink-${drink.id}`}
             className="shrink-0"
+            aria-label={`Select ${drink.name}`}
           />
-          <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
-            <span className="font-serif text-sm md:text-base truncate">{drink.name}</span>
+          <div className="flex-1 min-w-0 flex items-center gap-x-2 gap-y-0.5 flex-wrap">
+            <span className="font-serif text-[0.9375rem] md:text-base truncate max-md:w-full">{drink.name}</span>
+            {/* Section is already the group heading; phones skip the badge. */}
             {drink.section && (
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{drink.section}</Badge>
+              <Badge variant="secondary" className="hidden md:inline-flex text-[10px] px-1.5 py-0">{drink.section}</Badge>
             )}
             {!drink.isActive && (
               <Badge variant="outline" className="text-[10px] px-1.5 py-0">Inactive</Badge>
@@ -378,7 +405,8 @@ export default function DrinksPage() {
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="h-11 w-10 md:h-8 md:w-8"
+              aria-label={`Edit ${drink.name}`}
               onClick={(e) => {
                 e.stopPropagation();
                 setEditingDrink(drink);
@@ -391,7 +419,8 @@ export default function DrinksPage() {
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="hidden md:inline-flex h-8 w-8"
+              aria-label={`Duplicate ${drink.name}`}
               onClick={(e) => {
                 e.stopPropagation();
                 duplicateDrink(drink.id);
@@ -405,7 +434,8 @@ export default function DrinksPage() {
             <Button
               variant={drink.isOutOfStock ? "secondary" : "ghost"}
               size="icon"
-              className="h-8 w-8"
+              className="h-11 w-10 md:h-8 md:w-8"
+              aria-label={drink.isOutOfStock ? `Restock ${drink.name}` : `86 ${drink.name}`}
               onClick={(e) => {
                 e.stopPropagation();
                 updateDrink({ ...drink, isOutOfStock: !drink.isOutOfStock });
@@ -419,7 +449,8 @@ export default function DrinksPage() {
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-destructive"
+              className="hidden md:inline-flex h-8 w-8 text-destructive"
+              aria-label={`Delete ${drink.name}`}
               onClick={(e) => {
                 e.stopPropagation();
                 if (confirm(`Delete "${drink.name}"? This cannot be undone.`)) {
@@ -432,11 +463,68 @@ export default function DrinksPage() {
             >
               <Trash2 className="w-4 h-4" />
             </Button>
+            {/* Phones: Duplicate and Delete live one tap away in a menu. */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="md:hidden h-11 w-10"
+                  aria-label={`More actions for ${drink.name}`}
+                  onClick={(e) => e.stopPropagation()}
+                  data-testid={`mobile-button-drink-more-${drink.id}`}
+                >
+                  <MoreVertical className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                <DropdownMenuItem
+                  className="min-h-11"
+                  disabled={duplicateDrinkPending}
+                  onSelect={() => duplicateDrink(drink.id)}
+                  data-testid={`mobile-menuitem-duplicate-${drink.id}`}
+                >
+                  <Copy className="w-4 h-4 mr-2" />
+                  Duplicate
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="min-h-11 text-destructive focus:text-destructive"
+                  disabled={bulkDeletePending}
+                  onSelect={() => {
+                    if (confirm(`Delete "${drink.name}"? This cannot be undone.`)) {
+                      bulkDelete([drink.id]);
+                    }
+                  }}
+                  data-testid={`mobile-menuitem-delete-${drink.id}`}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </Card>
     );
   }
+
+  const selectManageMenu = (value: string) => {
+    setSelectedMenuId(value);
+    setSelectedDrinks(new Set());
+    setSectionFilter("all");
+    setLocalDrinks([]);
+    // Mirror the manage-menu selection into the create form so a
+    // new drink defaults to the menu the bartender is viewing.
+    createForm.setValue("menuId", value);
+    createForm.setValue("sortOrder", getNextSortOrder(value));
+  };
+
+  // Phone section jump chips + scroll spy.
+  const sectionAnchors = useMemo(
+    () => filteredSectionOrder.map((section) => ({ section, id: anchorId("drinks-sec", section) })),
+    [filteredSectionOrder],
+  );
+  const activeSectionId = useScrollSpy(sectionAnchors.map((a) => a.id));
 
   const handleCreateDrink = createForm.handleSubmit((data) => {
     createDrink(data);
@@ -464,18 +552,21 @@ export default function DrinksPage() {
       <div className="p-4 md:p-6 max-w-full space-y-4">
         {/* Create Drink — button triggers the form inside a Dialog so the
             list view isn't pushed below a 700px-tall form on every load. */}
-        <div className="flex justify-end">
+        {/* Phone: floating thumb-side button above the tab bar (hidden while
+            the bulk bar is up). Desktop: top-right as before. */}
+        <div className="md:flex md:justify-end max-md:!mt-0">
           <Button
             onClick={() => setCreateDialogOpen(true)}
             disabled={!menus || menus.length === 0}
             data-testid="button-open-create-drink"
+            className={`max-md:!fixed max-md:right-4 max-md:!z-30 max-md:h-12 max-md:rounded-full max-md:px-5 max-md:shadow-lg max-md:bottom-[calc(var(--mobile-tabbar-h)+0.75rem)] ${selectedDrinks.size > 0 ? "max-md:hidden" : ""}`}
           >
             <Plus className="w-4 h-4 mr-2" />
             Add Drink
           </Button>
         </div>
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogContent className={`max-w-2xl max-h-[85vh] overflow-y-auto ${MOBILE_SHEET_DIALOG}`}>
             <DialogHeader>
               <DialogTitle>Create New Drink</DialogTitle>
               <DialogDescription>
@@ -784,20 +875,36 @@ export default function DrinksPage() {
             brand context of what they're editing — same visual cue guests
             see on the corresponding menu page. */}
         <Card
-          className="overflow-hidden border-t-4"
+          className="md:overflow-hidden md:border-t-4 max-md:!mt-0 max-md:border-0 max-md:bg-transparent max-md:shadow-none"
           style={{
             borderTopColor: selectedMenu?.accentColor || "transparent",
           }}
         >
-          <CardHeader>
+          <CardHeader className="hidden md:flex">
             <CardTitle className="text-xl">Manage Drinks</CardTitle>
             <CardDescription>
               Reorder drinks, activate/deactivate, or bulk delete
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 max-md:p-0 max-md:space-y-3">
+            {/* Phone: menus as chips (one tap to switch), coloured by accent */}
+            {menus && menus.length > 0 && (
+              <ChipRow
+                className="md:hidden"
+                ariaLabel="Choose menu"
+                testIdPrefix="chip-drinks-menu"
+                activeId={selectedMenuId}
+                onSelect={(id) => id !== selectedMenuId && selectManageMenu(id)}
+                items={menus.map((m) => ({
+                  id: m.id,
+                  label: m.name,
+                  dot: m.accentColor,
+                  count: m.id === selectedMenuId ? localDrinks.length : undefined,
+                }))}
+              />
+            )}
             {/* Menu Selector */}
-            <div className="space-y-2">
+            <div className="hidden md:block space-y-2">
               <div className="flex items-center justify-between gap-2">
                 <Label htmlFor="manage-menu">Select Menu</Label>
                 {defaultMenu && (
@@ -809,16 +916,7 @@ export default function DrinksPage() {
               </div>
               <Select
                 value={selectedMenuId || undefined}
-                onValueChange={(value) => {
-                  setSelectedMenuId(value);
-                  setSelectedDrinks(new Set());
-                  setSectionFilter("all");
-                  setLocalDrinks([]);
-                  // Mirror the manage-menu selection into the create form so a
-                  // new drink defaults to the menu the bartender is viewing.
-                  createForm.setValue("menuId", value);
-                  createForm.setValue("sortOrder", getNextSortOrder(value));
-                }}
+                onValueChange={selectManageMenu}
                 disabled={menusLoading || !menus || menus.length === 0}
               >
                 <SelectTrigger id="manage-menu" data-testid="select-manage-menu">
@@ -836,8 +934,24 @@ export default function DrinksPage() {
 
             {selectedMenuId && (
               <>
+                {sectionAnchors.length > 1 && (
+                  <StickyToolbar className="md:hidden py-1" testId="drinks-section-toolbar">
+                    <ChipRow
+                      ariaLabel="Jump to section"
+                      testIdPrefix="chip-drinks-section"
+                      activeId={activeSectionId}
+                      onSelect={scrollToAnchor}
+                      items={sectionAnchors.map(({ section, id }) => ({
+                        id,
+                        label: section,
+                        count: (sectionedDrinks.get(section) || []).length,
+                      }))}
+                    />
+                  </StickyToolbar>
+                )}
+
                 {sectionOrder.length > 0 && (
-                  <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+                  <div className="hidden md:flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
                     <div className="space-y-1">
                       <Label htmlFor="section-filter">Section Filter</Label>
                       <p className="text-sm text-muted-foreground">
@@ -867,12 +981,19 @@ export default function DrinksPage() {
                 )}
 
                 {/* Sticky Bulk Actions Bar */}
+                {/* Bulk bar: sticky under the header on desktop; on phones it
+                    only appears once something is selected, pinned above the
+                    tab bar where the thumb is. */}
                 {filteredDrinks.length > 0 && (
-                  <div className="sticky top-0 z-50 bg-background pb-4">
-                    <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/20">
+                  <div
+                    className={`md:sticky md:top-[var(--dash-header-h)] md:z-20 bg-background md:pb-4 max-md:fixed max-md:inset-x-0 max-md:z-30 max-md:border-t max-md:bg-background/95 max-md:backdrop-blur max-md:px-3 max-md:py-2 max-md:bottom-[var(--mobile-tabbar-h)] ${selectedDrinks.size === 0 ? "max-md:hidden" : ""}`}
+                    data-testid="drinks-bulk-bar"
+                  >
+                    <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/20 max-md:grid max-md:grid-cols-6 max-md:border-0 max-md:p-0 max-md:bg-transparent max-md:gap-1.5">
                       <Button
                         variant="outline"
                         size="sm"
+                        className="max-md:min-h-11 max-md:col-span-2"
                         onClick={toggleSelectAll}
                         data-testid="button-toggle-select-all"
                       >
@@ -881,10 +1002,20 @@ export default function DrinksPage() {
                       
                       {selectedDrinks.size > 0 && (
                         <>
-                          <div className="text-sm text-muted-foreground">
+                          <div className="text-sm text-muted-foreground max-md:col-span-3 max-md:pl-1">
                             {selectedDrinks.size} selected
                           </div>
-                          <div className="flex-1" />
+                          <div className="flex-1 max-md:hidden" />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="md:hidden h-11 w-11 justify-self-end"
+                            aria-label="Clear selection"
+                            onClick={() => setSelectedDrinks(new Set())}
+                            data-testid="mobile-button-clear-drink-selection"
+                          >
+                            <X className="w-5 h-5" />
+                          </Button>
                           <Button
                             variant="outline"
                             size="sm"
@@ -896,6 +1027,7 @@ export default function DrinksPage() {
                             }}
                             disabled={bulkUpdatePending}
                             data-testid="button-bulk-activate"
+                            className="max-md:min-h-11 max-md:px-2 max-md:col-span-2"
                           >
                             <CheckCircle2 className="w-4 h-4 mr-1" />
                             Activate
@@ -911,6 +1043,7 @@ export default function DrinksPage() {
                             }}
                             disabled={bulkUpdatePending}
                             data-testid="button-bulk-deactivate"
+                            className="max-md:min-h-11 max-md:px-2 max-md:col-span-2"
                           >
                             <AlertCircle className="w-4 h-4 mr-1" />
                             Deactivate
@@ -925,6 +1058,7 @@ export default function DrinksPage() {
                             }}
                             disabled={bulkDeletePending}
                             data-testid="button-bulk-delete"
+                            className="max-md:min-h-11 max-md:px-2 max-md:col-span-2"
                           >
                             <Trash2 className="w-4 h-4 mr-1" />
                             Delete
@@ -943,15 +1077,15 @@ export default function DrinksPage() {
                     ))}
                   </div>
                 ) : filteredSectionOrder.length > 0 && filteredDrinks.length > 0 ? (
-                  <div className="space-y-8" data-testid="drinks-list">
+                  <div className="space-y-8 max-md:space-y-5" data-testid="drinks-list">
                     {filteredSectionOrder.map(section => {
                       const drinks = sectionedDrinks.get(section) || [];
 
                       return (
-                        <div key={section} className="space-y-3">
+                        <div key={section} className="space-y-3 max-md:space-y-1.5" id={anchorId("drinks-sec", section)}>
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                              <h4 className="font-semibold text-lg">{section}</h4>
+                              <h4 className="font-semibold text-lg max-md:text-xs max-md:uppercase max-md:tracking-wider max-md:text-muted-foreground">{section}</h4>
                               <Badge variant="outline" className="text-xs">
                                 {drinks.length} {drinks.length === 1 ? "drink" : "drinks"}
                               </Badge>
@@ -968,7 +1102,7 @@ export default function DrinksPage() {
                                 items={drinks.map(d => d.id)}
                                 strategy={verticalListSortingStrategy}
                               >
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-md:gap-1.5">
                                   {drinks.map((drink) => (
                                     <SortableDrinkItem key={drink.id} drink={drink} />
                                   ))}
@@ -1006,7 +1140,7 @@ export default function DrinksPage() {
 
         {/* Edit Drink Dialog */}
         <Dialog open={!!editingDrink} onOpenChange={(open) => !open && setEditingDrink(null)}>
-          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogContent className={`max-w-2xl max-h-[85vh] overflow-y-auto ${MOBILE_SHEET_DIALOG}`}>
             <DialogHeader>
               <DialogTitle>Edit Drink</DialogTitle>
               <DialogDescription>

@@ -20,7 +20,7 @@ import type { DrinkAvailability } from "@shared/validation";
 
 export default function QRCodesPage() {
   const { menus, menusLoading, defaultMenu } = useMenus();
-  const { settings } = useSettings();
+  const { settings, barName } = useSettings();
   const { toast } = useToast();
 
   const [selectedMenuId, setSelectedMenuId] = useState<string>("");
@@ -146,19 +146,20 @@ export default function QRCodesPage() {
   return (
     <DashboardLayout>
       <div className="p-4 md:p-6 max-w-full">
-        <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
-          <div>
+        <div className="mb-6 max-md:mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div className="hidden md:block">
             <h2 className="text-2xl font-bold mb-2" data-testid="text-page-title">
               Branded QR Codes
             </h2>
             <p className="text-muted-foreground" data-testid="text-page-description">
-              Generate branded QR codes with your Bar Flores logo for guests to scan
+              Generate branded QR codes with your {barName} logo for guests to scan
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 max-md:grid max-md:w-full max-md:grid-cols-2">
             <Button
               variant="outline"
               size="sm"
+              className="max-md:min-h-11"
               onClick={() => testOrderMutation.mutate()}
               disabled={
                 testOrderMutation.isPending ||
@@ -178,6 +179,7 @@ export default function QRCodesPage() {
             <Button
               variant="outline"
               size="sm"
+              className="max-md:min-h-11"
               onClick={() => setPrintOpen(true)}
               disabled={activeMenuCount === 0}
               data-testid="button-open-print"
@@ -203,7 +205,7 @@ export default function QRCodesPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>
-            <CardHeader>
+            <CardHeader className="max-md:p-4">
               <CardTitle className="text-xl">QR Code Preview</CardTitle>
               <CardDescription>
                 {selectedMenu 
@@ -211,7 +213,7 @@ export default function QRCodesPage() {
                   : "Select a menu to generate a QR code"}
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="max-md:p-4 max-md:pt-0">
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="menu-select">Select Menu</Label>
@@ -256,7 +258,7 @@ export default function QRCodesPage() {
                 <div className="flex flex-col items-center gap-4 py-6">
                   <BrandedQRCode
                     url={qrCodeUrl}
-                    menuName={selectedMenu?.name || "Bar Flores"}
+                    menuName={selectedMenu?.name || barName}
                     slug={selectedMenu?.slug || "home"}
                     size={qrSize}
                     fgColor={qrFgColor}
@@ -296,13 +298,13 @@ export default function QRCodesPage() {
           </Card>
 
           <Card>
-            <CardHeader>
+            <CardHeader className="max-md:p-4">
               <CardTitle className="text-xl">Customization</CardTitle>
               <CardDescription>
                 Customize the appearance of your branded QR code
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 max-md:p-4 max-md:pt-0">
               <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
                 <Palette className="w-5 h-5 text-muted-foreground" />
                 <div className="flex-1">
@@ -466,7 +468,7 @@ export default function QRCodesPage() {
               <div className="border-t pt-4">
                 <h3 className="text-sm font-semibold mb-2">About Branded QR Codes</h3>
                 <p className="text-xs text-muted-foreground">
-                  Your QR codes feature the Bar Flores "BF" logo in the center with rounded 
+                  Your QR codes feature the {barName} logo in the center with rounded 
                   corner styling and dot patterns. The high error correction level ensures 
                   the code remains scannable even with the logo overlay.
                 </p>

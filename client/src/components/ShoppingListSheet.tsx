@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Check, Copy, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   Sheet,
   SheetContent,
@@ -13,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { formatShoppingListText, useShoppingList } from "@/hooks/useShoppingList";
 
-export function ShoppingListSheet() {
+export function ShoppingListSheet({ triggerClassName }: { triggerClassName?: string } = {}) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
@@ -37,7 +38,7 @@ export function ShoppingListSheet() {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="outline" className="min-h-11" data-testid="button-shopping-list">
+        <Button variant="outline" className={cn("min-h-11", triggerClassName)} data-testid="button-shopping-list">
           <ShoppingCart className="w-4 h-4 mr-2" />
           Shopping list
         </Button>

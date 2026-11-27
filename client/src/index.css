@@ -131,6 +131,41 @@
     font-family: var(--font-body);
   }
 
+  /* Dashboard shell metrics. --mobile-tabbar-h is the height of the phone
+     bottom tab bar (0 from md up, where the sidebar replaces it); pages,
+     toasts and floating buttons offset themselves by it. Set on <html> by
+     DashboardLayout so guest pages are untouched. */
+  :root {
+    --dash-header-h: 3.5rem;
+    --mobile-tabbar-h: 0px;
+  }
+  html[data-dashboard] {
+    --mobile-tabbar-h: calc(4rem + env(safe-area-inset-bottom, 0px));
+  }
+  @media (min-width: 768px) {
+    :root {
+      --dash-header-h: 3.25rem;
+    }
+    html[data-dashboard] {
+      --mobile-tabbar-h: 0px;
+    }
+  }
+
+  /* Phone dashboard ergonomics: no double-tap zoom delay on controls, and
+     44px-tall text fields / selects so they are easy to hit one-handed.
+     (Inputs are already 16px on phones, which stops iOS focus zoom.) */
+  html[data-dashboard] :is(button, a, [role="button"], [role="tab"], [role="combobox"], label) {
+    touch-action: manipulation;
+  }
+  @media (max-width: 767px) {
+    html[data-dashboard] :is(input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"]), button[role="combobox"]) {
+      min-height: 2.75rem;
+    }
+    html[data-dashboard] textarea {
+      font-size: 16px;
+    }
+  }
+
   /* Honour the OS "reduce motion" setting for CSS-driven motion (tailwind
      animate-*, transitions, the elevate hover fades, the splash screen
      keyframes). */
@@ -167,6 +202,20 @@
  * need to be distinguished from eachother visually.
  */
 @layer utilities {
+
+  /* Horizontal chip rows scroll by swipe; the scrollbar is just noise. */
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Mobile tab bar item: icon over a short label, full-cell tap target. */
+  .tab-item {
+    @apply relative flex h-full w-full flex-col items-center justify-center gap-1 text-[0.6875rem] font-medium leading-none;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring;
+  }
 
   /* Hide ugly search cancel button in Chrome until we can style it properly */
   input[type="search"]::-webkit-search-cancel-button {

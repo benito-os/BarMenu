@@ -20,9 +20,9 @@ import { Label } from "@/components/ui/label";
 import { Clock, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, MessageSquare, Leaf, Trash2, Play, Ban, RotateCcw, Pencil, Check, X, Volume2, VolumeX, Keyboard } from "lucide-react";
 import type { OrderWithDrink } from "@shared/validation";
 import { splitRecipe } from "@/lib/recipe";
+import { StatTiles } from "@/components/dashboard/StatTiles";
 
 const ALERT_PREF_KEY = "barflores_queue_alerts";
-const ORIGINAL_TITLE = "Bar Flores";
 
 export default function QueuePage() {
   const { toast } = useToast();
@@ -40,7 +40,7 @@ export default function QueuePage() {
     editDetails,
     editDetailsPending,
   } = useOrders(true);
-  const { settings } = useSettings();
+  const { settings, barName } = useSettings();
   // Pull menus so each queue row and the order Sheet header can show a
   // colored hint matching the order's originating menu — visual cue for
   // which menu a guest is sitting at when multiple are active.
@@ -65,6 +65,10 @@ export default function QueuePage() {
     return localStorage.getItem(ALERT_PREF_KEY) !== "off";
   });
   const [showShortcuts, setShowShortcuts] = useState(false);
+  // Phone-only status filter driven by the summary tiles. Not persisted on
+  // purpose: a remembered filter could hide new orders next visit. (The queue
+  // endpoint returns open orders only, so there is no "served" tile.)
+  const [statusFilter, setStatusFilter] = useState<"all" | "requested" | "in_progress">("all");
   const previousPendingCountRef = useRef<number | null>(null);
 
   // Pending count = orders awaiting bartender action (excludes served).
@@ -114,11 +118,11 @@ export default function QueuePage() {
 
   // Tab title badge so the bartender can leave the tab in the background.
   useEffect(() => {
-    document.title = pendingCount > 0 ? `(${pendingCount}) ${ORIGINAL_TITLE}` : ORIGINAL_TITLE;
+    document.title = pendingCount > 0 ? `(${pendingCount}) ${barName}` : barName;
     return () => {
-      document.title = ORIGINAL_TITLE;
+      document.title = barName;
     };
-  }, [pendingCount]);
+  }, [pendingCount, barName]);
 
   const toggleAlerts = () => {
     setAlertsEnabled((prev) => {
@@ -356,7 +360,9 @@ export default function QueuePage() {
     queue.find(o => o.id === id)?.status === "in_progress"
   ).length;
 
-  // Mobile card component for each order - optimized for small screens (375px+)
+  // Mobile card component for each order - optimized for small screens (375px+).
+  // The next step (Start / Served) sits on the card itself so moving an order
+  // along is one tap; tapping the body expands notes, recipe, Details and 86.
   const MobileOrderCard = ({ order }: { order: OrderWithDrink }) => {
     const isExpanded = expandedOrderId === order.id;
     const isSelected = selectedIds.has(order.id);
@@ -366,7 +372,7 @@ export default function QueuePage() {
 
     return (
       <div
-        className={`border rounded-lg mb-2 overflow-hidden border-l-4 ${isSelected ? "ring-2 ring-primary" : ""} ${isOutOfStock ? "border-destructive/50 bg-destructive/5" : ""}`}
+        className={`border rounded-lg mb-2 overflow-hidden border-l-4 bg-card ${isSelected ? "ring-2 ring-primary" : ""} ${isOutOfStock ? "border-destructive/50 bg-destructive/5" : ""} ${order.status === "served" ? "opacity-70" : ""}`}
         style={
           !isOutOfStock && menuAccent
             ? { borderLeftColor: menuAccent }
@@ -380,24 +386,26 @@ export default function QueuePage() {
           open={isExpanded}
           onOpenChange={() => toggleExpand(order.id)}
         >
-          <CollapsibleTrigger className="w-full">
-            <div className="p-2.5 hover-elevate">
-              {/* Row 1: Checkbox + Drink name + expand icon */}
-              <div className="flex items-center gap-2">
-                <div 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleSelect(order.id);
-                  }}
-                  className="shrink-0"
-                >
-                  <Checkbox
-                    checked={isSelected}
-                    aria-label={`Select ${order.drinkName}${order.guestName ? ` for ${order.guestName}` : ""}`}
-                    data-testid={`mobile-checkbox-${order.id}`}
-                  />
-                </div>
-                <span className="font-serif font-medium text-sm truncate flex-1 text-left">
+          <div className="flex items-stretch">
+            {/* 44px-wide tap column for the selection checkbox */}
+            <label
+              className="flex w-11 shrink-0 cursor-pointer items-start justify-center pt-3.5"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Checkbox
+                checked={isSelected}
+                onCheckedChange={() => toggleSelect(order.id)}
+                aria-label={`Select ${order.drinkName}${order.guestName ? ` for ${order.guestName}` : ""}`}
+                data-testid={`mobile-checkbox-${order.id}`}
+              />
+            </label>
+
+            <CollapsibleTrigger
+              className="min-w-0 flex-1 py-2.5 pr-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring rounded-sm"
+              aria-label={`${order.drinkName}${order.guestName ? ` for ${order.guestName}` : ""}, ${isExpanded ? "hide" : "show"} details`}
+            >
+              <div className="flex items-center gap-1">
+                <span className="font-serif font-medium text-base leading-tight truncate">
                   {order.drinkName}
                 </span>
                 {isExpanded ? (
@@ -406,17 +414,13 @@ export default function QueuePage() {
                   <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
                 )}
               </div>
-              
-              {/* Row 2: Guest + Time + Comment indicator */}
-              <div className="flex items-center gap-1.5 mt-1 ml-6 text-xs text-muted-foreground">
-                <span className="truncate max-w-[80px]">{order.guestName || "Guest"}</span>
-                <span>•</span>
+              <div className="flex items-center gap-1.5 mt-0.5 text-xs text-muted-foreground">
+                <span className="truncate max-w-[7rem]">{order.guestName || "Guest"}</span>
+                <span aria-hidden>•</span>
                 <span className="shrink-0">{formatTime(order.requestedAt.toString())}</span>
-                {order.comments && <MessageSquare className="w-3 h-3 shrink-0" />}
+                {order.comments && <MessageSquare className="w-3 h-3 shrink-0" aria-label="Has notes" />}
               </div>
-              
-              {/* Row 3: Badges */}
-              <div className="flex items-center gap-1.5 mt-1.5 ml-6 flex-wrap">
+              <div className="flex items-center gap-1 mt-1.5 flex-wrap">
                 {isOutOfStock && (
                   <Badge variant="destructive" className="text-xs px-1.5 py-0" data-testid={`badge-86-${order.id}`}>
                     <Ban className="w-3 h-3 mr-0.5" />
@@ -432,32 +436,64 @@ export default function QueuePage() {
                   </Badge>
                 )}
               </div>
+            </CollapsibleTrigger>
+
+            {/* Next step, one tap, thumb side */}
+            <div className="flex shrink-0 items-center pr-2.5 pl-1">
+              {order.status === "requested" && (
+                <Button
+                  className="h-11 min-w-[5.5rem] px-3 text-sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    markInProgress(order.id);
+                  }}
+                  disabled={inProgressPending}
+                  data-testid={`mobile-button-in-progress-${order.id}`}
+                >
+                  <Play className="w-4 h-4 mr-1" />
+                  Start
+                </Button>
+              )}
+              {order.status === "in_progress" && (
+                <Button
+                  className="h-11 min-w-[5.5rem] px-3 text-sm bg-success text-success-foreground border-success hover:bg-success/90"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    markServed(order.id);
+                  }}
+                  disabled={servedPending}
+                  data-testid={`mobile-button-serve-${order.id}`}
+                >
+                  <CheckCircle2 className="w-4 h-4 mr-1" />
+                  Served
+                </Button>
+              )}
             </div>
-          </CollapsibleTrigger>
-          
+          </div>
+
           <CollapsibleContent>
-            <div className="px-2.5 pb-2.5 pt-1.5 border-t bg-muted/30 space-y-2">
+            <div className="px-3 pb-3 pt-2 border-t bg-muted/30 space-y-2">
               {/* Out of stock warning */}
               {isOutOfStock && (
                 <div className="text-xs text-destructive bg-destructive/10 rounded px-2 py-1.5">
                   This drink is out of stock — alert the guest
                 </div>
               )}
-              
+
               {order.comments && (
-                <div className="text-xs">
+                <div className="text-sm">
                   <span className="font-medium">Notes: </span>
                   <span className="text-muted-foreground">{order.comments}</span>
                 </div>
               )}
-              
+
               {order.drinkRecipe && order.drinkRecipe !== "-" && (
-                <div className="text-xs">
+                <div className="text-sm">
                   <span className="font-medium">Recipe: </span>
-                  <span className="text-muted-foreground line-clamp-2">{order.drinkRecipe}</span>
+                  <span className="text-muted-foreground line-clamp-3">{order.drinkRecipe}</span>
                 </div>
               )}
-              
+
               <div className="flex flex-wrap gap-1 text-xs">
                 {order.drinkBaseSpirit && (
                   <Badge variant="outline" className="text-xs px-1.5 py-0">{order.drinkBaseSpirit}</Badge>
@@ -469,43 +505,10 @@ export default function QueuePage() {
                 {order.drinkIsShaken && <Badge variant="outline" className="text-xs px-1.5 py-0">Shaken</Badge>}
               </div>
 
-              {/* Action buttons - 2-column grid, 40px tall so a bartender with
-                  wet hands can hit them without looking. */}
               <div className="grid grid-cols-2 gap-2 pt-1">
-                {order.status === "requested" && (
-                  <Button
-                    size="sm"
-                    className="h-10 text-sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      markInProgress(order.id);
-                    }}
-                    disabled={inProgressPending}
-                    data-testid={`mobile-button-in-progress-${order.id}`}
-                  >
-                    <Play className="w-3 h-3 mr-1" />
-                    Start
-                  </Button>
-                )}
-                {order.status === "in_progress" && (
-                  <Button
-                    size="sm"
-                    className="h-10 text-sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      markServed(order.id);
-                    }}
-                    disabled={servedPending}
-                    data-testid={`mobile-button-serve-${order.id}`}
-                  >
-                    <CheckCircle2 className="w-3 h-3 mr-1" />
-                    Served
-                  </Button>
-                )}
                 <Button
-                  size="sm"
                   variant="outline"
-                  className="h-10 text-sm"
+                  className="h-11 text-sm"
                   onClick={(e) => {
                     e.stopPropagation();
                     setSelectedOrder(order);
@@ -515,14 +518,13 @@ export default function QueuePage() {
                   Details
                 </Button>
                 <Button
-                  size="sm"
                   variant={isOutOfStock ? "secondary" : "outline"}
-                  className="h-10 text-sm"
+                  className="h-11 text-sm"
                   onClick={(e) => {
                     e.stopPropagation();
-                    toggleStockMutation.mutate({ 
-                      drinkId: order.drinkId, 
-                      isOutOfStock: !isOutOfStock 
+                    toggleStockMutation.mutate({
+                      drinkId: order.drinkId,
+                      isOutOfStock: !isOutOfStock
                     });
                   }}
                   disabled={toggleStockMutation.isPending}
@@ -530,12 +532,12 @@ export default function QueuePage() {
                 >
                   {isOutOfStock ? (
                     <>
-                      <RotateCcw className="w-3 h-3 mr-1" />
+                      <RotateCcw className="w-4 h-4 mr-1" />
                       Restock
                     </>
                   ) : (
                     <>
-                      <Ban className="w-3 h-3 mr-1" />
+                      <Ban className="w-4 h-4 mr-1" />
                       86 Drink
                     </>
                   )}
@@ -548,14 +550,31 @@ export default function QueuePage() {
     );
   };
 
+  const requestedCount = queue.filter((o) => o.status === "requested").length;
+  const inProgressCount = queue.filter((o) => o.status === "in_progress").length;
+  const visibleQueue = statusFilter === "all" ? queue : queue.filter((o) => o.status === statusFilter);
+
   return (
     <DashboardLayout>
       <div className="p-4 md:p-6 max-w-full">
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col gap-4">
+        <Card className="max-md:border-0 max-md:bg-transparent max-md:shadow-none">
+          <CardHeader className="max-md:px-0 max-md:pt-0 max-md:pb-3">
+            <div className="flex flex-col gap-4 max-md:gap-3">
               <div className="flex items-start justify-between gap-3">
-                <div>
+                {/* Phone: status tiles that filter the list (the shell header
+                    already says "Queue"). */}
+                <StatTiles
+                  className="md:hidden flex-1"
+                  ariaLabel="Filter orders by status"
+                  activeId={statusFilter}
+                  onSelect={(id) => setStatusFilter((prev) => (prev === id && id !== "all" ? "all" : (id as typeof statusFilter)))}
+                  tiles={[
+                    { id: "all", label: "All", value: queue.length, testId: "tile-queue-all" },
+                    { id: "requested", label: "New", value: requestedCount, tone: "info", testId: "tile-queue-requested" },
+                    { id: "in_progress", label: "Making", value: inProgressCount, tone: "warning", testId: "tile-queue-in-progress" },
+                  ]}
+                />
+                <div className="hidden md:block">
                   <CardTitle className="text-2xl">Live Order Queue</CardTitle>
                   <CardDescription>
                     Live view of drink requests — auto-refreshes every 5 seconds
@@ -565,6 +584,7 @@ export default function QueuePage() {
                   <Button
                     variant="ghost"
                     size="icon"
+                    className="max-md:h-11 max-md:w-11"
                     onClick={toggleAlerts}
                     title={alertsEnabled ? "Disable new-order chime" : "Enable new-order chime"}
                     aria-label={alertsEnabled ? "Disable new-order chime" : "Enable new-order chime"}
@@ -580,6 +600,7 @@ export default function QueuePage() {
                   <Button
                     variant="ghost"
                     size="icon"
+                    className="hidden md:inline-flex"
                     onClick={() => setShowShortcuts((prev) => !prev)}
                     title="Keyboard shortcuts (press ?)"
                     aria-label="Keyboard shortcuts"
@@ -601,7 +622,7 @@ export default function QueuePage() {
 
               {/* Bulk Actions */}
               {queue.length > 0 && (
-                <div className="flex flex-wrap gap-2">
+                <div className="hidden md:flex flex-wrap gap-2">
                   {selectedIds.size > 0 && requestedSelected > 0 && (
                     <Button
                       size="sm"
@@ -640,7 +661,7 @@ export default function QueuePage() {
               )}
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="max-md:px-0">
             {queueLoading ? (
               <div className="space-y-4">
                 {[1, 2, 3].map(i => (
@@ -651,20 +672,72 @@ export default function QueuePage() {
               <>
                 {/* Mobile view - collapsible cards */}
                 <div className="md:hidden" data-testid="queue-mobile-view">
-                  <div className="flex items-center gap-2 mb-3 pb-2 border-b">
-                    <Checkbox
-                      checked={selectedIds.size === queue.length && queue.length > 0}
-                      onCheckedChange={selectAll}
-                      aria-label="Select all orders"
-                      data-testid="mobile-checkbox-all"
-                    />
-                    <span className="text-sm text-muted-foreground">
-                      {selectedIds.size > 0 ? `${selectedIds.size} selected` : "Select all"}
-                    </span>
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <label className="flex min-h-11 items-center gap-3 pl-3 pr-2 cursor-pointer">
+                      <Checkbox
+                        checked={selectedIds.size === queue.length && queue.length > 0}
+                        onCheckedChange={selectAll}
+                        aria-label="Select all orders"
+                        data-testid="mobile-checkbox-all"
+                      />
+                      <span className="text-sm text-muted-foreground">
+                        {selectedIds.size > 0 ? `${selectedIds.size} selected` : "Select all"}
+                      </span>
+                    </label>
+                    {servedCount > 0 && (
+                      <Button
+                        variant="ghost"
+                        className="min-h-11 text-sm text-muted-foreground"
+                        onClick={handleClearServed}
+                        disabled={clearServedPending}
+                        data-testid="mobile-button-clear-served"
+                      >
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        Clear {servedCount} served
+                      </Button>
+                    )}
                   </div>
-                  {queue.map((order) => (
-                    <MobileOrderCard key={order.id} order={order} />
-                  ))}
+                  {visibleQueue.length === 0 ? (
+                    <p className="py-10 text-center text-sm text-muted-foreground">
+                      Nothing here.{" "}
+                      <button type="button" className="underline underline-offset-2 min-h-11" onClick={() => setStatusFilter("all")}>
+                        Show all orders
+                      </button>
+                    </p>
+                  ) : (
+                    visibleQueue.map((order) => (
+                      <MobileOrderCard key={order.id} order={order} />
+                    ))
+                  )}
+
+                  {/* Bulk actions follow the thumb: pinned above the tab bar
+                      while anything is selected. */}
+                  {selectedIds.size > 0 && (
+                    <div
+                      className="fixed inset-x-0 z-30 border-t bg-background/95 px-4 py-2 backdrop-blur"
+                      style={{ bottom: "var(--mobile-tabbar-h)" }}
+                      data-testid="mobile-bulk-bar"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground mr-auto">{selectedIds.size} selected</span>
+                        {requestedSelected > 0 && (
+                          <Button className="h-11" onClick={handleBatchStart} disabled={batchUpdatePending} data-testid="mobile-button-batch-start">
+                            <Play className="w-4 h-4 mr-1" />
+                            Start {requestedSelected}
+                          </Button>
+                        )}
+                        {inProgressSelected > 0 && (
+                          <Button className="h-11" onClick={handleBatchServe} disabled={batchUpdatePending} data-testid="mobile-button-batch-serve">
+                            <CheckCircle2 className="w-4 h-4 mr-1" />
+                            Serve {inProgressSelected}
+                          </Button>
+                        )}
+                        <Button variant="ghost" className="h-11 w-11 p-0" aria-label="Clear selection" onClick={() => setSelectedIds(new Set())} data-testid="mobile-button-clear-selection">
+                          <X className="w-5 h-5" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Desktop view - full table */}

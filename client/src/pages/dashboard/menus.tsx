@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { MOBILE_SHEET_DIALOG } from "@/lib/mobileSheet";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -199,13 +200,14 @@ export default function MenusPage() {
             onClick={() => setCreateDialogOpen(true)}
             disabled={menusLoading}
             data-testid="button-open-create-menu"
+            className="max-md:min-h-11 max-md:w-full"
           >
             <Plus className="w-4 h-4 mr-2" />
             Add Menu
           </Button>
         </div>
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-          <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogContent className={`max-w-3xl max-h-[85vh] overflow-y-auto ${MOBILE_SHEET_DIALOG}`}>
             <DialogHeader>
               <DialogTitle>Create New Menu</DialogTitle>
               <DialogDescription>
@@ -481,14 +483,14 @@ export default function MenusPage() {
         </Dialog>
 
         {/* Manage Menus Section */}
-        <Card>
-          <CardHeader>
+        <Card className="max-md:border-0 max-md:bg-transparent max-md:shadow-none">
+          <CardHeader className="hidden md:flex">
             <CardTitle className="text-xl">Manage Menus</CardTitle>
             <CardDescription>
               Toggle menu visibility for guests
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="max-md:p-0">
             {menusLoading ? (
               <div className="space-y-4">
                 {[1, 2].map(i => (
@@ -500,11 +502,12 @@ export default function MenusPage() {
                 {menus.map((menu) => (
                   <div
                     key={menu.id}
-                    className="flex items-center gap-2 px-3 py-2 border rounded-md"
+                    className="flex items-center gap-2 px-3 py-2 border rounded-md max-md:flex-wrap max-md:rounded-lg max-md:bg-card max-md:p-0 max-md:gap-0 max-md:overflow-hidden max-md:border-l-4"
+                    style={{ borderLeftColor: menu.accentColor ?? undefined }}
                     data-testid={`menu-item-${menu.id}`}
                   >
-                    <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
-                      <span className="font-serif text-sm md:text-base truncate">{menu.name}</span>
+                    <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap max-md:px-3 max-md:pt-3 max-md:pb-2 max-md:gap-x-2 max-md:gap-y-1">
+                      <span className="font-serif text-sm md:text-base truncate max-md:text-lg max-md:w-full">{menu.name}</span>
                       <span className="text-xs text-muted-foreground font-mono">/{menu.slug}</span>
                       {menu.sections && menu.sections.length > 0 && (
                         <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
@@ -515,7 +518,8 @@ export default function MenusPage() {
                         <Badge variant="outline" className="text-[10px] px-1.5 py-0">Inactive</Badge>
                       )}
                     </div>
-                    <div className="flex items-center gap-1 shrink-0">
+                    {/* Phone: a full-width action strip, 44px targets */}
+                    <div className="flex items-center gap-1 shrink-0 max-md:w-full max-md:grid max-md:grid-cols-5 max-md:gap-0 max-md:border-t max-md:[&>*]:justify-self-center">
                       <Switch
                         checked={menu.isActive}
                         onCheckedChange={(checked) => {
@@ -523,12 +527,13 @@ export default function MenusPage() {
                         }}
                         disabled={menusLoading}
                         data-testid={`switch-menu-active-${menu.id}`}
-                        aria-label={menu.isActive ? "Active" : "Inactive"}
+                        aria-label={`${menu.name}: ${menu.isActive ? "visible to guests" : "hidden from guests"}`}
                       />
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8"
+                        className="h-8 w-8 max-md:h-11 max-md:w-full"
+                        aria-label={`Edit ${menu.name}`}
                         onClick={() => setEditingMenu(menu)}
                         data-testid={`button-edit-menu-${menu.id}`}
                         title="Edit"
@@ -538,7 +543,8 @@ export default function MenusPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8"
+                        className="h-8 w-8 max-md:h-11 max-md:w-full"
+                        aria-label={`Duplicate ${menu.name}`}
                         onClick={() => duplicateMenu(menu.id)}
                         disabled={duplicateMenuPending}
                         data-testid={`button-duplicate-menu-${menu.id}`}
@@ -551,7 +557,8 @@ export default function MenusPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8"
+                            className="h-8 w-8 max-md:h-11 max-md:w-full"
+                            aria-label={`QR code for ${menu.name}`}
                             data-testid={`button-qr-${menu.id}`}
                             title="QR Code"
                           >
@@ -585,7 +592,8 @@ export default function MenusPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-destructive"
+                            className="h-8 w-8 text-destructive max-md:h-11 max-md:w-full"
+                            aria-label={`Delete ${menu.name}`}
                             data-testid={`button-delete-menu-${menu.id}`}
                             title="Delete"
                           >
@@ -624,7 +632,7 @@ export default function MenusPage() {
 
         {/* Edit Menu Dialog */}
         <Dialog open={!!editingMenu} onOpenChange={(open) => !open && setEditingMenu(null)}>
-          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogContent className={`max-w-2xl max-h-[85vh] overflow-y-auto ${MOBILE_SHEET_DIALOG}`}>
             <DialogHeader>
               <DialogTitle>Edit Menu</DialogTitle>
               <DialogDescription>

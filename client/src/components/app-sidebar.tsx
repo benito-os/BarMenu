@@ -1,4 +1,6 @@
-import { LayoutDashboard, BarChart3, Menu as MenuIcon, Wine, QrCode, Settings, LogOut, Boxes, FileDown, Info, BookOpen } from "lucide-react";
+import { LogOut } from "lucide-react";
+import { DASHBOARD_NAV } from "@/lib/dashboardNav";
+import { useSettings } from "@/hooks/useSettings";
 import { Link, useLocation } from "wouter";
 import {
   Sidebar,
@@ -12,68 +14,7 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 
-const menuItems = [
-  {
-    title: "Queue",
-    icon: LayoutDashboard,
-    path: "/dashboard",
-    testId: "sidebar-queue",
-  },
-  {
-    title: "Analytics",
-    icon: BarChart3,
-    path: "/dashboard/analytics",
-    testId: "sidebar-analytics",
-  },
-  {
-    title: "Menus",
-    icon: MenuIcon,
-    path: "/dashboard/menus",
-    testId: "sidebar-menus",
-  },
-  {
-    title: "Drinks",
-    icon: Wine,
-    path: "/dashboard/drinks",
-    testId: "sidebar-drinks",
-  },
-  {
-    title: "Recipes",
-    icon: BookOpen,
-    path: "/dashboard/recipes",
-    testId: "sidebar-recipes",
-  },
-  {
-    title: "Inventory",
-    icon: Boxes,
-    path: "/dashboard/inventory",
-    testId: "sidebar-inventory",
-  },
-  {
-    title: "QR Codes",
-    icon: QrCode,
-    path: "/dashboard/qr-codes",
-    testId: "sidebar-qr-codes",
-  },
-  {
-    title: "Import/Export",
-    icon: FileDown,
-    path: "/dashboard/import-export",
-    testId: "sidebar-import-export",
-  },
-  {
-    title: "Settings",
-    icon: Settings,
-    path: "/dashboard/settings",
-    testId: "sidebar-settings",
-  },
-  {
-    title: "About",
-    icon: Info,
-    path: "/about",
-    testId: "sidebar-about",
-  },
-];
+const menuItems = DASHBOARD_NAV;
 
 interface AppSidebarProps {
   activeSection?: string;
@@ -85,6 +26,7 @@ interface AppSidebarProps {
 
 export function AppSidebar({ onLogout }: AppSidebarProps) {
   const [location] = useLocation();
+  const { barName } = useSettings();
 
   const isItemActive = (path: string) => {
     if (path === "/dashboard") {
@@ -98,7 +40,7 @@ export function AppSidebar({ onLogout }: AppSidebarProps) {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className="text-lg font-serif px-4 py-6">
-            Bar Flores
+            {barName}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>

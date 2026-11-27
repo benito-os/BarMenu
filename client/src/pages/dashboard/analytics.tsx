@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { AlertCircle } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const ALL_MENUS = "__all__";
 
@@ -48,25 +49,30 @@ export default function AnalyticsPage() {
     return analytics;
   }, [analytics, filterMode]);
 
+  // Phones get horizontal bars: names stay readable instead of 45-degree
+  // labels clipped at the screen edge.
+  const isMobile = useIsMobile();
+  const chartHeight = isMobile ? Math.max(160, filteredAnalytics.length * 30 + 40) : 400;
+
   return (
     <DashboardLayout>
       <div className="p-4 md:p-6 max-w-full space-y-4">
         {/* Filters */}
-        <Card>
-          <CardHeader>
+        <Card className="max-md:border-0 max-md:bg-transparent max-md:shadow-none">
+          <CardHeader className="hidden md:flex">
             <CardTitle className="text-xl">Filter Options</CardTitle>
             <CardDescription>
               View drinks by popularity to find what needs attention
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap items-center gap-3">
+          <CardContent className="max-md:p-0">
+            <div className="flex flex-wrap items-center gap-3 max-md:gap-2">
               <Select
                 value={selectedMenuId}
                 onValueChange={setSelectedMenuId}
                 disabled={menusLoading}
               >
-                <SelectTrigger className="w-[220px]" data-testid="select-analytics-menu">
+                <SelectTrigger className="w-[220px] max-md:w-full" data-testid="select-analytics-menu">
                   <SelectValue placeholder="All menus" />
                 </SelectTrigger>
                 <SelectContent>
@@ -81,7 +87,7 @@ export default function AnalyticsPage() {
               </Select>
 
               {archivedCount > 0 && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 max-md:min-h-11">
                   <Checkbox
                     id="analytics-show-archived"
                     checked={showArchived}
@@ -94,10 +100,12 @@ export default function AnalyticsPage() {
                 </div>
               )}
 
+              <div className="flex flex-wrap gap-3 max-md:grid max-md:w-full max-md:grid-cols-3 max-md:gap-2">
               <Button
                 variant={filterMode === "all" ? "default" : "outline"}
                 onClick={() => setFilterMode("all")}
                 data-testid="button-filter-all"
+                className="max-md:min-h-11 max-md:px-1 max-md:text-[0.8125rem]"
               >
                 All Drinks
               </Button>
@@ -105,24 +113,27 @@ export default function AnalyticsPage() {
                 variant={filterMode === "never-made" ? "default" : "outline"}
                 onClick={() => setFilterMode("never-made")}
                 data-testid="button-filter-never-made"
+                className="max-md:min-h-11 max-md:px-1 max-md:text-[0.8125rem]"
               >
-                <AlertCircle className="w-4 h-4 mr-2" />
+                <AlertCircle className="w-4 h-4 mr-2 max-md:hidden" />
                 Never Made
               </Button>
               <Button
                 variant={filterMode === "least-ordered" ? "default" : "outline"}
                 onClick={() => setFilterMode("least-ordered")}
                 data-testid="button-filter-least-ordered"
+                className="max-md:min-h-11 max-md:px-1 max-md:text-[0.8125rem]"
               >
                 Least Ordered
               </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Chart */}
         <Card>
-          <CardHeader>
+          <CardHeader className="max-md:p-4">
             <CardTitle className="text-xl">Drink Popularity</CardTitle>
             <CardDescription>
               {filterMode === "never-made" && "Drinks that haven't been made yet"}
@@ -130,21 +141,34 @@ export default function AnalyticsPage() {
               {filterMode === "all" && "Total orders per drink"}
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="max-md:px-2 max-md:pb-4">
             {analyticsLoading ? (
               <Skeleton className="h-96 w-full" />
             ) : filteredAnalytics.length > 0 ? (
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={filteredAnalytics}>
+              <ResponsiveContainer width="100%" height={chartHeight}>
+                <BarChart
+                  data={filteredAnalytics}
+                  layout={isMobile ? "vertical" : "horizontal"}
+                  margin={isMobile ? { left: 0, right: 12, top: 4, bottom: 4 } : undefined}
+                >
                   <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis 
-                    dataKey="name" 
-                    angle={-45} 
-                    textAnchor="end" 
-                    height={120}
-                    className="text-xs"
-                  />
-                  <YAxis className="text-xs" />
+                  {isMobile ? (
+                    <>
+                      <XAxis type="number" allowDecimals={false} className="text-xs" />
+                      <YAxis type="category" dataKey="name" width={120} className="text-xs" tick={{ fontSize: 11 }} />
+                    </>
+                  ) : (
+                    <>
+                      <XAxis
+                        dataKey="name"
+                        angle={-45}
+                        textAnchor="end"
+                        height={120}
+                        className="text-xs"
+                      />
+                      <YAxis className="text-xs" />
+                    </>
+                  )}
                   <Tooltip 
                     contentStyle={{ 
                       backgroundColor: 'hsl(var(--card))',
@@ -152,7 +176,7 @@ export default function AnalyticsPage() {
                       borderRadius: '6px'
                     }}
                   />
-                  <Bar dataKey="orderCount" radius={[4, 4, 0, 0]}>
+                  <Bar dataKey="orderCount" radius={isMobile ? [0, 4, 4, 0] : [4, 4, 0, 0]}>
                     {filteredAnalytics.map((entry, index) => (
                       <Cell 
                         key={`cell-${index}`}
@@ -172,10 +196,10 @@ export default function AnalyticsPage() {
 
         {/* Data Table */}
         <Card>
-          <CardHeader>
+          <CardHeader className="max-md:p-4">
             <CardTitle className="text-xl">Detailed View</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="max-md:p-0">
             {analyticsLoading ? (
               <div className="space-y-4">
                 {[1, 2, 3, 4].map(i => (
