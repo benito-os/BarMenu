@@ -16,6 +16,7 @@ import { useIngredients } from "@/hooks/useIngredients";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { ChipRow, StickyToolbar, useScrollSpy } from "@/components/dashboard/ChipRow";
 import { StatTiles } from "@/components/dashboard/StatTiles";
+import { SectionHeading } from "@/components/brand/Deco";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MOBILE_SHEET_DIALOG } from "@/lib/mobileSheet";
@@ -207,31 +208,31 @@ export function InventorySection({ actions }: { actions?: ReactNode } = {}) {
       <div className="hidden md:grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Ingredients</CardTitle>
-            <Boxes className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="font-sans text-[0.6875rem] font-semibold uppercase leading-none tracking-[0.16em] text-brass">Total Ingredients</CardTitle>
+            <Boxes className="h-4 w-4 text-brass" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-semibold" data-testid="text-total-ingredients">{summary.total}</div>
+            <div className="font-serif text-4xl font-bold lining-nums" data-testid="text-total-ingredients">{summary.total}</div>
             <p className="text-xs text-muted-foreground">Across all bar stations</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Low Stock</CardTitle>
-            <ClipboardList className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="font-sans text-[0.6875rem] font-semibold uppercase leading-none tracking-[0.16em] text-brass">Low Stock</CardTitle>
+            <ClipboardList className="h-4 w-4 text-brass" />
           </CardHeader>
           <CardContent className="space-y-2">
-            <div className="text-3xl font-semibold" data-testid="text-low-stock">{summary.low}</div>
+            <div className="font-serif text-4xl font-bold lining-nums" data-testid="text-low-stock">{summary.low}</div>
             <p className="text-xs text-muted-foreground">{summary.out} out of stock today</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Restock Urgency</CardTitle>
-            <Sparkles className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="font-sans text-[0.6875rem] font-semibold uppercase leading-none tracking-[0.16em] text-brass">Restock Urgency</CardTitle>
+            <Sparkles className="h-4 w-4 text-brass" />
           </CardHeader>
           <CardContent className="space-y-2">
-            <div className="text-3xl font-semibold" data-testid="text-restock-percent">{restockPercent}%</div>
+            <div className="font-serif text-4xl font-bold lining-nums" data-testid="text-restock-percent">{restockPercent}%</div>
             <Progress value={restockPercent} className="h-2" />
             <p className="text-xs text-muted-foreground">
               {summary.healthy} ingredients are at healthy levels
@@ -249,8 +250,8 @@ export function InventorySection({ actions }: { actions?: ReactNode } = {}) {
         </CardHeader>
         <CardContent className="space-y-6 max-md:p-0 max-md:space-y-3">
           {/* Desktop: Always visible form */}
-          <div className="hidden md:block rounded-lg border p-4 space-y-3">
-            <h3 className="text-sm font-semibold">Add Ingredient</h3>
+          <div className="hidden md:block rounded-sm border border-brass/30 bg-secondary/40 p-4 space-y-3">
+            <h3 className="smallcaps text-brass">Add Ingredient</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               <div className="space-y-1">
                 <Label htmlFor="ingredient-name">Name</Label>
@@ -340,7 +341,7 @@ export function InventorySection({ actions }: { actions?: ReactNode } = {}) {
           <Sheet open={addFormOpen} onOpenChange={setAddFormOpen}>
             <SheetContent
               side="bottom"
-              className="md:hidden rounded-t-2xl px-4 pt-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] max-h-[92dvh] overflow-y-auto"
+              className="md:hidden px-4 pt-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] max-h-[92dvh] overflow-y-auto"
               data-testid="sheet-add-ingredient"
             >
               <SheetHeader className="text-left mb-4">
@@ -532,18 +533,17 @@ export function InventorySection({ actions }: { actions?: ReactNode } = {}) {
                 ) : (
                   mobileGroups.map((group) => (
                     <section key={group.id} id={group.id} aria-labelledby={`${group.id}-h`}>
-                      <h3 id={`${group.id}-h`} className="mb-1.5 flex items-baseline justify-between px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      <SectionHeading as="h3" id={`${group.id}-h`} className="mb-1 px-1 min-h-6" count={group.items.length}>
                         {group.name}
-                        <span className="font-normal normal-case tracking-normal tabular-nums">{group.items.length}</span>
-                      </h3>
-                      <ul className="divide-y rounded-lg border bg-card overflow-hidden">
+                      </SectionHeading>
+                      <ul className="divide-y border-b">
                         {group.items.map((item) => {
                           const isLow = item.onHand > 0 && item.onHand <= item.parLevel;
                           const isOut = item.onHand <= 0;
                           return (
                             <li
                               key={item.id}
-                              className={`flex items-center gap-1 py-1.5 pl-3 pr-1 border-l-4 ${isOut ? "border-l-destructive bg-destructive/5" : isLow ? "border-l-warning bg-warning/5" : "border-l-transparent"}`}
+                              className={`flex items-center gap-1 py-1.5 pl-3 pr-1 border-l-[3px] ${isOut ? "border-l-destructive bg-destructive-soft/45" : isLow ? "border-l-warning bg-warning-soft/40" : "border-l-transparent"}`}
                               data-testid={`mobile-ingredient-${item.id}`}
                             >
                               <button
@@ -555,10 +555,10 @@ export function InventorySection({ actions }: { actions?: ReactNode } = {}) {
                               >
                                 <span className="flex items-center gap-1 font-medium text-[0.9375rem] leading-tight">
                                   <span className="truncate">{item.name}</span>
-                                  <Pencil className="h-3 w-3 shrink-0 text-muted-foreground/60" aria-hidden />
+                                  <Pencil className="h-3 w-3 shrink-0 text-brass/60" aria-hidden />
                                 </span>
                                 <span className="mt-0.5 block text-xs text-muted-foreground truncate">
-                                  <span className={isOut ? "text-destructive font-medium" : isLow ? "text-amber-700 font-medium" : ""}>
+                                  <span className={isOut ? "text-destructive font-medium" : isLow ? "text-warning font-medium" : ""}>
                                     {isOut ? "Out" : isLow ? "Low" : "OK"}
                                   </span>
                                   {" · "}par {item.parLevel} {item.unit}
@@ -570,7 +570,7 @@ export function InventorySection({ actions }: { actions?: ReactNode } = {}) {
                                 <Button
                                   size="icon"
                                   variant="outline"
-                                  className="h-11 w-11 rounded-r-none"
+                                  className="h-11 w-11 rounded-r-none bg-popover/60"
                                   aria-label={`Decrease ${item.name}`}
                                   onClick={() => adjustStock(item.id, -1)}
                                   disabled={item.onHand <= 0}
@@ -579,18 +579,18 @@ export function InventorySection({ actions }: { actions?: ReactNode } = {}) {
                                   <Minus className="h-4 w-4" />
                                 </Button>
                                 <div
-                                  className="flex h-11 min-w-[2.75rem] flex-col items-center justify-center border-y bg-background px-1 leading-none"
+                                  className="flex h-11 min-w-[2.75rem] flex-col items-center justify-center border-y border-[color:var(--button-outline)] bg-popover px-1 leading-none"
                                   data-testid={`mobile-stock-count-${item.id}`}
                                   aria-live="polite"
                                 >
-                                  <span className="text-base font-semibold tabular-nums">{item.onHand}</span>
+                                  <span className="font-serif text-lg font-bold leading-none tabular-nums lining-nums">{item.onHand}</span>
                                   <span className="sr-only"> </span>
                                   <span className="mt-0.5 max-w-[3.5rem] truncate text-[0.625rem] text-muted-foreground">{item.unit}</span>
                                 </div>
                                 <Button
                                   size="icon"
                                   variant="outline"
-                                  className="h-11 w-11 rounded-l-none"
+                                  className="h-11 w-11 rounded-l-none bg-popover/60"
                                   aria-label={`Increase ${item.name}`}
                                   onClick={() => adjustStock(item.id, 1)}
                                   data-testid={`mobile-button-increment-${item.id}`}
@@ -622,6 +622,7 @@ export function InventorySection({ actions }: { actions?: ReactNode } = {}) {
                                   <AlertDialogFooter>
                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                                     <AlertDialogAction
+                                      className="bg-destructive text-destructive-foreground border-destructive hover:bg-destructive/90"
                                       onClick={() => handleDelete(item.id)}
                                       data-testid="button-confirm-delete-ingredient-mobile"
                                     >
@@ -672,8 +673,8 @@ export function InventorySection({ actions }: { actions?: ReactNode } = {}) {
                                 isOut
                                   ? "destructive"
                                   : isLow
-                                    ? "secondary"
-                                    : "default"
+                                    ? "warning"
+                                    : "success"
                               }
                             >
                               {isOut ? "Out of stock" : isLow ? "Low stock" : "Healthy"}
@@ -711,6 +712,7 @@ export function InventorySection({ actions }: { actions?: ReactNode } = {}) {
                                   <AlertDialogFooter>
                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                                     <AlertDialogAction
+                                      className="bg-destructive text-destructive-foreground border-destructive hover:bg-destructive/90"
                                       onClick={() => handleDelete(item.id)}
                                       data-testid="button-confirm-delete-ingredient"
                                     >

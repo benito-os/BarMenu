@@ -228,7 +228,7 @@ export default function RecipesPage() {
             <p className="text-xs text-muted-foreground" data-testid="text-recipe-count">
               {filtered.length} {filtered.length === 1 ? "recipe" : "recipes"}
             </p>
-            <div className="grid gap-2 md:gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid max-md:gap-0 max-md:border-t md:gap-x-8 md:gap-y-2 md:grid-cols-2 xl:grid-cols-3">
               {filtered.map((entry) => {
                 const ch = entry.drink.name.trim().charAt(0).toUpperCase();
                 const id = `recipe-letter-${/[A-Z]/.test(ch) ? ch : "num"}`;
@@ -271,17 +271,17 @@ function RecipeCard({
   const bodyId = `recipe-body-${drink.id}`;
 
   return (
-    <Card data-testid={`card-recipe-${drink.id}`} id={anchorId} className="max-md:shadow-none">
+    <Card data-testid={`card-recipe-${drink.id}`} id={anchorId} className="max-md:border-0 max-md:border-b">
       <CardHeader className="pb-3 space-y-2 max-md:p-0 max-md:space-y-0">
         <button
           type="button"
-          className="md:pointer-events-none flex w-full items-start gap-2 text-left max-md:min-h-14 max-md:px-3 max-md:py-2.5 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="md:pointer-events-none flex w-full items-start gap-2 text-left max-md:min-h-14 max-md:px-3 max-md:py-2.5 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
           aria-controls={bodyId}
         >
           <div className="min-w-0 flex-1 space-y-1.5 max-md:space-y-1">
-            <CardTitle className="font-serif text-lg max-md:text-base max-md:leading-snug">{drink.name}</CardTitle>
+            <CardTitle className="font-serif text-xl max-md:text-[1.0625rem] max-md:leading-snug">{drink.name}</CardTitle>
             <div className="flex flex-wrap gap-1.5 max-md:gap-1">
               {cantMake && (
                 <Badge variant="destructive" className="md:hidden text-[0.6875rem] px-1.5 py-0">
@@ -298,17 +298,17 @@ function RecipeCard({
           </div>
           <ChevronDown
             aria-hidden
-            className={cn("md:hidden mt-1 h-5 w-5 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")}
+            className={cn("md:hidden mt-1 h-5 w-5 shrink-0 text-brass transition-transform", open && "rotate-180")}
           />
         </button>
       </CardHeader>
-      <CardContent id={bodyId} className={cn("space-y-3 text-sm max-md:px-3 max-md:pb-3 max-md:pt-2 max-md:border-t", open ? "block" : "hidden md:block")}>
+      <CardContent id={bodyId} className={cn("space-y-3 text-sm max-md:px-3 max-md:pb-4 max-md:pt-3 max-md:border-t max-md:border-dashed max-md:bg-secondary/40", open ? "block" : "hidden md:block")}>
         {steps.length === 0 ? (
           <p className="text-muted-foreground italic">No recipe recorded.</p>
         ) : steps.length === 1 ? (
           <p className="leading-relaxed whitespace-pre-wrap max-md:text-[0.9375rem]">{steps[0]}</p>
         ) : (
-          <ul className="leading-relaxed space-y-1 list-disc list-inside marker:text-muted-foreground max-md:text-[0.9375rem]">
+          <ul className="leading-relaxed space-y-1 list-disc list-inside marker:text-brass max-md:text-[0.9375rem]">
             {steps.map((step, i) => (
               <li key={i}>{step}</li>
             ))}

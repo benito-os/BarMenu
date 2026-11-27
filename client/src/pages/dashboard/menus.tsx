@@ -181,7 +181,7 @@ export default function MenusPage() {
         <button
           type="button"
           onClick={onRemove}
-          className="p-1 hover:bg-destructive/20 rounded-full"
+          className="p-1 hover:bg-destructive/20 rounded-sm"
           data-testid={`button-remove-section-${mapping.index}`}
         >
           <X className="w-4 h-4" />
@@ -498,16 +498,16 @@ export default function MenusPage() {
                 ))}
               </div>
             ) : menus && menus.length > 0 ? (
-              <div className="space-y-2">
+              <div className="menu-rows border-y">
                 {menus.map((menu) => (
                   <div
                     key={menu.id}
-                    className="flex items-center gap-2 px-3 py-2 border rounded-md max-md:flex-wrap max-md:rounded-lg max-md:bg-card max-md:p-0 max-md:gap-0 max-md:overflow-hidden max-md:border-l-4"
+                    className="flex items-center gap-2 px-3 py-3 border-l-[3px] border-l-transparent max-md:flex-wrap max-md:p-0 max-md:gap-0 max-md:overflow-hidden"
                     style={{ borderLeftColor: menu.accentColor ?? undefined }}
                     data-testid={`menu-item-${menu.id}`}
                   >
                     <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap max-md:px-3 max-md:pt-3 max-md:pb-2 max-md:gap-x-2 max-md:gap-y-1">
-                      <span className="font-serif text-sm md:text-base truncate max-md:text-lg max-md:w-full">{menu.name}</span>
+                      <span className="font-serif text-lg md:text-xl font-semibold truncate max-md:w-full">{menu.name}</span>
                       <span className="text-xs text-muted-foreground font-mono">/{menu.slug}</span>
                       {menu.sections && menu.sections.length > 0 && (
                         <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
@@ -611,7 +611,7 @@ export default function MenusPage() {
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
                             <AlertDialogAction
                               onClick={() => deleteMenu(menu.id)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              className="bg-destructive text-destructive-foreground border-destructive hover:bg-destructive/90"
                             >
                               Delete
                             </AlertDialogAction>

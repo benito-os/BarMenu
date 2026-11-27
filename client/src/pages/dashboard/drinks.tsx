@@ -5,6 +5,7 @@ import { useIngredients } from "@/hooks/useIngredients";
 import { useMenus } from "@/hooks/useMenus";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { SectionHeading } from "@/components/brand/Deco";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
@@ -359,7 +360,7 @@ export default function DrinksPage() {
       <Card
         ref={setNodeRef}
         style={style}
-        className="hover-elevate cursor-pointer"
+        className="hover-elevate cursor-pointer border-0 border-b"
         onClick={() => toggleDrinkSelection(drink.id)}
         data-testid={`drink-item-${drink.id}`}
       >
@@ -559,7 +560,7 @@ export default function DrinksPage() {
             onClick={() => setCreateDialogOpen(true)}
             disabled={!menus || menus.length === 0}
             data-testid="button-open-create-drink"
-            className={`max-md:!fixed max-md:right-4 max-md:!z-30 max-md:h-12 max-md:rounded-full max-md:px-5 max-md:shadow-lg max-md:bottom-[calc(var(--mobile-tabbar-h)+0.75rem)] ${selectedDrinks.size > 0 ? "max-md:hidden" : ""}`}
+            className={`max-md:!fixed max-md:right-4 max-md:!z-30 max-md:h-12 max-md:rounded-sm max-md:px-5 max-md:shadow-[0_8px_22px_-8px_hsl(var(--ink)/0.6)] max-md:bottom-[calc(var(--mobile-tabbar-h)+0.75rem)] ${selectedDrinks.size > 0 ? "max-md:hidden" : ""}`}
           >
             <Plus className="w-4 h-4 mr-2" />
             Add Drink
@@ -1083,14 +1084,14 @@ export default function DrinksPage() {
 
                       return (
                         <div key={section} className="space-y-3 max-md:space-y-1.5" id={anchorId("drinks-sec", section)}>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <h4 className="font-semibold text-lg max-md:text-xs max-md:uppercase max-md:tracking-wider max-md:text-muted-foreground">{section}</h4>
-                              <Badge variant="outline" className="text-xs">
-                                {drinks.length} {drinks.length === 1 ? "drink" : "drinks"}
-                              </Badge>
-                            </div>
-                          </div>
+                          <SectionHeading
+                            as="h4"
+                            className="min-h-6 px-1 md:px-0"
+                            labelClassName="md:text-xs"
+                            count={`${drinks.length} ${drinks.length === 1 ? "drink" : "drinks"}`}
+                          >
+                            {section}
+                          </SectionHeading>
 
                           {drinks.length > 0 ? (
                             <DndContext
@@ -1102,7 +1103,7 @@ export default function DrinksPage() {
                                 items={drinks.map(d => d.id)}
                                 strategy={verticalListSortingStrategy}
                               >
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-md:gap-1.5">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 md:gap-x-8 border-t">
                                   {drinks.map((drink) => (
                                     <SortableDrinkItem key={drink.id} drink={drink} />
                                   ))}

@@ -205,7 +205,7 @@ export default function QRCodesPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>
-            <CardHeader className="max-md:p-4">
+            <CardHeader className="max-md:px-0 max-md:py-4">
               <CardTitle className="text-xl">QR Code Preview</CardTitle>
               <CardDescription>
                 {selectedMenu 
@@ -213,7 +213,7 @@ export default function QRCodesPage() {
                   : "Select a menu to generate a QR code"}
               </CardDescription>
             </CardHeader>
-            <CardContent className="max-md:p-4 max-md:pt-0">
+            <CardContent className="max-md:px-0 max-md:pb-4 max-md:pt-0">
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="menu-select">Select Menu</Label>
@@ -298,13 +298,13 @@ export default function QRCodesPage() {
           </Card>
 
           <Card>
-            <CardHeader className="max-md:p-4">
+            <CardHeader className="max-md:px-0 max-md:py-4">
               <CardTitle className="text-xl">Customization</CardTitle>
               <CardDescription>
                 Customize the appearance of your branded QR code
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6 max-md:p-4 max-md:pt-0">
+            <CardContent className="space-y-6 max-md:px-0 max-md:pb-4 max-md:pt-0">
               <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
                 <Palette className="w-5 h-5 text-muted-foreground" />
                 <div className="flex-1">

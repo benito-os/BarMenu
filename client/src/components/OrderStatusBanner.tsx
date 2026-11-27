@@ -112,22 +112,22 @@ export function OrderStatusBanner() {
         return {
           icon: Clock,
           label: "Requested",
-          color: "text-info-soft-foreground",
-          bgColor: "bg-info-soft",
+          color: "text-info",
+          badge: "info" as const,
         };
       case "in_progress":
         return {
           icon: ChefHat,
           label: "In Progress",
-          color: "text-warning-soft-foreground",
-          bgColor: "bg-warning-soft",
+          color: "text-warning",
+          badge: "warning" as const,
         };
       default:
         return {
           icon: Clock,
           label: "Pending",
           color: "text-muted-foreground",
-          bgColor: "bg-muted",
+          badge: "outline" as const,
         };
     }
   };
@@ -136,19 +136,20 @@ export function OrderStatusBanner() {
     // role="status" + aria-live so a screen reader hears "In Progress" when
     // the bartender starts the drink, without stealing focus from the menu.
     <div className="mb-8" role="status" aria-live="polite" data-testid="order-status-banner">
-      <Card className="border-primary/20 bg-primary/5">
-        <div className="p-4 md:p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5" />
+      {/* A ticket: framed card stock, like a bar chit. */}
+      <Card variant="framed" className="deco-corners">
+        <div className="px-5 pt-5 pb-4 md:px-7 md:pt-6">
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <h3 className="font-headline text-xl font-semibold text-foreground flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-brass" />
               Your Active Orders
             </h3>
-            <Badge variant="secondary" data-testid="order-count-badge">
+            <Badge variant="secondary" className="tabular-nums" data-testid="order-count-badge">
               {activeOrders.length} {activeOrders.length === 1 ? "order" : "orders"}
             </Badge>
           </div>
 
-          <div className="space-y-3">
+          <div className="menu-rows">
             {activeOrders.map((order) => {
               const statusInfo = getStatusInfo(order.status);
               const StatusIcon = statusInfo.icon;
@@ -157,13 +158,13 @@ export function OrderStatusBanner() {
               return (
                 <div
                   key={order.id}
-                  className={`flex items-center justify-between p-3 rounded-lg ${statusInfo.bgColor}`}
+                  className="flex items-center justify-between gap-3 py-3"
                   data-testid={`order-item-${order.id}`}
                 >
                   <div className="flex items-center gap-3 flex-1">
                     <StatusIcon className={`w-5 h-5 ${statusInfo.color}`} />
                     <div className="flex-1">
-                      <p className="font-medium text-foreground">
+                      <p className="font-headline text-lg font-semibold leading-tight text-foreground">
                         {trackedOrder?.drinkName || "Your Drink"}
                       </p>
                       {order.guestName && (
@@ -185,8 +186,8 @@ export function OrderStatusBanner() {
                   </div>
 
                   <Badge 
-                    variant="outline" 
-                    className={statusInfo.color}
+                    variant={statusInfo.badge}
+                    className="shrink-0 uppercase tracking-[0.1em] text-[0.6875rem]"
                     data-testid={`order-status-${order.id}`}
                   >
                     {statusInfo.label}
@@ -201,7 +202,7 @@ export function OrderStatusBanner() {
               return (
                 <div
                   key={orderId}
-                  className="flex items-center justify-between p-3 rounded-lg bg-muted"
+                  className="flex items-center justify-between gap-3 py-3"
                   data-testid={`order-item-loading-${orderId}`}
                 >
                   <div className="flex items-center gap-3 flex-1">
@@ -224,7 +225,7 @@ export function OrderStatusBanner() {
             })}
           </div>
 
-          <p className="text-xs text-muted-foreground mt-4 text-center">
+          <p className="text-xs text-muted-foreground mt-3 pt-3 border-t border-border text-center">
             Order status updates automatically. Completed orders will be removed from this list.
           </p>
         </div>

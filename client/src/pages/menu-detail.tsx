@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
 import { useMutation } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,10 +14,12 @@ import { apiRequest, HttpError } from "@/lib/queryClient";
 import { addTrackedOrder } from "@/lib/orderCookies";
 import { OrderStatusBanner } from "@/components/OrderStatusBanner";
 import type { Menu, DrinkAvailability } from "@shared/validation";
-import { Home, Wine, Sparkles, Glasses, Check, Flame, Snowflake, ThermometerSun, Share2, QrCode, RefreshCw } from "lucide-react";
+import { Home, Sparkles, Check, Share2, QrCode, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ensureFontLoaded } from "@/hooks/useApplyBrandSettings";
 import { BrandedQRCode } from "@/components/BrandedQRCode";
+import { DecoRule, SectionHeading } from "@/components/brand/Deco";
+import { cn } from "@/lib/utils";
 
 /**
  * Pull the guest-readable message out of an API failure. The server answers
@@ -188,38 +189,56 @@ export default function MenuDetail() {
     );
   }
 
-  // Dynamic theming styles. Per-menu typography wins; otherwise fall through
-  // to the global brand headline font (set by useApplyBrandSettings) so a
-  // menu with no explicit typography still picks up the admin's brand choice
-  // instead of the browser default.
-  const themingStyle = menu ? {
-    backgroundColor: menu.backgroundColor || undefined,
-    fontFamily: menu.typography || "var(--font-headline)",
-  } : {};
+  // Dynamic theming. The printed-menu theme supplies the defaults; anything
+  // the owner set on this menu wins. Per-menu typography replaces both the
+  // headline and body font slots for this page, so every font-headline /
+  // font-body element below follows it; otherwise the global brand fonts
+  // (useApplyBrandSettings) apply.
+  const themingStyle = (menu
+    ? {
+        backgroundColor: menu.backgroundColor || undefined,
+        ...(menu.typography
+          ? {
+              fontFamily: menu.typography,
+              "--font-headline": menu.typography,
+              "--font-body": menu.typography,
+            }
+          : {}),
+      }
+    : {}) as React.CSSProperties;
 
   const accentColor = menu?.accentColor || undefined;
   const sectionHeaderColor = menu?.sectionHeaderColor || undefined;
   const menuTitleColor = menu?.menuTitleColor || undefined;
+  // Accent recolours the brass parts (rules, ornaments, tag line). Without
+  // one, the theme's brass tokens apply.
+  const accentText = accentColor ? { color: accentColor } : undefined;
+  const accentRule = accentColor ? { backgroundColor: accentColor } : undefined;
 
   return (
-    <div className="min-h-screen bg-background" style={themingStyle}>
-      {/* Fixed Header */}
-      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b">
-        <div className="max-w-6xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between gap-4">
+    <div className="min-h-screen bg-background font-body" style={themingStyle}>
+      {/* Fixed Header. Takes the menu's own background when it has one, so a
+          themed menu never gets a cream band across the top. */}
+      <header
+        className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90 border-b border-brass/30"
+        style={menu?.backgroundColor ? { backgroundColor: menu.backgroundColor } : undefined}
+      >
+        <div className="max-w-5xl mx-auto px-2 sm:px-6 py-1.5">
+          <div className="flex items-center justify-between gap-2">
             <Link href="/">
               <Button 
                 variant="ghost" 
                 size="sm"
+                className="min-h-11 px-3"
                 data-testid="button-back-home"
               >
-                <Home className="w-4 h-4 mr-2" />
+                <Home className="w-4 h-4 mr-1.5" />
                 Home
               </Button>
             </Link>
             {menu && (
               <h1 
-                className="text-xl md:text-2xl font-bold text-foreground truncate flex-1 text-center"
+                className="font-headline text-lg md:text-xl font-semibold text-foreground truncate flex-1 text-center"
                 style={{ color: menuTitleColor }}
               >
                 {menu.name}
@@ -228,11 +247,12 @@ export default function MenuDetail() {
             <Button
               variant="ghost"
               size="sm"
+              className="min-h-11 px-3"
               onClick={() => setQrDialogOpen(true)}
               aria-label={menu ? `Share ${menu.name}` : "Share this menu"}
               data-testid="button-share-menu"
             >
-              <Share2 className="w-4 h-4 mr-2" />
+              <Share2 className="w-4 h-4 mr-1.5" />
               Share
             </Button>
           </div>
@@ -249,13 +269,14 @@ export default function MenuDetail() {
             decoding="async"
             fetchPriority="high"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-black/60 flex items-center justify-center">
-            <div className="text-center text-white px-6">
-              <h2 className="text-4xl md:text-6xl font-bold mb-4">
+          <div className="absolute inset-0 bg-gradient-to-b from-ink/45 to-ink/75 flex items-center justify-center">
+            <div className="text-center text-paper px-6">
+              <h2 className="font-headline text-4xl md:text-6xl font-bold">
                 {menu.name}
               </h2>
+              <DecoRule double className="mx-auto mt-4 mb-4 max-w-[14rem] text-gold" />
               {menu.description && (
-                <p className="text-lg md:text-xl max-w-2xl mx-auto">
+                <p className="font-headline italic text-lg md:text-xl max-w-2xl mx-auto text-paper/90">
                   {menu.description}
                 </p>
               )}
@@ -264,7 +285,7 @@ export default function MenuDetail() {
         </div>
       )}
 
-      <div className="max-w-6xl mx-auto px-6 py-12">
+      <div className="max-w-5xl mx-auto px-5 sm:px-8 pt-8 pb-16 md:pt-12">
         {/* Order Status Banner - Shows active orders inline */}
         <OrderStatusBanner />
         
@@ -287,153 +308,112 @@ export default function MenuDetail() {
             </Button>
           </div>
         ) : isLoading ? (
-          <div className="space-y-8">
+          <div className="space-y-10">
             <div className="text-center space-y-4">
               <Skeleton className="h-12 w-3/4 mx-auto" />
-              <Skeleton className="h-6 w-1/2 mx-auto" />
+              <Skeleton className="h-5 w-1/2 mx-auto" />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-12 menu-rows md:[&>*:nth-child(2)]:border-t-0">
               {[1, 2, 3, 4, 5, 6].map((i) => (
-                <Card key={i}>
-                  <CardHeader>
-                    <Skeleton className="h-6 w-3/4 mb-2" />
+                <div key={i} className="flex gap-4 py-5">
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-6 w-2/3" />
+                    <Skeleton className="h-3 w-1/3" />
                     <Skeleton className="h-4 w-full" />
-                  </CardHeader>
-                  <CardContent>
-                    <Skeleton className="h-10 w-full" />
-                  </CardContent>
-                </Card>
+                  </div>
+                  <Skeleton className="h-11 w-24" />
+                </div>
               ))}
             </div>
           </div>
         ) : menu ? (
           <div className="space-y-12">
-            {/* Menu Header - only show if no hero image */}
+            {/* Menu masthead - only show if no hero image */}
             {!menu.heroImageUrl && (
-              <div className="text-center space-y-4 pb-8 border-b">
+              <div className="text-center pt-2">
+                {menu.isActive && (
+                  <p className="smallcaps mb-4 text-brass" style={accentText}>
+                    Tonight&rsquo;s menu
+                  </p>
+                )}
                 <h2 
-                  className="text-4xl md:text-5xl font-bold text-foreground"
+                  className="font-headline text-[2.75rem] leading-[1.02] md:text-6xl font-bold tracking-tight text-foreground"
                   style={{ color: menuTitleColor }}
                 >
                   {menu.name}
                 </h2>
+                <DecoRule double className="mx-auto mt-5 max-w-[15rem]" style={accentText} />
                 {menu.description && (
-                  <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                  <p className="font-headline italic text-lg md:text-xl leading-snug text-muted-foreground max-w-xl mx-auto mt-5">
                     {menu.description}
                   </p>
                 )}
               </div>
             )}
 
-            {/* Sections */}
+            {/* Sections: each one a ruled list of entries, like a printed
+                menu card. Two columns from md up. */}
             {sections.map((section) => (
-              <section key={section} className="space-y-6">
-                <h3 
-                  className="text-xl md:text-2xl font-semibold uppercase tracking-wide border-l-4 pl-4"
-                  style={{
-                    borderLeftColor: accentColor || undefined,
-                    color: sectionHeaderColor || undefined,
-                    ...(accentColor ? {} : { borderLeftColor: 'hsl(var(--primary))' })
-                  }}
+              <section key={section} className="space-y-1">
+                <SectionHeading
+                  as="h3"
+                  align="center"
+                  className="mb-2"
+                  labelClassName="text-[0.8125rem] tracking-[0.22em]"
+                  style={{ color: sectionHeaderColor || accentColor }}
+                  ruleStyle={accentRule}
                 >
                   {section}
-                </h3>
+                </SectionHeading>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-12 menu-rows md:[&>*:nth-child(2)]:border-t-0">
                   {drinksBySection[section]
                     .sort((a, b) => a.sortOrder - b.sortOrder)
                     .map((drink) => {
                       const isOrdered = orderedDrinks.has(drink.id);
                       const isUnavailable = !drink.isMakeable || drink.isOutOfStock;
+                      // One quiet line of descriptors in small caps, instead
+                      // of a row of boxed badges.
+                      const descriptors = [
+                        drink.style,
+                        drink.temperature === "hot" ? "Hot" : drink.temperature === "cold" ? "Cold" : drink.temperature === "room_temp" ? "Room temp" : null,
+                        drink.isStirred ? "Stirred" : null,
+                        drink.isShaken ? "Shaken" : null,
+                        drink.baseSpirit,
+                      ].filter(Boolean) as string[];
                       
                       return (
-                        <Card 
+                        <article 
                           key={drink.id} 
-                          className="flex flex-col h-full hover-elevate"
+                          className="py-5"
                           data-testid={`card-drink-${drink.id}`}
                         >
-                          <CardHeader className="flex-1">
-                            <CardTitle className="text-xl text-foreground mb-2">
-                              {drink.name}
-                            </CardTitle>
-                            {drink.style && (
-                              <Badge variant="secondary" className="w-fit mb-3">
-                                {drink.style}
-                              </Badge>
-                            )}
-                            {drink.description && (
-                              <CardDescription className="text-sm leading-relaxed">
-                                {drink.description}
-                              </CardDescription>
-                            )}
-                            
-                            {/* Badges row */}
-                            <div className="flex flex-wrap gap-2 pt-3">
-                              {drink.isOutOfStock && (
-                                <Badge variant="destructive" className="text-xs">
-                                  Out of stock
-                                </Badge>
-                              )}
-                              {!drink.isOutOfStock && drink.missingIngredients.length > 0 && (
-                                <Badge variant="secondary" className="text-xs">
-                                  Missing ingredients
-                                </Badge>
-                              )}
-                              {drink.isMocktail && (
-                                <Badge variant="outline" className="text-xs">
-                                  <Sparkles className="w-3 h-3 mr-1" />
-                                  Non-Alcoholic
-                                </Badge>
-                              )}
-                              {drink.canBeMocktail && !drink.isMocktail && (
-                                <Badge variant="secondary" className="text-xs">
-                                  <Sparkles className="w-3 h-3 mr-1" />
-                                  Mocktail Available
-                                </Badge>
-                              )}
-                              {drink.temperature === "hot" && (
-                                <Badge variant="outline" className="text-xs">
-                                  <Flame className="w-3 h-3 mr-1" />
-                                  Hot
-                                </Badge>
-                              )}
-                              {drink.temperature === "cold" && (
-                                <Badge variant="outline" className="text-xs">
-                                  <Snowflake className="w-3 h-3 mr-1" />
-                                  Cold
-                                </Badge>
-                              )}
-                              {drink.temperature === "room_temp" && (
-                                <Badge variant="outline" className="text-xs">
-                                  <ThermometerSun className="w-3 h-3 mr-1" />
-                                  Room Temp
-                                </Badge>
-                              )}
-                              {drink.isStirred && (
-                                <Badge variant="outline" className="text-xs">
-                                  <Wine className="w-3 h-3 mr-1" />
-                                  Stirred
-                                </Badge>
-                              )}
-                              {drink.isShaken && (
-                                <Badge variant="outline" className="text-xs">
-                                  <Glasses className="w-3 h-3 mr-1" />
-                                  Shaken
-                                </Badge>
-                              )}
-                              {drink.baseSpirit && (
-                                <Badge variant="outline" className="text-xs">
-                                  {drink.baseSpirit}
-                                </Badge>
+                          <div className="flex items-start gap-4">
+                            <div className="min-w-0 flex-1 pt-1">
+                              <h4 className="font-headline text-[1.375rem] font-semibold leading-tight text-foreground">
+                                {drink.name}
+                              </h4>
+                              {descriptors.length > 0 && (
+                                <p className="mt-1.5 flex flex-wrap text-[0.6875rem] font-semibold uppercase tracking-[0.14em] leading-relaxed text-brass" style={accentText}>
+                                  {descriptors.map((d, i) => (
+                                    <span key={d + i} className="whitespace-nowrap">
+                                      {d}
+                                      {i < descriptors.length - 1 && <span aria-hidden className="mx-1.5 opacity-60">&middot;</span>}
+                                    </span>
+                                  ))}
+                                </p>
                               )}
                             </div>
-                          </CardHeader>
-                          
-                          <CardContent>
                             {/* min-h-11 = 44px: the one action a guest takes
                                 on this page, so it gets a full thumb target. */}
                             <Button
-                              className="w-full min-h-11 text-base"
+                              variant="outline"
+                              className={cn(
+                                "shrink-0 min-h-11 min-w-[6.5rem] px-4 text-[0.9375rem] font-semibold",
+                                "border-foreground/80 text-foreground hover:bg-foreground hover:text-background",
+                                isOrdered && "border-success/60 bg-success-soft text-success-soft-foreground disabled:opacity-100",
+                                isUnavailable && !isOrdered && "border-transparent px-0 min-w-0 text-xs uppercase tracking-[0.14em] text-muted-foreground disabled:opacity-100",
+                              )}
                               onClick={() => handleOrderClick(drink.id)}
                               disabled={orderMutation.isPending || isOrdered || isUnavailable}
                               aria-label={
@@ -447,22 +427,57 @@ export default function MenuDetail() {
                             >
                               {isOrdered ? (
                                 <>
-                                  <Check className="w-4 h-4 mr-2" />
+                                  <Check className="w-4 h-4" />
                                   Ordered
                                 </>
                               ) : isUnavailable ? (
                                 "Unavailable"
                               ) : (
-                                "Request This Drink"
+                                "Request"
                               )}
                             </Button>
+                          </div>
+                          <div>
+                            {drink.description && (
+                              <p className="mt-2.5 text-[0.9375rem] leading-relaxed text-foreground/75">
+                                {drink.description}
+                              </p>
+                            )}
+                            
+                            {/* Status flags: only the ones a guest must notice. */}
+                            {(drink.isOutOfStock || drink.missingIngredients.length > 0 || drink.isMocktail || (drink.canBeMocktail && !drink.isMocktail)) && (
+                              <div className="flex flex-wrap gap-1.5 pt-2.5">
+                                {drink.isOutOfStock && (
+                                  <Badge variant="danger" className="text-xs">
+                                    Out of stock
+                                  </Badge>
+                                )}
+                                {!drink.isOutOfStock && drink.missingIngredients.length > 0 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    Missing ingredients
+                                  </Badge>
+                                )}
+                                {drink.isMocktail && (
+                                  <Badge variant="success" className="text-xs">
+                                    <Sparkles className="w-3 h-3 mr-1" />
+                                    Non-Alcoholic
+                                  </Badge>
+                                )}
+                                {drink.canBeMocktail && !drink.isMocktail && (
+                                  <Badge variant="outline" className="text-xs">
+                                    <Sparkles className="w-3 h-3 mr-1" />
+                                    Mocktail Available
+                                  </Badge>
+                                )}
+                              </div>
+                            )}
                             {drink.missingIngredients.length > 0 && (
                               <p className="text-xs text-muted-foreground mt-2">
                                 Missing: {drink.missingIngredients.join(", ")}
                               </p>
                             )}
-                          </CardContent>
-                        </Card>
+                          </div>
+                        </article>
                       );
                     })}
                 </div>
@@ -492,9 +507,14 @@ export default function MenuDetail() {
 
       {/* Guest Name Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent data-testid="dialog-guest-name" className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Complete Your Order</DialogTitle>
+        <DialogContent data-testid="dialog-guest-name" className="max-w-md deco-corners">
+          <DialogHeader className="text-left">
+            {selectedDrinkId && (
+              <p className="smallcaps text-brass">
+                {drinks?.find(d => d.id === selectedDrinkId)?.name}
+              </p>
+            )}
+            <DialogTitle className="text-2xl">Complete Your Order</DialogTitle>
             <DialogDescription>
               Add your details and any special requests for this drink
             </DialogDescription>

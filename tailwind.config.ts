@@ -4,10 +4,16 @@ export default {
   content: ["./client/index.html", "./client/src/**/*.{js,jsx,ts,tsx}"],
   theme: {
     extend: {
+      // Printed-menu identity: a card has crisp corners. Everything from
+      // `rounded` to `rounded-2xl` collapses to 1-4px; `rounded-full` stays
+      // for genuinely round things (dots, count badges, the back-to-top pill).
       borderRadius: {
-        lg: ".5625rem", /* 9px */
-        md: ".375rem", /* 6px */
-        sm: ".1875rem", /* 3px */
+        DEFAULT: "2px",
+        sm: "1px",
+        md: "2px",
+        lg: "3px",
+        xl: "3px",
+        "2xl": "4px",
       },
       colors: {
         // Flat / base colors (regular buttons)
@@ -49,6 +55,24 @@ export default {
           DEFAULT: "hsl(var(--destructive) / <alpha-value>)",
           foreground: "hsl(var(--destructive-foreground) / <alpha-value>)",
           border: "var(--destructive-border)",
+          soft: "hsl(var(--destructive-soft) / <alpha-value>)",
+          "soft-foreground": "hsl(var(--destructive-soft-foreground) / <alpha-value>)",
+        },
+        // Identity colours (client/src/index.css). brass = text-safe antique
+        // brass; brass-bright = decoration only; gold = on ink only.
+        brass: {
+          DEFAULT: "hsl(var(--brass) / <alpha-value>)",
+          bright: "hsl(var(--brass-bright) / <alpha-value>)",
+        },
+        gold: "hsl(var(--gold) / <alpha-value>)",
+        ink: {
+          DEFAULT: "hsl(var(--ink) / <alpha-value>)",
+          deep: "hsl(var(--ink-deep) / <alpha-value>)",
+        },
+        paper: "hsl(var(--paper) / <alpha-value>)",
+        ember: {
+          DEFAULT: "hsl(var(--ember) / <alpha-value>)",
+          foreground: "hsl(var(--ember-foreground) / <alpha-value>)",
         },
         // Semantic status palette (defined in client/src/index.css). Use the
         // solid variants for filled badges; use the *-soft variants for low-

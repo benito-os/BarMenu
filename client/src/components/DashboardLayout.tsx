@@ -57,7 +57,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className="flex flex-col flex-1 min-w-0 min-h-0">
           <header
             data-sticky-top
-            className="sticky top-0 z-30 flex h-[var(--dash-header-h)] items-center justify-between gap-2 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/85"
+            className="sticky top-0 z-30 flex h-[var(--dash-header-h)] items-center justify-between gap-2 border-b border-brass/30 bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/90"
           >
             <div className="flex min-w-0 items-center gap-3">
               <SidebarTrigger data-testid="button-sidebar-toggle" className="hidden md:inline-flex" />
@@ -71,7 +71,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               </h1>
             </div>
             <div className="flex shrink-0 items-center gap-1">
-              <span className="md:hidden max-w-[9rem] truncate text-xs text-muted-foreground" aria-hidden>
+              <span className="md:hidden max-w-[9rem] truncate smallcaps text-brass" aria-hidden>
                 {barName}
               </span>
               <Link href="/">

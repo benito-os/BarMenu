@@ -12,7 +12,7 @@ import { Home, Github, QrCode, Wine, ChefHat, BarChart3 } from "lucide-react";
 export default function About() {
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b">
+      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90 border-b border-brass/30">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/">
             <Button variant="ghost" size="sm" data-testid="button-back-home">
@@ -38,10 +38,10 @@ export default function About() {
           </p>
         </section>
 
-        <section className="grid md:grid-cols-3 gap-4">
+        <section className="grid md:grid-cols-3 gap-x-8 gap-y-2">
           <Card>
             <CardHeader>
-              <QrCode className="w-8 h-8 mb-2 text-primary" />
+              <QrCode className="w-8 h-8 mb-2 text-brass" />
               <CardTitle className="font-headline text-xl">For guests</CardTitle>
               <CardDescription>
                 Scan the QR code on your table. Browse the menu. Tap a drink,
@@ -53,20 +53,20 @@ export default function About() {
 
           <Card>
             <CardHeader>
-              <ChefHat className="w-8 h-8 mb-2 text-primary" />
+              <ChefHat className="w-8 h-8 mb-2 text-brass" />
               <CardTitle className="font-headline text-xl">For bartenders</CardTitle>
               <CardDescription>
                 The dashboard shows incoming orders the moment they're placed,
                 with a chime and a tab badge so you can leave the tab in the
-                background. Keyboard shortcuts: <kbd className="px-1 py-0.5 text-[10px] bg-muted rounded">S</kbd> starts the
-                oldest order, <kbd className="px-1 py-0.5 text-[10px] bg-muted rounded">D</kbd> marks it served.
+                background. Keyboard shortcuts: <kbd className="px-1 py-0.5 text-[10px] bg-muted rounded-sm">S</kbd> starts the
+                oldest order, <kbd className="px-1 py-0.5 text-[10px] bg-muted rounded-sm">D</kbd> marks it served.
               </CardDescription>
             </CardHeader>
           </Card>
 
           <Card>
             <CardHeader>
-              <BarChart3 className="w-8 h-8 mb-2 text-primary" />
+              <BarChart3 className="w-8 h-8 mb-2 text-brass" />
               <CardTitle className="font-headline text-xl">For operators</CardTitle>
               <CardDescription>
                 Rotate seasonal menus, duplicate last year's lineup, theme each
@@ -116,7 +116,7 @@ export default function About() {
           </div>
         </section>
 
-        <footer className="pt-8 border-t text-center text-xs text-muted-foreground font-body">
+        <footer className="pt-8 rule-double text-center text-xs text-muted-foreground font-body">
           Built with React, TypeScript, Drizzle, Tailwind. MIT licensed.
         </footer>
       </main>

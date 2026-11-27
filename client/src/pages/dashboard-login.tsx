@@ -5,6 +5,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DecoRule } from "@/components/brand/Deco";
 import { useToast } from "@/hooks/use-toast";
 import { Lock } from "lucide-react";
 import { useSettings } from "@/hooks/useSettings";
@@ -54,15 +55,17 @@ export default function DashboardLogin() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto w-12 h-12 bg-primary rounded-full flex items-center justify-center mb-4">
-            <Lock className="w-6 h-6 text-primary-foreground" />
+      <Card variant="framed" className="deco-corners w-full max-w-md">
+        <CardHeader className="text-center pt-9">
+          {/* Lock set in a brass lozenge, after the logo's deco ring. */}
+          <div className="mx-auto mb-5 flex h-11 w-11 rotate-45 items-center justify-center border border-brass/60 shadow-[inset_0_0_0_3px_hsl(var(--popover)),inset_0_0_0_4px_hsl(var(--brass-bright)/0.5)]">
+            <Lock className="h-5 w-5 -rotate-45 text-brass" />
           </div>
           <CardTitle className="text-3xl font-serif">{barName}</CardTitle>
-          <CardDescription>Dashboard Login</CardDescription>
+          <DecoRule double className="mx-auto mt-3 w-40" />
+          <CardDescription className="smallcaps pt-2 text-brass">Dashboard Login</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pb-9">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="username" className="text-sm font-medium">
@@ -85,8 +88,8 @@ export default function DashboardLogin() {
                 data-testid="input-username"
               />
               <p id="username-hint" className="text-xs text-muted-foreground">
-                The username is <code className="bg-muted px-1 rounded">admin</code>. The
-                password is the <code className="bg-muted px-1 rounded">DASHBOARD_PASSWORD</code> secret.
+                The username is <code className="bg-muted px-1 rounded-sm text-foreground">admin</code>. The
+                password is the <code className="bg-muted px-1 rounded-sm text-foreground">DASHBOARD_PASSWORD</code> secret.
               </p>
             </div>
             <div className="space-y-2">
@@ -107,7 +110,7 @@ export default function DashboardLogin() {
             </div>
             <Button
               type="submit"
-              className="w-full"
+              className="w-full min-h-11"
               disabled={loginMutation.isPending || !username || !password}
               data-testid="button-login"
             >

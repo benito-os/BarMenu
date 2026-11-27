@@ -33,7 +33,7 @@ export function BackToTop() {
       onClick={scrollToTop}
       aria-label="Back to top"
       data-testid="button-back-to-top"
-      className="md:hidden fixed left-4 z-30 flex h-11 w-11 items-center justify-center rounded-full border bg-background/95 shadow-md backdrop-blur focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="md:hidden fixed left-4 z-30 flex h-11 w-11 items-center justify-center rounded-full border border-brass/50 bg-popover/95 text-brass shadow-[0_4px_14px_-6px_hsl(var(--ink)/0.45)] backdrop-blur focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       style={{ bottom: "calc(var(--mobile-tabbar-h) + 0.75rem)" }}
     >
       <ArrowUp className="h-5 w-5" aria-hidden />

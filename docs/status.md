@@ -25,6 +25,7 @@
 ## Blockers
 - Nothing on the branch has run against the production (Neon) database. Treat the first publish as untested there.
 - Not exercised: the stale-chunk auto-reload (unit tests only), image upload, QR download on a real phone.
+- Theme: Settings, QR codes, Import/Export and the Analytics table got token-level restyling only and still look like plain forms. Guest copy changed ("Request This Drink" is now "Request", "Active Tonight" is now "Tonight").
 - Known rough edges on mobile: first visit to a dashboard page shows a skeleton without the tab bar; "Clear served" can never appear because the queue endpoint returns open orders only; toasts briefly cover the header.
 
 ## Key paths

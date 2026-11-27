@@ -128,7 +128,7 @@ export default function SettingsPage() {
   const activeSection = useScrollSpy(SECTIONS.map((x) => x.id));
   // What the default drawn logo looks like with the name being typed.
   const previewName = barNameDraft.trim() || DEFAULT_BAR_NAME;
-  const cardPad = "max-md:p-4";
+  const cardPad = "max-md:px-0 max-md:py-4";
   const saveBtn = "max-md:w-full max-md:min-h-11";
 
   return (

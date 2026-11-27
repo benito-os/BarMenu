@@ -192,7 +192,7 @@ export default function ImportExportPage() {
               <TabsContent key={type.id} value={type.id} className="space-y-6 max-md:space-y-4">
                 <div className="grid md:grid-cols-2 gap-6 max-md:gap-4">
                   <Card>
-                    <CardHeader className="max-md:p-4">
+                    <CardHeader className="max-md:px-0 max-md:py-4">
                       <CardTitle className="flex items-center gap-2">
                         <Download className="w-5 h-5" />
                         Export {type.label}
@@ -201,7 +201,7 @@ export default function ImportExportPage() {
                         Download all {type.label.toLowerCase()} as a CSV file
                       </CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4 max-md:p-4 max-md:pt-0">
+                    <CardContent className="space-y-4 max-md:px-0 max-md:pb-4 max-md:pt-0">
                       <p className="text-sm text-muted-foreground">
                         Export your current {type.label.toLowerCase()} data including all fields.
                         The exported file can be used as a backup or to transfer data.
@@ -214,7 +214,7 @@ export default function ImportExportPage() {
                   </Card>
 
                   <Card>
-                    <CardHeader className="max-md:p-4">
+                    <CardHeader className="max-md:px-0 max-md:py-4">
                       <CardTitle className="flex items-center gap-2">
                         <FileText className="w-5 h-5" />
                         CSV Template
@@ -223,7 +223,7 @@ export default function ImportExportPage() {
                         Download a template with example data
                       </CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4 max-md:p-4 max-md:pt-0">
+                    <CardContent className="space-y-4 max-md:px-0 max-md:pb-4 max-md:pt-0">
                       <p className="text-sm text-muted-foreground">
                         Get a properly formatted template with column headers and example data.
                         Fields marked with "(REQUIRED)" must be filled in.
@@ -237,7 +237,7 @@ export default function ImportExportPage() {
                 </div>
 
                 <Card>
-                  <CardHeader className="max-md:p-4">
+                  <CardHeader className="max-md:px-0 max-md:py-4">
                     <CardTitle className="flex items-center gap-2">
                       <Upload className="w-5 h-5" />
                       Import {type.label}
@@ -246,7 +246,7 @@ export default function ImportExportPage() {
                       Upload a CSV file to add new {type.label.toLowerCase()} — you'll see a preview before anything is written
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-4 max-md:p-4 max-md:pt-0">
+                  <CardContent className="space-y-4 max-md:px-0 max-md:pb-4 max-md:pt-0">
                     <Alert>
                       <Info className="w-4 h-4" />
                       <AlertTitle>Before importing</AlertTitle>
@@ -434,7 +434,7 @@ export default function ImportExportPage() {
                 </Card>
 
                 <Card>
-                  <CardHeader className="max-md:p-4">
+                  <CardHeader className="max-md:px-0 max-md:py-4">
                     <CardTitle className="flex items-center gap-2">
                       <Icon className="w-5 h-5" />
                       {type.label} Field Reference
@@ -443,7 +443,7 @@ export default function ImportExportPage() {
                       Required and optional fields for {type.label.toLowerCase()}
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="max-md:p-4 max-md:pt-0">
+                  <CardContent className="max-md:px-0 max-md:pb-4 max-md:pt-0">
                     <FieldReference type={type.id} />
                   </CardContent>
                 </Card>

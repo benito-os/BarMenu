@@ -133,7 +133,7 @@ export default function AnalyticsPage() {
 
         {/* Chart */}
         <Card>
-          <CardHeader className="max-md:p-4">
+          <CardHeader className="max-md:px-0 max-md:py-4">
             <CardTitle className="text-xl">Drink Popularity</CardTitle>
             <CardDescription>
               {filterMode === "never-made" && "Drinks that haven't been made yet"}
@@ -154,8 +154,8 @@ export default function AnalyticsPage() {
                   <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                   {isMobile ? (
                     <>
-                      <XAxis type="number" allowDecimals={false} className="text-xs" />
-                      <YAxis type="category" dataKey="name" width={120} className="text-xs" tick={{ fontSize: 11 }} />
+                      <XAxis type="number" allowDecimals={false} className="text-xs" tick={{ fill: "hsl(var(--muted-foreground))" }} stroke="hsl(var(--border))" />
+                      <YAxis type="category" dataKey="name" width={120} className="text-xs" tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }} stroke="hsl(var(--border))" />
                     </>
                   ) : (
                     <>
@@ -165,22 +165,26 @@ export default function AnalyticsPage() {
                         textAnchor="end"
                         height={120}
                         className="text-xs"
+                        tick={{ fill: "hsl(var(--foreground))" }}
+                        stroke="hsl(var(--border))"
                       />
-                      <YAxis className="text-xs" />
+                      <YAxis className="text-xs" tick={{ fill: "hsl(var(--muted-foreground))" }} stroke="hsl(var(--border))" />
                     </>
                   )}
                   <Tooltip 
                     contentStyle={{ 
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '6px'
+                      backgroundColor: 'hsl(var(--popover))',
+                      border: '1px solid hsl(var(--brass) / 0.4)',
+                      borderRadius: '2px',
+                      color: 'hsl(var(--foreground))',
                     }}
+                    cursor={{ fill: 'hsl(var(--brass-bright) / 0.15)' }}
                   />
-                  <Bar dataKey="orderCount" radius={isMobile ? [0, 4, 4, 0] : [4, 4, 0, 0]}>
+                  <Bar dataKey="orderCount" radius={isMobile ? [0, 1, 1, 0] : [1, 1, 0, 0]}>
                     {filteredAnalytics.map((entry, index) => (
                       <Cell 
                         key={`cell-${index}`}
-                        fill={entry.isNeverMade ? "hsl(var(--destructive))" : "hsl(var(--primary))"}
+                        fill={entry.isNeverMade ? "hsl(var(--chart-3))" : "hsl(var(--chart-1))"}
                       />
                     ))}
                   </Bar>
@@ -196,7 +200,7 @@ export default function AnalyticsPage() {
 
         {/* Data Table */}
         <Card>
-          <CardHeader className="max-md:p-4">
+          <CardHeader className="max-md:px-0 max-md:py-4">
             <CardTitle className="text-xl">Detailed View</CardTitle>
           </CardHeader>
           <CardContent className="max-md:p-0">

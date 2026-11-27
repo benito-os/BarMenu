@@ -2,14 +2,26 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
+/**
+ * Printed-menu card. Not a grey rounded box:
+ * - "ruled" (default): a section on the paper itself, opened by a brass
+ *   double rule. Header/content have no side padding so text lines up with
+ *   the page, like a section of a printed menu.
+ * - "framed": a raised card-stock panel with a brass keyline, for the few
+ *   places that need a real container (login, notices).
+ */
 const Card = React.forwardRef<
   HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
+  React.HTMLAttributes<HTMLDivElement> & { variant?: "ruled" | "framed" }
+>(({ className, variant = "ruled", ...props }, ref) => (
   <div
     ref={ref}
+    data-card-variant={variant}
     className={cn(
-      "shadcn-card rounded-xl border bg-card border-card-border text-card-foreground shadow-sm",
+      "shadcn-card group/card text-card-foreground",
+      variant === "ruled"
+        ? "rule-double bg-transparent"
+        : "keyline rounded-sm bg-popover [&>[data-card-part]]:px-6",
       className
     )}
     {...props}
@@ -23,7 +35,8 @@ const CardHeader = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex flex-col space-y-1.5 p-6", className)}
+    data-card-part=""
+    className={cn("flex flex-col space-y-1.5 py-5", className)}
     {...props}
   />
 ));
@@ -36,7 +49,7 @@ const CardTitle = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "text-2xl font-semibold leading-none tracking-tight",
+      "font-headline text-2xl font-semibold leading-none tracking-tight",
       className
     )}
     {...props}
@@ -60,7 +73,7 @@ const CardContent = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("p-6 pt-0", className)} {...props} />
+  <div ref={ref} data-card-part="" className={cn("pb-6 pt-0", className)} {...props} />
 ))
 CardContent.displayName = "CardContent"
 
@@ -70,7 +83,8 @@ const CardFooter = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex items-center p-6 pt-0", className)}
+    data-card-part=""
+    className={cn("flex items-center pb-6 pt-0", className)}
     {...props}
   />
 ))

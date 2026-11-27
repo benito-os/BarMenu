@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSettings } from "@/hooks/useSettings";
 import { barLogoDataUrl } from "@/lib/barLogo";
+import { DecoRule } from "@/components/brand/Deco";
 
 interface SplashScreenProps {
   onComplete?: () => void;
@@ -15,7 +16,7 @@ const EXIT_MS = 300;
 const SPLASH_CSS = `
 @keyframes splash-fade-in { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
 @keyframes splash-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes splash-pulse { 0%, 100% { transform: scale(1); opacity: 0.5; } 50% { transform: scale(1.2); opacity: 1; } }
+@keyframes splash-pulse { 0%, 100% { transform: rotate(45deg) scale(1); opacity: 0.5; } 50% { transform: rotate(45deg) scale(1.25); opacity: 1; } }
 .splash-root { transition: opacity ${EXIT_MS}ms ease-out; }
 .splash-root[data-leaving="true"] { opacity: 0; pointer-events: none; }
 .splash-content { animation: splash-fade-in 400ms cubic-bezier(0.22, 1, 0.36, 1) both; }
@@ -67,7 +68,7 @@ export function SplashScreen({
 
   return (
     <div
-      className="splash-root fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black cursor-pointer"
+      className="splash-root fixed inset-0 z-[100] flex flex-col items-center justify-center bg-ink-deep cursor-pointer"
       data-leaving={phase === "leaving"}
       data-testid="splash-screen"
       role="presentation"
@@ -88,14 +89,15 @@ export function SplashScreen({
 
         <div className="splash-text text-center space-y-3">
           <h1
-            className="font-headline text-3xl md:text-4xl font-bold text-primary"
+            className="font-headline text-3xl md:text-4xl font-bold text-gold"
             data-testid="splash-title"
           >
             {barName}
           </h1>
+          <DecoRule double className="mx-auto w-40 text-gold/70" />
           {welcomeMessage && (
             <p
-              className="font-body text-lg max-w-sm px-4 text-primary/80"
+              className="font-headline italic text-lg max-w-sm px-4 text-paper/80"
               data-testid="splash-message"
             >
               {welcomeMessage}
@@ -107,7 +109,7 @@ export function SplashScreen({
           {[0, 1, 2].map((i) => (
             <span
               key={i}
-              className="splash-dot w-2 h-2 rounded-full bg-primary"
+              className="splash-dot w-1.5 h-1.5 rotate-45 bg-gold"
               style={{ animationDelay: `${i * 150}ms` }}
             />
           ))}

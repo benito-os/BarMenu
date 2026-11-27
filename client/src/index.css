@@ -2,64 +2,89 @@
 @tailwind components;
 @tailwind utilities;
 
-/* LIGHT MODE */
-:root {
-  --button-outline: rgba(0,0,0, .10);
-  --badge-outline: rgba(0,0,0, .05);
-  --opaque-button-border-intensity: -8;
-  --elevate-1: rgba(0,0,0, .03);
-  --elevate-2: rgba(0,0,0, .08);
-  --background: 0 0% 100%;
-  --foreground: 0 0% 9%;
-  --border: 0 0% 92%;
-  --card: 0 0% 98%;
-  --card-foreground: 0 0% 9%;
-  --card-border: 0 0% 95%;
-  --sidebar: 0 0% 96%;
-  --sidebar-foreground: 0 0% 9%;
-  --sidebar-border: 0 0% 93%;
-  --sidebar-primary: 24 88% 42%;
-  --sidebar-primary-foreground: 24 20% 98%;
-  --sidebar-accent: 24 8% 92%;
-  --sidebar-accent-foreground: 0 0% 9%;
-  --sidebar-ring: 24 88% 42%;
-  --popover: 0 0% 94%;
-  --popover-foreground: 0 0% 9%;
-  --popover-border: 0 0% 91%;
-  --primary: 24 88% 42%;
-  --primary-foreground: 24 20% 98%;
-  --secondary: 24 6% 90%;
-  --secondary-foreground: 0 0% 9%;
-  --muted: 24 5% 92%;
-  --muted-foreground: 0 0% 45%;
-  --accent: 24 8% 94%;
-  --accent-foreground: 0 0% 9%;
-  --destructive: 0 84% 48%;
-  --destructive-foreground: 0 20% 98%;
-  --input: 0 0% 75%;
-  --ring: 24 88% 42%;
+/* "Printed menu" identity: cream card stock, warm ink, antique brass.
+   One light palette (no dark mode). Contrast ratios are against --background
+   (paper, #F6F0E3) unless stated; see the notes beside each token.
 
-  /* Semantic status palette. One source of truth for the queue badges,
-     OrderStatusBanner, settings threshold previews, inventory levels. Each
-     pair is (solid + soft) so the same semantic can be used as a strong
-     "filled badge" or a "soft surface" without per-component color picking. */
-  --success: 142 71% 38%;
-  --success-foreground: 0 0% 100%;
-  --success-soft: 142 76% 94%;
-  --success-soft-foreground: 142 71% 22%;
-  --warning: 38 92% 50%;
-  --warning-foreground: 0 0% 100%;
-  --warning-soft: 48 96% 89%;
-  --warning-soft-foreground: 32 81% 29%;
-  --info: 217 91% 50%;
-  --info-foreground: 0 0% 100%;
-  --info-soft: 214 95% 93%;
-  --info-soft-foreground: 224 76% 33%;
-  --chart-1: 24 88% 42%;
-  --chart-2: 32 86% 38%;
-  --chart-3: 15 76% 46%;
-  --chart-4: 42 90% 35%;
-  --chart-5: 12 82% 44%;
+   Brass comes in two strengths:
+   --brass         #7A5C1A  text, icons and rules that carry meaning (5.5:1)
+   --brass-bright  #C9A44A  decoration only (hairlines, ornaments); fails as
+                            text on cream (2.1:1) and must never carry meaning
+   --gold          #D4AF37  the logo's gold; on ink only (splash, 8.2:1) */
+:root {
+  --button-outline: hsl(41 40% 45% / .45);
+  --badge-outline: hsl(41 40% 40% / .35);
+  --opaque-button-border-intensity: -8;
+  /* hover / press veils: warm, not grey */
+  --elevate-1: hsl(35 60% 20% / .05);
+  --elevate-2: hsl(35 60% 20% / .10);
+  --background: 41 51% 93%;         /* paper   #F6F0E3 */
+  --foreground: 33 22% 10%;         /* ink     #1F1A14  15.2:1 */
+  --border: 41 38% 72%;             /* hairline #D3C29E (decorative rule) */
+  --card: 41 51% 93%;               /* cards sit on the paper itself */
+  --card-foreground: 33 22% 10%;
+  --card-border: 41 38% 72%;
+  --sidebar: 41 47% 88%;            /* raised cream #EFE6D3 */
+  --sidebar-foreground: 33 22% 10%;
+  --sidebar-border: 41 38% 72%;
+  --sidebar-primary: 33 22% 10%;
+  --sidebar-primary-foreground: 41 51% 93%;
+  --sidebar-accent: 40 44% 84%;     /* #E8DCC4 */
+  --sidebar-accent-foreground: 33 22% 10%;
+  --sidebar-ring: 41 65% 29%;
+  --popover: 44 58% 96%;            /* lighter card stock #FBF8F0 */
+  --popover-foreground: 33 22% 10%;
+  --popover-border: 41 38% 72%;
+  /* Primary action: ink with cream text (15.2:1), brass inner keyline. */
+  --primary: 33 22% 10%;
+  --primary-foreground: 41 51% 93%;
+  --secondary: 41 47% 88%;          /* raised cream #EFE6D3; ink 13.9:1 */
+  --secondary-foreground: 33 22% 10%;
+  --muted: 40 44% 84%;              /* #E8DCC4 */
+  --muted-foreground: 34 20% 35%;   /* #6A5B47  5.8:1 paper, 4.8:1 on muted */
+  --accent: 41 47% 88%;
+  --accent-foreground: 33 22% 10%;
+  --destructive: 356 56% 39%;       /* oxblood #9A2B33  6.7:1 */
+  --destructive-foreground: 41 51% 93%;
+  --input: 37 21% 50%;              /* field edge #9A8665  3.1:1 */
+  --ring: 41 65% 29%;               /* focus ring = deep brass, 5.5:1 */
+
+  /* Identity colours (tailwind: brass, brass-bright, gold, ember). */
+  --brass: 41 65% 29%;              /* #7A5C1A */
+  --brass-bright: 43 54% 54%;       /* #C9A44A decoration only */
+  --gold: 46 65% 52%;               /* #D4AF37 logo gold, on ink only */
+  --ink: 33 22% 10%;
+  --ink-deep: 0 0% 4%;              /* #0A0A0A, the logo plate (splash) */
+  --paper: 41 51% 93%;
+  /* The one orange left: live / new-order signals. #B34A12, 4.7:1 */
+  --ember: 21 82% 39%;
+  --ember-foreground: 41 51% 93%;
+
+  /* Semantic status palette, re-inked for cream paper: muted, printed
+     colours that stay distinct at a glance. Solid = filled badge / button
+     (cream text on it); soft = tinted surface with dark text.
+     solid on paper / paper on solid: success 5.5, warning 5.2, info 7.2,
+     destructive 6.7.  soft-fg on soft: success 7.4, warning 6.3, info 8.7. */
+  --success: 123 27% 33%;           /* bottle green #3D6B3F */
+  --success-foreground: 41 51% 93%;
+  --success-soft: 74 31% 87%;       /* #E3E8D3 */
+  --success-soft-foreground: 123 28% 24%;
+  --warning: 37 87% 29%;            /* ochre #8C5A0A */
+  --warning-foreground: 41 51% 93%;
+  --warning-soft: 43 65% 84%;       /* #F1E2BC */
+  --warning-soft-foreground: 39 81% 23%;
+  --info: 209 43% 32%;              /* ink blue #2E5274 */
+  --info-foreground: 41 51% 93%;
+  --info-soft: 180 8% 88%;          /* #DEE3E3 */
+  --info-soft-foreground: 209 45% 24%;
+  --destructive-soft: 6 52% 89%;    /* #F2D9D6 */
+  --destructive-soft-foreground: 354 60% 30%; /* 7.6:1 */
+  /* Charts: brass, ink blue, oxblood, bottle green, ochre. */
+  --chart-1: 41 65% 33%;
+  --chart-2: 209 43% 36%;
+  --chart-3: 356 50% 42%;
+  --chart-4: 123 27% 36%;
+  --chart-5: 30 70% 40%;
   --font-sans: Inter, sans-serif;
   --font-serif: Playfair Display, serif;
   --font-mono: Menlo, monospace;
@@ -70,7 +95,7 @@
      classes below. */
   --font-headline: var(--font-serif);
   --font-body: var(--font-sans);
-  --radius: .5rem;
+  --radius: .125rem;
   --shadow-2xs: 0px 2px 0px 0px hsl(0 0% 0% / 0.00);
   --shadow-xs: 0px 2px 0px 0px hsl(0 0% 0% / 0.00);
   --shadow-sm: 0px 2px 0px 0px hsl(0 0% 0% / 0.00), 0px 1px 2px -1px hsl(0 0% 0% / 0.00);
@@ -118,6 +143,15 @@
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
+  }
+
+  ::selection {
+    background: hsl(var(--brass-bright) / 0.35);
+  }
+
+  /* Visible focus on cream: every focus ring is deep brass (5.5:1). */
+  :focus-visible {
+    outline-color: hsl(var(--ring));
   }
 
   /* Opt-in brand fonts. Guest-facing surfaces (landing, splash, menu pages)
@@ -201,6 +235,92 @@
  * Even without handling focused or not, this is six possible combinations that
  * need to be distinguished from eachother visually.
  */
+/* ------------------------------------------------------------------
+   Printed-menu identity pieces. Reusable, token-driven, no images.
+   ------------------------------------------------------------------ */
+@layer components {
+  /* Letter-spaced small caps for labels and section heads. */
+  .smallcaps {
+    @apply text-[0.6875rem] font-semibold uppercase leading-none tracking-[0.16em];
+  }
+
+  /* A list of entries separated by hairlines, like lines on a menu card.
+     Put it on the parent; children get a rule between them. */
+  .menu-rows > * + * {
+    border-top: 1px solid hsl(var(--border));
+  }
+
+  /* Dot leader: <span>Name</span><span class="leader"/><span>4</span>.
+     Fills the gap with brass dots sitting on the text baseline. */
+  .leader {
+    flex: 1 1 1rem;
+    min-width: 1rem;
+    align-self: flex-end;
+    height: 0.5em;
+    margin: 0 0.35rem 0.3em;
+    background-image: radial-gradient(circle, hsl(var(--brass) / 0.55) 0.7px, transparent 1.1px);
+    background-size: 5px 3px;
+    background-repeat: repeat-x;
+    background-position: left bottom;
+  }
+
+  /* Printed double rule (two hairlines). */
+  .rule-double {
+    border-top: 3px double hsl(var(--brass) / 0.55);
+  }
+
+  /* Framed surface for the few containers that need one (dialogs, sheets,
+     the login card): a brass hairline with a second line set just inside,
+     like the border on a printed card. */
+  .keyline {
+    border: 1px solid hsl(var(--brass) / 0.45);
+    box-shadow:
+      inset 0 0 0 3px hsl(var(--popover)),
+      inset 0 0 0 4px hsl(var(--brass-bright) / 0.45);
+  }
+  .keyline-paper {
+    border: 1px solid hsl(var(--brass) / 0.45);
+    box-shadow:
+      inset 0 0 0 3px hsl(var(--background)),
+      inset 0 0 0 4px hsl(var(--brass-bright) / 0.45);
+  }
+
+  /* Art-deco corner brackets for hero surfaces only (login, order dialog,
+     masthead). Pure background-image, so it never fights the element's own
+     background colour or padding. */
+  .deco-corners {
+    --deco-c: hsl(var(--brass) / 0.75);
+    --deco-s: 16px;
+    --deco-w: 1.5px;
+    --deco-o: 8px;
+    background-image:
+      linear-gradient(var(--deco-c), var(--deco-c)), linear-gradient(var(--deco-c), var(--deco-c)),
+      linear-gradient(var(--deco-c), var(--deco-c)), linear-gradient(var(--deco-c), var(--deco-c)),
+      linear-gradient(var(--deco-c), var(--deco-c)), linear-gradient(var(--deco-c), var(--deco-c)),
+      linear-gradient(var(--deco-c), var(--deco-c)), linear-gradient(var(--deco-c), var(--deco-c));
+    background-repeat: no-repeat;
+    background-size:
+      var(--deco-s) var(--deco-w), var(--deco-w) var(--deco-s),
+      var(--deco-s) var(--deco-w), var(--deco-w) var(--deco-s),
+      var(--deco-s) var(--deco-w), var(--deco-w) var(--deco-s),
+      var(--deco-s) var(--deco-w), var(--deco-w) var(--deco-s);
+    background-position:
+      top var(--deco-o) left var(--deco-o), top var(--deco-o) left var(--deco-o),
+      top var(--deco-o) right var(--deco-o), top var(--deco-o) right var(--deco-o),
+      bottom var(--deco-o) left var(--deco-o), bottom var(--deco-o) left var(--deco-o),
+      bottom var(--deco-o) right var(--deco-o), bottom var(--deco-o) right var(--deco-o);
+  }
+
+  /* Brass inner keyline on ink buttons. */
+  .btn-ink-keyline {
+    outline: 1px solid hsl(var(--brass-bright) / 0.55);
+    outline-offset: -4px;
+  }
+  .btn-ink-keyline:disabled {
+    outline-color: transparent;
+  }
+}
+
 @layer utilities {
 
   /* Horizontal chip rows scroll by swipe; the scrollbar is just noise. */

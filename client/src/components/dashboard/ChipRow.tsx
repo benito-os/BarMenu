@@ -59,21 +59,21 @@ export function ChipRow({
             data-testid={testIdPrefix ? `${testIdPrefix}-${item.id}` : undefined}
             aria-pressed={active}
             onClick={() => onSelect(item.id)}
-            className="group shrink-0 min-h-11 flex items-center rounded-full focus-visible:outline-none"
+            className="group shrink-0 min-h-11 flex items-center focus-visible:outline-none"
           >
             <span
               className={cn(
-                "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm whitespace-nowrap transition-colors",
+                "inline-flex h-8 items-center gap-1.5 rounded-sm border px-3 text-sm whitespace-nowrap transition-colors",
                 "group-focus-visible:ring-2 group-focus-visible:ring-ring group-focus-visible:ring-offset-1",
                 active
                   ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-card text-foreground group-hover:bg-muted",
+                  : "border-[color:var(--button-outline)] bg-transparent text-foreground group-hover:bg-secondary",
               )}
             >
               {item.dot && (
                 <span
                   aria-hidden
-                  className="h-2 w-2 rounded-full ring-1 ring-black/10"
+                  className="h-2 w-2 rotate-45 ring-1 ring-ink/15"
                   style={{ backgroundColor: item.dot }}
                 />
               )}
@@ -115,7 +115,7 @@ export function StickyToolbar({
       data-testid={testId}
       className={cn(
         "sticky top-[var(--dash-header-h)] z-20 -mx-4 px-4 md:-mx-6 md:px-6",
-        "bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85 border-b",
+        "bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90 border-b border-brass/30",
         className,
       )}
     >

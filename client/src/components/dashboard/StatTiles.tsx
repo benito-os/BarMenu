@@ -9,7 +9,7 @@ export type StatTile = {
 };
 
 const TONE_DOT: Record<NonNullable<StatTile["tone"]>, string> = {
-  default: "bg-muted-foreground/40",
+  default: "bg-brass-bright",
   warning: "bg-warning",
   destructive: "bg-destructive",
   success: "bg-success",
@@ -35,7 +35,7 @@ export function StatTiles({
   className?: string;
 }) {
   return (
-    <div role="toolbar" aria-label={ariaLabel} className={cn("grid gap-2", className)} style={{ gridTemplateColumns: `repeat(${tiles.length}, minmax(0, 1fr))` }}>
+    <div role="toolbar" aria-label={ariaLabel} className={cn("grid divide-x divide-border border-y border-border", className)} style={{ gridTemplateColumns: `repeat(${tiles.length}, minmax(0, 1fr))` }}>
       {tiles.map((tile) => {
         const active = tile.id === activeId;
         return (
@@ -46,16 +46,16 @@ export function StatTiles({
             onClick={() => onSelect(tile.id)}
             data-testid={tile.testId}
             className={cn(
-              "min-h-14 rounded-lg border px-2.5 py-1.5 text-left transition-colors",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              "min-h-14 px-2.5 py-1.5 text-left transition-colors",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
               active
-                ? "border-primary bg-primary/10 ring-1 ring-primary"
-                : "bg-card hover:bg-muted",
+                ? "bg-secondary shadow-[inset_0_-3px_0_hsl(var(--brass))]"
+                : "hover:bg-secondary/60",
             )}
           >
-            <span className="block text-lg font-semibold leading-tight tabular-nums">{tile.value}</span>
-            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-              <span aria-hidden className={cn("h-1.5 w-1.5 rounded-full", TONE_DOT[tile.tone ?? "default"])} />
+            <span className="block font-serif text-xl font-bold leading-tight tabular-nums lining-nums">{tile.value}</span>
+            <span className={cn("flex items-center gap-1.5 text-[0.6875rem] font-semibold uppercase tracking-[0.12em]", active ? "text-foreground" : "text-muted-foreground")}>
+              <span aria-hidden className={cn("h-2 w-2 rotate-45", TONE_DOT[tile.tone ?? "default"])} />
               {tile.label}
             </span>
           </button>

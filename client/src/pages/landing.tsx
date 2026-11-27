@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -8,7 +7,8 @@ import { SplashScreen, useSplashScreen } from "@/components/SplashScreen";
 import { useSettings } from "@/hooks/useSettings";
 import type { Menu } from "@shared/validation";
 import heroImage from "@assets/generated_images/Bar_hero_cocktails_overhead_0be3299c.webp";
-import { Calendar, Sparkles, RefreshCw } from "lucide-react";
+import { ArrowRight, RefreshCw } from "lucide-react";
+import { DecoRule, Masthead } from "@/components/brand/Deco";
 
 export default function Landing() {
   const { data: menus, isLoading, isError, refetch } = useQuery<Menu[]>({
@@ -41,8 +41,8 @@ export default function Landing() {
           height={768}
           fetchPriority="high"
         />
-        {/* Dark gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70" />
+        {/* Warm ink overlay for legibility */}
+        <div className="absolute inset-0 bg-gradient-to-b from-ink/65 via-ink/55 to-ink/80" />
         
         {/* Hero content */}
         <div className="relative h-full flex flex-col items-center justify-center px-6 text-center">
@@ -54,22 +54,24 @@ export default function Landing() {
               data-testid="landing-brand-logo"
             />
           ) : (
-            <h1 className="font-headline text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-4 tracking-tight">
+            <h1 className="font-headline text-5xl md:text-6xl lg:text-7xl font-bold text-paper tracking-tight">
               {barName}
             </h1>
           )}
-          <p className="font-body text-lg md:text-xl text-white/90 mb-8 max-w-2xl">
+          {/* Gold on ink: the logo's own colours. Decoration only. */}
+          <DecoRule double className="mx-auto mt-5 mb-5 w-full max-w-[15rem] text-gold" />
+          <p className="font-headline italic text-xl md:text-2xl text-paper/90 mb-9 max-w-2xl">
             {tagline}
           </p>
           {activeMenu && (
             <Link href={`/menu/${activeMenu.slug}`}>
               <Button
                 size="lg"
-                className="text-base px-8"
+                className="min-h-12 px-8 text-base font-semibold bg-paper text-ink border-paper shadow-[inset_0_0_0_2px_hsl(var(--paper)),inset_0_0_0_3px_hsl(var(--brass)/0.7)] hover:bg-paper"
                 data-testid="button-view-tonights-menu"
               >
-                <Sparkles className="w-4 h-4 mr-2" />
-                View Tonight's Menu
+                View Tonight&rsquo;s Menu
+                <ArrowRight className="w-4 h-4" />
               </Button>
             </Link>
           )}
@@ -77,15 +79,15 @@ export default function Landing() {
       </div>
 
       {/* Menu Grid Section */}
-      <div className="max-w-7xl mx-auto px-6 py-16">
-        <div className="mb-12">
-          <h2 className="font-body text-2xl md:text-3xl font-semibold text-foreground mb-2 uppercase tracking-wide">
-            Our Menus
-          </h2>
-          <p className="font-body text-muted-foreground">
-            Explore our curated collection of seasonal and event-specific cocktail experiences
-          </p>
-        </div>
+      <div className="max-w-3xl mx-auto px-5 sm:px-8 py-14 md:py-20">
+        <Masthead
+          as="h2"
+          eyebrow="The list"
+          title="Our Menus"
+          titleClassName="text-4xl md:text-5xl"
+          subtitle="Seasonal and event menus, each one its own little card."
+          className="mb-10"
+        />
 
         {isError ? (
           <div className="text-center py-16 space-y-4" role="alert" data-testid="menus-load-error">
@@ -102,78 +104,78 @@ export default function Landing() {
             </Button>
           </div>
         ) : isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {[1, 2, 3, 4].map((i) => (
-              <Card key={i}>
-                <CardHeader>
-                  <Skeleton className="h-8 w-3/4 mb-2" />
-                  <Skeleton className="h-4 w-full" />
-                </CardHeader>
-                <CardContent>
-                  <Skeleton className="h-10 w-32" />
-                </CardContent>
-              </Card>
+          <div className="menu-rows border-y border-border">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="py-6 space-y-3">
+                <Skeleton className="h-8 w-2/3" />
+                <Skeleton className="h-4 w-full" />
+              </div>
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          // A table of contents, not a grid of cards: each menu is a ruled
+          // entry. The menu's own accent marks its diamond and tonight badge;
+          // its title colour (if set) colours its name.
+          <ul className="menu-rows border-y border-border">
             {menus?.map((menu) => (
-              <Link key={menu.id} href={`/menu/${menu.slug}`}>
-                {/* 4px left stripe in the menu's accent color so each card
-                    carries the same identity its detail page has. Falls back
-                    to transparent when the admin hasn't set an accent. */}
-                <Card
-                  className="hover-elevate active-elevate-2 cursor-pointer transition-all h-full border-l-4"
-                  style={{ borderLeftColor: menu.accentColor || "transparent" }}
+              <li key={menu.id}>
+                <Link
+                  href={`/menu/${menu.slug}`}
+                  className="group block py-6 md:py-7 hover-elevate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   data-testid={`card-menu-${menu.slug}`}
                 >
-                  <CardHeader className="space-y-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <CardTitle
-                        className="font-headline text-2xl"
-                        style={{ color: menu.menuTitleColor || undefined }}
-                      >
-                        {menu.name}
-                      </CardTitle>
-                      {menu.isActive && (
-                        // When the menu has an accent color, tint the badge
-                        // with it (assumes accent has enough contrast against
-                        // white text — the admin's choice). Otherwise use the
-                        // default primary-coloured badge.
-                        <Badge
-                          variant={menu.accentColor ? undefined : "default"}
-                          className="shrink-0"
-                          style={
-                            menu.accentColor
-                              ? { backgroundColor: menu.accentColor, color: "#fff" }
-                              : undefined
-                          }
-                          data-testid="badge-active-tonight"
+                  <div className="flex items-start gap-3">
+                    <span
+                      aria-hidden
+                      className="mt-3 h-2 w-2 shrink-0 rotate-45 bg-brass-bright"
+                      style={menu.accentColor ? { backgroundColor: menu.accentColor } : undefined}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                        <h3
+                          className="font-headline text-[1.75rem] md:text-3xl font-semibold leading-tight text-foreground"
+                          style={{ color: menu.menuTitleColor || undefined }}
                         >
-                          Active Tonight
-                        </Badge>
+                          {menu.name}
+                        </h3>
+                        {menu.isActive && (
+                          // Tinted with the menu's accent when it has one
+                          // (assumes the admin picked an accent that holds
+                          // cream text); otherwise the ember "live" mark.
+                          <Badge
+                            variant="live"
+                            className="shrink-0 uppercase tracking-[0.12em] text-[0.625rem] translate-y-[-3px]"
+                            style={
+                              menu.accentColor
+                                ? { backgroundColor: menu.accentColor, color: "hsl(var(--paper))" }
+                                : undefined
+                            }
+                            data-testid="badge-active-tonight"
+                          >
+                            Tonight
+                          </Badge>
+                        )}
+                      </div>
+                      {menu.description && (
+                        <p className="font-body mt-2 text-base leading-relaxed text-foreground/75">
+                          {menu.description}
+                        </p>
                       )}
+                      <Button
+                        variant="ghost"
+                        tabIndex={-1}
+                        className="mt-3 -ml-3 min-h-11 px-3 text-sm font-semibold text-brass group-hover:text-foreground"
+                        data-testid={`button-view-menu-${menu.slug}`}
+                      >
+                        View menu
+                        <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                      </Button>
                     </div>
-                    {menu.description && (
-                      <CardDescription className="text-base leading-relaxed">
-                        {menu.description}
-                      </CardDescription>
-                    )}
-                  </CardHeader>
-                  <CardContent>
-                    <Button 
-                      variant="outline" 
-                      className="w-full sm:w-auto"
-                      data-testid={`button-view-menu-${menu.slug}`}
-                    >
-                      <Calendar className="w-4 h-4 mr-2" />
-                      View Menu
-                    </Button>
-                  </CardContent>
-                </Card>
-              </Link>
+                  </div>
+                </Link>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
 
         {!isLoading && !isError && menus?.length === 0 && (
@@ -188,12 +190,12 @@ export default function Landing() {
       {/* Public footer with a discoverable About link. Curious guests and
           forkers landing on the site can find the project's source from
           here without having to know the /about URL. */}
-      <footer className="border-t mt-8">
-        <div className="max-w-7xl mx-auto px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground font-body">
+      <footer className="rule-double mt-4">
+        <div className="max-w-3xl mx-auto px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground font-body">
           <span>© {new Date().getFullYear()} {barName}</span>
           <Link
             href="/about"
-            className="hover:text-foreground transition-colors"
+            className="inline-flex min-h-11 items-center underline decoration-brass/40 underline-offset-4 hover:text-foreground transition-colors"
             data-testid="link-about"
           >
             About this project
